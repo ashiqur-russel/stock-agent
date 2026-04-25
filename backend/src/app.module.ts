@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { StocksModule } from './modules/stocks/stocks.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
