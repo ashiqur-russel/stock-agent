@@ -51,14 +51,16 @@ function PaperContent() {
 
   const loadAccount = useCallback(async () => {
     try {
-      const data = await paperApi.getAccount() as Account
+      // Pass currency so first-time accounts get seeded with 1M in the user's
+      // chosen display currency (1,000,000 EUR if EUR, ~€910k = $1,000,000 if USD).
+      const data = await paperApi.getAccount(currency) as Account
       setAccount(data)
     } catch {
       // ignore
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [currency])
 
   const loadWatchlist = useCallback(async () => {
     try {
@@ -99,9 +101,9 @@ function PaperContent() {
   }
 
   const resetAccount = async () => {
-    const resetAmount = currency === 'USD' ? '$109,890' : '€100,000'
+    const resetAmount = `${currencySymbol}1,000,000`
     if (!confirm(`${t('pt_reset_confirm')} ${resetAmount} ${t('pt_reset_confirm2')}`)) return
-    await paperApi.reset()
+    await paperApi.reset(currency)
     await loadAccount()
   }
 

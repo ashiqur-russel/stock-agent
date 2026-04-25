@@ -76,10 +76,15 @@ export const indicators = {
 }
 
 export const paper = {
-  getAccount: () => apiFetch('/api/v1/paper/account'),
+  getAccount: (currency: 'USD' | 'EUR' = 'EUR') =>
+    apiFetch(`/api/v1/paper/account?currency=${currency}`),
   trade: (ticker: string, type: 'BUY' | 'SELL', shares: number) =>
     apiFetch('/api/v1/paper/trade', { method: 'POST', body: JSON.stringify({ ticker, type, shares }) }),
-  reset: () => apiFetch('/api/v1/paper/reset', { method: 'POST' }),
+  reset: (currency: 'USD' | 'EUR' = 'EUR') =>
+    apiFetch('/api/v1/paper/reset', {
+      method: 'POST',
+      body: JSON.stringify({ currency }),
+    }),
   watchlist: {
     list: () => apiFetch<{ tickers: string[] }>('/api/v1/paper/watchlist'),
     add: (ticker: string) =>
