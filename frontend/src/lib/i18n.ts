@@ -52,6 +52,7 @@ export const translations = {
 
     // Transactions
     tx_log: 'Log Transaction',
+    tx_edit_log: 'Edit Transaction',
     tx_type_lbl: 'Type',
     tx_ticker_lbl: 'Ticker',
     tx_shares_lbl: 'Shares',
@@ -60,6 +61,10 @@ export const translations = {
     tx_notes_lbl: 'Notes (optional)',
     tx_add: 'Add Transaction',
     tx_adding: 'Adding…',
+    tx_save: 'Save Changes',
+    tx_saving: 'Saving…',
+    tx_edit: 'Edit',
+    tx_cancel: 'Cancel',
     tx_history: 'Transaction History',
     tx_empty: 'No transactions yet.',
     tx_delete_confirm: 'Delete this transaction? This will recalculate your portfolio.',
@@ -273,6 +278,7 @@ export const translations = {
 
     // Transactions
     tx_log: 'Transaktion erfassen',
+    tx_edit_log: 'Transaktion bearbeiten',
     tx_type_lbl: 'Typ',
     tx_ticker_lbl: 'Ticker',
     tx_shares_lbl: 'Anteile',
@@ -281,6 +287,10 @@ export const translations = {
     tx_notes_lbl: 'Notizen (optional)',
     tx_add: 'Transaktion hinzufügen',
     tx_adding: 'Wird hinzugefügt…',
+    tx_save: 'Änderungen speichern',
+    tx_saving: 'Wird gespeichert…',
+    tx_edit: 'Bearbeiten',
+    tx_cancel: 'Abbrechen',
     tx_history: 'Transaktionshistorie',
     tx_empty: 'Noch keine Transaktionen.',
     tx_delete_confirm: 'Diese Transaktion löschen? Das Portfolio wird neu berechnet.',

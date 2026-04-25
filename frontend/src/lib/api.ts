@@ -60,6 +60,21 @@ export const portfolio = {
     executed_at: string
     notes?: string
   }) => apiFetch('/api/v1/portfolio/transaction', { method: 'POST', body: JSON.stringify(body) }),
+  updateTransaction: (
+    id: number,
+    body: {
+      ticker: string
+      type: 'BUY' | 'SELL'
+      shares: number
+      price: number
+      executed_at: string
+      notes?: string
+    },
+  ) =>
+    apiFetch(`/api/v1/portfolio/transaction/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
   deleteTransaction: (id: number) =>
     apiFetch(`/api/v1/portfolio/transaction/${id}`, { method: 'DELETE' }),
 }

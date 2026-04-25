@@ -54,6 +54,35 @@ def delete_transaction(tx_id: int, user_id: int) -> bool:
         return True
 
 
+def update_transaction(
+    tx_id: int,
+    user_id: int,
+    ticker: str,
+    tx_type: str,
+    shares: float,
+    price: float,
+    executed_at: str,
+    notes: str = None,
+) -> bool:
+    """Update an existing transaction. Returns False if it doesn't belong to user."""
+    ticker = ticker.upper()
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id FROM transactions WHERE id = ? AND user_id = ?",
+            (tx_id, user_id),
+        ).fetchone()
+        if not row:
+            return False
+        conn.execute(
+            """UPDATE transactions
+               SET ticker = ?, type = ?, shares = ?, price = ?, executed_at = ?, notes = ?
+               WHERE id = ?""",
+            (ticker, tx_type, shares, price, executed_at, notes, tx_id),
+        )
+        conn.commit()
+        return True
+
+
 def get_transactions(user_id: int) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
