@@ -6,7 +6,13 @@ import { AmountLocale } from '@/components/ui/Amount'
 import MarketStatus from '@/components/ui/MarketStatus'
 import TradeModal from '@/components/paper/TradeModal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { LivePrice, LiveDayChange } from '@/components/ui/LivePrice'
+import {
+  LivePrice,
+  LiveDayChange,
+  LiveMarketValue,
+  LivePnL,
+  LivePnLPct,
+} from '@/components/ui/LivePrice'
 import { paper as paperApi } from '@/lib/api'
 
 interface Holding {
@@ -160,7 +166,6 @@ function PaperContent() {
               </thead>
               <tbody>
                 {account.holdings.map((h) => {
-                  const pnlVal = currency === 'USD' ? h.pnl_usd : h.pnl
                   return (
                     <tr key={h.ticker} style={{ borderBottom: '1px solid #0d1117' }}>
                       <td style={{ padding: '10px', fontWeight: 700, color: '#f1f5f9' }}>{h.ticker}</td>
@@ -176,11 +181,29 @@ function PaperContent() {
                         />
                       </td>
                       <td style={{ padding: '10px', color: '#f1f5f9', fontWeight: 600 }}>
-                        <AmountLocale eur={h.value} usd={h.value_usd} decimals={2} />
+                        <LiveMarketValue
+                          ticker={h.ticker}
+                          shares={h.shares}
+                          fallbackEur={h.value}
+                          fallbackUsd={h.value_usd}
+                        />
                       </td>
-                      <td style={{ padding: '10px', fontWeight: 600, color: pnlVal >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {pnlVal >= 0 ? '+' : ''}{currencySymbol}{Math.abs(pnlVal).toFixed(2)}
-                        <span style={{ fontSize: 11, color: '#64748b', marginLeft: 4 }}>({h.pnl_pct >= 0 ? '+' : ''}{h.pnl_pct.toFixed(1)}%)</span>
+                      <td style={{ padding: '10px' }}>
+                        <LivePnL
+                          ticker={h.ticker}
+                          shares={h.shares}
+                          avgCostEur={h.avg_cost}
+                          fallbackEur={h.pnl}
+                          fallbackUsd={h.pnl_usd}
+                        />
+                        <LivePnLPct
+                          ticker={h.ticker}
+                          avgCostEur={h.avg_cost}
+                          fallbackPct={h.pnl_pct}
+                          parens
+                          muted
+                          style={{ fontSize: 11, marginLeft: 4 }}
+                        />
                       </td>
                       <td style={{ padding: '10px' }}>
                         <div style={{ display: 'flex', gap: 6 }}>

@@ -4,8 +4,13 @@ import { memo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import type { Holding } from '@/hooks/usePortfolio'
-import { useLiveQuote } from '@/hooks/usePriceStream'
-import { LivePrice, LiveDayChange } from '@/components/ui/LivePrice'
+import {
+  LivePrice,
+  LiveDayChange,
+  LiveMarketValue,
+  LivePnL,
+  LivePnLPct,
+} from '@/components/ui/LivePrice'
 import SignalBadge from '@/components/ui/SignalBadge'
 import CandlestickChart from '@/components/charts/CandlestickChart'
 
@@ -14,19 +19,6 @@ interface Props {
 }
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
-
-function PnlText({ eur, usd, pct }: { eur: number; usd: number; pct: number }) {
-  const { currency, currencySymbol } = useApp()
-  const val = num(currency === 'USD' ? usd : eur)
-  const safePct = num(pct)
-  const color = val >= 0 ? '#22c55e' : '#ef4444'
-  const sign = val >= 0 ? '+' : ''
-  return (
-    <span style={{ color, fontWeight: 600, fontSize: 14 }}>
-      {sign}{currencySymbol}{Math.abs(val).toFixed(2)} ({safePct >= 0 ? '+' : ''}{safePct.toFixed(2)}%)
-    </span>
-  )
-}
 
 function PortfolioCardImpl({ holding }: Props) {
   const { t, formatPrice, currency, currencySymbol } = useApp()
@@ -93,8 +85,22 @@ function PortfolioCardImpl({ holding }: Props) {
         </div>
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_unrealized')}</div>
-          <div style={{ marginTop: 2 }}>
-            <PnlText eur={holding.unrealized_pnl} usd={holding.unrealized_pnl_usd} pct={holding.unrealized_pnl_pct} />
+          <div style={{ marginTop: 2, fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'baseline' }}>
+            <LivePnL
+              ticker={holding.ticker}
+              shares={shares}
+              avgCostEur={num(holding.avg_cost)}
+              fallbackEur={num(holding.unrealized_pnl)}
+              fallbackUsd={num(holding.unrealized_pnl_usd)}
+            />
+            <LivePnLPct
+              ticker={holding.ticker}
+              avgCostEur={num(holding.avg_cost)}
+              fallbackPct={num(holding.unrealized_pnl_pct)}
+              parens
+              muted
+              style={{ fontSize: 12 }}
+            />
           </div>
         </div>
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
@@ -151,35 +157,3 @@ function shallowHoldingEqual(a: Holding, b: Holding): boolean {
 
 const PortfolioCard = memo(PortfolioCardImpl, (prev, next) => shallowHoldingEqual(prev.holding, next.holding))
 export default PortfolioCard
-
-// ---------------------------------------------------------------------------
-// LiveMarketValue
-//
-// Renders shares × live price for the active currency. Subscribes to the live
-// quote stream so it ticks with the rest of the LivePrice elements without
-// requiring a portfolio reload.
-// ---------------------------------------------------------------------------
-
-interface LiveMarketValueProps {
-  ticker: string
-  shares: number
-  fallbackEur: number
-  fallbackUsd: number
-}
-
-const LiveMarketValue = memo(function LiveMarketValue({ ticker, shares, fallbackEur, fallbackUsd }: LiveMarketValueProps) {
-  const { currency, currencySymbol } = useApp()
-  const quote = useLiveQuote(ticker)
-  const livePrice = quote
-    ? currency === 'USD' ? quote.current_price_usd : quote.current_price
-    : null
-  const fallback = currency === 'USD' ? fallbackUsd : fallbackEur
-  const value = livePrice !== null && Number.isFinite(livePrice)
-    ? livePrice * shares
-    : fallback
-  return (
-    <span style={{ color: '#f1f5f9' }}>
-      {currencySymbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    </span>
-  )
-})

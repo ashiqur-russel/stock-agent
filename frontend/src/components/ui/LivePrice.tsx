@@ -4,6 +4,16 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { useApp } from '@/contexts/AppContext'
 import { useLiveQuote } from '@/hooks/usePriceStream'
 
+const num = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : 0
+
+function fmtMoney(value: number, decimals = 2): string {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+}
+
 interface LivePriceProps {
   ticker: string
   /** Initial price to render before the first WebSocket tick arrives. */
@@ -100,3 +110,137 @@ function LiveDayChangeImpl({ ticker, initialPct, style }: LiveDayChangeProps) {
 }
 
 export const LiveDayChange = memo(LiveDayChangeImpl)
+
+// ---------------------------------------------------------------------------
+// LiveMarketValue — shares × live price in the active display currency.
+// Falls back to the server-provided snapshot until the first WS tick lands.
+// ---------------------------------------------------------------------------
+
+interface LiveMarketValueProps {
+  ticker: string
+  shares: number
+  fallbackEur: number
+  fallbackUsd: number
+  decimals?: number
+  style?: React.CSSProperties
+}
+
+export const LiveMarketValue = memo(function LiveMarketValue({
+  ticker,
+  shares,
+  fallbackEur,
+  fallbackUsd,
+  decimals = 2,
+  style,
+}: LiveMarketValueProps) {
+  const { currency, currencySymbol } = useApp()
+  const quote = useLiveQuote(ticker)
+  const livePrice = quote
+    ? currency === 'USD' ? quote.current_price_usd : quote.current_price
+    : null
+  const fallback = currency === 'USD' ? fallbackUsd : fallbackEur
+  const value = livePrice !== null && Number.isFinite(livePrice)
+    ? livePrice * num(shares)
+    : num(fallback)
+  return (
+    <span style={{ color: '#f1f5f9', ...style }}>
+      {currencySymbol}{fmtMoney(value, decimals)}
+    </span>
+  )
+})
+
+// ---------------------------------------------------------------------------
+// LivePnL — shares × (live price − avg cost) in the active display currency.
+//
+// avg_cost is stored in EUR on the backend, so when the user is viewing in
+// USD we convert the cost basis at the current FX rate from the same tick
+// (keeps cost basis consistent with the live price denominator).
+// Falls back to the server-side snapshot until the first WS tick arrives.
+// ---------------------------------------------------------------------------
+
+interface LivePnLProps {
+  ticker: string
+  shares: number
+  avgCostEur: number
+  fallbackEur: number
+  fallbackUsd: number
+  style?: React.CSSProperties
+}
+
+export const LivePnL = memo(function LivePnL({
+  ticker,
+  shares,
+  avgCostEur,
+  fallbackEur,
+  fallbackUsd,
+  style,
+}: LivePnLProps) {
+  const { currency, currencySymbol } = useApp()
+  const quote = useLiveQuote(ticker)
+
+  let pnl: number
+  if (quote) {
+    if (currency === 'USD') {
+      const rate = quote.eur_rate || 0.91
+      const avgCostUsd = num(avgCostEur) / rate
+      pnl = (quote.current_price_usd - avgCostUsd) * num(shares)
+    } else {
+      pnl = (quote.current_price - num(avgCostEur)) * num(shares)
+    }
+  } else {
+    pnl = num(currency === 'USD' ? fallbackUsd : fallbackEur)
+  }
+
+  const color = pnl >= 0 ? '#22c55e' : '#ef4444'
+  const sign = pnl >= 0 ? '+' : '-'
+  return (
+    <span style={{ color, fontWeight: 600, ...style }}>
+      {sign}{currencySymbol}{fmtMoney(Math.abs(pnl))}
+    </span>
+  )
+})
+
+// ---------------------------------------------------------------------------
+// LivePnLPct — (live price − avg cost) / avg cost × 100. Currency-agnostic
+// (a return % is a pure number), computed in EUR space which matches the
+// canonical avg-cost basis. Falls back to the server snapshot pre-tick.
+// ---------------------------------------------------------------------------
+
+interface LivePnLPctProps {
+  ticker: string
+  avgCostEur: number
+  fallbackPct: number
+  style?: React.CSSProperties
+  /** When true wraps in parentheses, e.g. `(+1.23%)`. */
+  parens?: boolean
+  /** When true, hides the colour and just renders muted text. */
+  muted?: boolean
+}
+
+export const LivePnLPct = memo(function LivePnLPct({
+  ticker,
+  avgCostEur,
+  fallbackPct,
+  style,
+  parens = false,
+  muted = false,
+}: LivePnLPctProps) {
+  const quote = useLiveQuote(ticker)
+  const cost = num(avgCostEur)
+
+  let pct: number
+  if (quote && cost > 0) {
+    pct = ((quote.current_price - cost) / cost) * 100
+  } else {
+    pct = num(fallbackPct)
+  }
+
+  const color = muted ? '#64748b' : pct >= 0 ? '#22c55e' : '#ef4444'
+  const sign = pct >= 0 ? '+' : ''
+  const text = `${sign}${pct.toFixed(2)}%`
+  return (
+    <span style={{ color, ...style }}>
+      {parens ? `(${text})` : text}
+    </span>
+  )
+})
