@@ -21,6 +21,7 @@ const NAV = [
       { id: 'env-vars', label: 'Environment Variables' },
       { id: 'running', label: 'Running Locally' },
       { id: 'dev-db', label: 'Database Management (dev)' },
+      { id: 'realtime-data', label: 'Real-Time Data & Polling' },
     ],
   },
   {
@@ -432,6 +433,99 @@ cd backend && uvicorn main:app --reload --port 8000`}</Code>
 
             <H3>One-liner: wipe DB + clear my own user (no CLI)</H3>
             <P>If you just want to reset your own paper-trading account without nuking the whole DB, use the in-app button on the Paper Trading page (<Code>POST /api/v1/paper/reset</Code>) — it clears positions and restores the €100,000 starting balance without touching your login.</P>
+          </Section>
+
+          {/* ── Real-time data & polling ── */}
+          <Section id='realtime-data' title='Real-Time Data & Polling'>
+            <P>StockAgent uses <strong style={{ color: '#f1f5f9' }}>yfinance</strong> for all market data — quotes, OHLCV history, news. yfinance is free, requires no API key, and works out of the box, which is why it&apos;s the default for development. <strong style={{ color: '#f1f5f9' }}>It is not a real-time tick feed</strong>, and that has consequences for how often we can poll.</P>
+
+            <H3>Why we poll every 30s (and not every 1s)</H3>
+            <P>Two hard limits force the cadence:</P>
+            <ul style={{ margin: '8px 0 12px 20px', lineHeight: 1.8 }}>
+              <li><strong style={{ color: '#f1f5f9' }}>yfinance refresh rate.</strong> Yahoo&apos;s public endpoint only updates the quote roughly every <strong>10–20 seconds</strong>. Polling faster than that gives you the same number repeatedly — wasted requests.</li>
+              <li><strong style={{ color: '#f1f5f9' }}>Rate limiting.</strong> yfinance is unofficial scraping. Sustained &gt;1 req/sec from one IP triggers <Code>429 Too Many Requests</Code> and eventually a soft IP block (15–60 min). With multiple users × multiple tickers this happens fast.</li>
+            </ul>
+            <P>So in <Code>backend/routers/ws.py</Code>:</P>
+            <Code block>{`MARKET_HOURS_INTERVAL = 30    # /ws/alerts cadence during US market hours
+OFF_HOURS_INTERVAL    = 300   # /ws/alerts cadence after hours
+
+PRICES_TICK_INTERVAL_OPEN   = 3   # /ws/prices cadence when something is "live"
+PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</Code>
+            <Note>The <Code>/ws/prices</Code> stream uses a tighter 3s tick because it&apos;s the visible UI flicker — even though yfinance only refreshes every ~15s, polling every 3s catches the change as soon as it happens. <Code>/ws/alerts</Code> uses 30s because alert messages are user-facing notifications, not pixel-level updates.</Note>
+            <Warn>These intervals are tuned for <strong>development with a single user</strong>. With 50+ concurrent users you will get rate-limited; either share a per-ticker quote cache across all sockets, or switch to a paid provider (below).</Warn>
+
+            <H3>Adding true real-time data (paid providers)</H3>
+            <P>If you want sub-second tick-by-tick prices like Webull, Robinhood, or TradingView, you need a real WebSocket feed from a market data vendor. Here are the realistic options ranked by best-fit for this project:</P>
+
+            <div style={{ overflowX: 'auto', margin: '12px 0' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#0d1117', color: '#f1f5f9', textAlign: 'left' }}>
+                    <th style={{ padding: 10, border: '1px solid #1e293b' }}>Provider</th>
+                    <th style={{ padding: 10, border: '1px solid #1e293b' }}>Free tier</th>
+                    <th style={{ padding: 10, border: '1px solid #1e293b' }}>Paid</th>
+                    <th style={{ padding: 10, border: '1px solid #1e293b' }}>WebSocket?</th>
+                    <th style={{ padding: 10, border: '1px solid #1e293b' }}>Best for</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: '#cbd5e1' }}>
+                  <tr>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}><strong style={{ color: '#22c55e' }}>Finnhub</strong></td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>60 req/min, WS for US stocks</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>$25/mo (Starter) → $99/mo</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>✅ even on free tier</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Best free option for stocks. Drop-in replacement.</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}><strong style={{ color: '#22c55e' }}>Binance</strong></td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Unlimited public WS</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>$0 (no auth needed)</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>✅ true tick stream</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Crypto only — but the gold standard for it.</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}><strong style={{ color: '#f1f5f9' }}>Polygon.io</strong></td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>5 req/min, no WS</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>$29/mo (delayed) → $199/mo (real-time)</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>✅ on paid tiers</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Production-grade, broad coverage (stocks, options, FX, crypto).</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}><strong style={{ color: '#f1f5f9' }}>Tradier</strong></td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>—</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>$10/mo (Sandbox real-time)</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>✅</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Cheapest real-time stocks, US-only, also brokerage API.</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}><strong style={{ color: '#f1f5f9' }}>Alpaca</strong></td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>15-min delayed WS, IEX feed</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>$99/mo (SIP real-time)</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>✅</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Free 15-min delayed IEX is enough for most swing trading.</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}><strong style={{ color: '#64748b' }}>Alpha Vantage</strong></td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>5 req/min, 500/day</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>$49.99/mo+</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>❌ HTTP only</td>
+                    <td style={{ padding: 10, border: '1px solid #1e293b' }}>Avoid — no streaming, generous tier is too slow.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <P><strong style={{ color: '#22c55e' }}>Recommendation:</strong> use <strong>Finnhub free tier for stocks</strong> + <strong>Binance public WS for crypto</strong>. Zero cost, real WebSocket, covers 95% of the use case. Upgrade to Polygon $99 only when you have paying users.</P>
+
+            <H3>What changes when you swap to a real WS feed</H3>
+            <ol style={{ margin: '8px 0 12px 20px', lineHeight: 1.8, color: '#cbd5e1' }}>
+              <li>Add a per-process subscription manager (one upstream WS per provider, fan-out to N connected browser clients) in <Code>backend/services/market_data.py</Code>.</li>
+              <li>Replace <Code>fetch_quote(t)</Code> calls inside <Code>_broadcast_prices()</Code> and <Code>ws_alerts</Code> with reads from an in-memory <Code>last_quote</Code> dict that the upstream WS keeps fresh.</li>
+              <li>Drop <Code>PRICES_TICK_INTERVAL_OPEN</Code> to ~1s (or push on every upstream tick — even better).</li>
+              <li>Drop <Code>MARKET_HOURS_INTERVAL</Code> to ~5s and use ticks for <Code>price_alert</Code> detection too.</li>
+              <li>Cache the historical OHLCV (used for support/resistance and indicators) once per minute — those don&apos;t need real-time and the paid endpoints have monthly request quotas.</li>
+            </ol>
+            <Note>The current architecture (separate <Code>/ws/prices</Code> and <Code>/ws/alerts</Code> sockets, both polling yfinance independently) is wasteful but isolated; consolidating onto a shared per-ticker quote cache is the right time to do it. See <Code>backend/routers/ws.py</Code> for the seams.</Note>
           </Section>
 
           {/* ── Backend structure ── */}

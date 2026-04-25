@@ -33,7 +33,20 @@ def _has_always_open_ticker(tickers) -> bool:
 
 PRICE_MOVE_THRESHOLD = 2.0  # % intraday move to trigger alert
 SIGNAL_CHECK_INTERVAL = 600  # recompute full analysis every 10 min
-MARKET_HOURS_INTERVAL = 30   # seconds between checks during market hours
+
+# Alerts scanner cadence.
+#
+# We're stuck at coarse polling because the data source (yfinance) is a free
+# scraped HTTP endpoint with no real-time stream — yfinance itself only refreshes
+# its quote roughly every 10–20s, and pushing requests harder gets the IP rate
+# limited. 30s during US market hours (300s off-hours) is the sweet spot for
+# *development* on a free feed.
+#
+# For a real "Webull-style" live feed you need a paid provider with a websocket
+# tick stream — see the "Real-Time Data" section in /docs for the options
+# (Finnhub / Polygon / Tradier / Binance for crypto). When you swap the data
+# source, drop these intervals to ~1s or use the WS tick directly.
+MARKET_HOURS_INTERVAL = 30   # seconds between checks during US market hours
 OFF_HOURS_INTERVAL = 300     # seconds between checks outside market hours
 
 
@@ -89,10 +102,17 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
     })
 
     try:
+        # Cadence depends on whether *anything* is live. US market hours OR
+        # any subscribed crypto ticker (24/7) keeps us on the fast tick.
+        def _current_interval() -> tuple[int, bool]:
+            us_open = is_market_open()
+            live = us_open or _has_always_open_ticker(tickers)
+            return (MARKET_HOURS_INTERVAL if live else OFF_HOURS_INTERVAL, us_open)
+
+        # Poll-first/sleep-after so the user gets their first alert pass
+        # immediately on connect instead of waiting a full interval.
         while True:
-            market_open = is_market_open()
-            interval = MARKET_HOURS_INTERVAL if market_open else OFF_HOURS_INTERVAL
-            await asyncio.sleep(interval)
+            interval, market_open = _current_interval()
 
             now_loop = asyncio.get_event_loop().time()
 
@@ -115,17 +135,21 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 support = analysis.get("key_support")
                 resistance = analysis.get("key_resistance")
 
-                # Price update (always sent)
+                # Per-ticker live-state: crypto is always live; stocks only
+                # during US hours. This decides whether we emit alerts.
+                ticker_live = market_open or _is_crypto_ticker(ticker)
+
+                # Price update (always sent — the UI uses these even off-hours)
                 await websocket.send_json({
                     "type": "price_update",
                     "ticker": ticker,
                     "price": price,
                     "change_pct": round(pct, 2),
                     "day_change_pct": quote.get("day_change_pct", 0),
-                    "market_open": market_open,
+                    "market_open": ticker_live,
                 })
 
-                if not market_open:
+                if not ticker_live:
                     continue
 
                 # Intraday move alert
@@ -182,6 +206,9 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                             "message": f"{old_signal.upper()} → {new_signal.upper()}",
                             "severity": "high",
                         })
+
+            # Sleep AFTER the poll so the first scan runs immediately on connect.
+            await asyncio.sleep(interval)
 
     except WebSocketDisconnect:
         pass
