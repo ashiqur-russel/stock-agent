@@ -1,5 +1,36 @@
+import time
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+
 from database import get_connection
 from services.market_data import fetch_quote
+from services.technical import run_swing_analysis
+
+# In-memory cache for swing-setup signals.
+#
+# `run_swing_analysis` is expensive (downloads price history, computes
+# indicators, fetches news) so we keep the result for SIGNAL_TTL seconds.
+# Memory only — clears on process restart, which is fine for dev. For prod
+# this should move to Redis or be persisted.
+SIGNAL_TTL = 600  # 10 minutes
+_signal_cache: dict[str, tuple[float, str | None]] = {}
+_signal_lock = Lock()
+
+
+def _signal_for(ticker: str) -> str | None:
+    now = time.time()
+    with _signal_lock:
+        cached = _signal_cache.get(ticker)
+        if cached and now - cached[0] < SIGNAL_TTL:
+            return cached[1]
+    try:
+        analysis = run_swing_analysis(ticker)
+        sig = analysis.get("swing_setup_quality") if isinstance(analysis, dict) else None
+    except Exception:
+        sig = None
+    with _signal_lock:
+        _signal_cache[ticker] = (now, sig)
+    return sig
 
 
 def add_transaction(user_id: int, ticker: str, tx_type: str, shares: float, price: float, executed_at: str, notes: str = None) -> dict:
@@ -63,6 +94,15 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
     transactions = [dict(r) for r in rows]
     holdings = _calculate_holdings(transactions)
 
+    # Pre-fetch signals in parallel so the response time stays bearable when
+    # several tickers are uncached. Each call is cached for SIGNAL_TTL.
+    tickers = list(holdings.keys())
+    signals: dict[str, str | None] = {}
+    if tickers:
+        with ThreadPoolExecutor(max_workers=min(8, len(tickers))) as pool:
+            for tk, sig in zip(tickers, pool.map(_signal_for, tickers)):
+                signals[tk] = sig
+
     result = []
     for ticker, h in holdings.items():
         quote = fetch_quote(ticker)
@@ -87,6 +127,7 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
             "day_change_pct": quote["day_change_pct"],
             "currency": "EUR",
             "eur_rate": quote.get("eur_rate", 0.92),
+            "signal": signals.get(ticker),
         })
 
     return result

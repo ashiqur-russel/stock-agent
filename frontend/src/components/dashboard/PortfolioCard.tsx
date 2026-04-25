@@ -6,6 +6,7 @@ import { useApp } from '@/contexts/AppContext'
 import type { Holding } from '@/hooks/usePortfolio'
 import { useLiveQuote } from '@/hooks/usePriceStream'
 import { LivePrice, LiveDayChange } from '@/components/ui/LivePrice'
+import SignalBadge from '@/components/ui/SignalBadge'
 import CandlestickChart from '@/components/charts/CandlestickChart'
 
 interface Props {
@@ -48,7 +49,10 @@ function PortfolioCardImpl({ holding }: Props) {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{holding.ticker}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{holding.ticker}</span>
+            <SignalBadge signal={holding.signal} />
+          </div>
           <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
             {shares.toFixed(4)} {t('pc_shares')}
           </div>
@@ -140,7 +144,8 @@ function shallowHoldingEqual(a: Holding, b: Holding): boolean {
     a.shares_held === b.shares_held &&
     a.avg_cost === b.avg_cost &&
     a.realized_pnl === b.realized_pnl &&
-    a.realized_pnl_usd === b.realized_pnl_usd
+    a.realized_pnl_usd === b.realized_pnl_usd &&
+    a.signal === b.signal
   )
 }
 

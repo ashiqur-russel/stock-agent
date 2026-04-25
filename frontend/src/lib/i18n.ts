@@ -112,6 +112,13 @@ export const translations = {
     paper_pnl: 'P&L',
     paper_actions: 'Actions',
 
+    // Signal labels (swing setup quality on portfolio cards)
+    signal_strong_buy: 'Strong Buy',
+    signal_potential_buy: 'Buy',
+    signal_hold: 'Hold',
+    signal_potential_sell: 'Sell',
+    signal_strong_sell: 'Strong Sell',
+
     // Buy/Sell Modal
     modal_buy: 'Buy',
     modal_sell: 'Sell',
@@ -320,6 +327,13 @@ export const translations = {
     paper_value: 'Wert',
     paper_pnl: 'G/V',
     paper_actions: 'Aktionen',
+
+    // Signal labels
+    signal_strong_buy: 'Stark Kaufen',
+    signal_potential_buy: 'Kaufen',
+    signal_hold: 'Halten',
+    signal_potential_sell: 'Verkaufen',
+    signal_strong_sell: 'Stark Verkaufen',
 
     // Buy/Sell Modal
     modal_buy: 'Kaufen',

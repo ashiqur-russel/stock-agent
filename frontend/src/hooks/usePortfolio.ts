@@ -18,7 +18,15 @@ export interface Holding {
   realized_pnl_usd: number
   day_change_pct: number
   eur_rate: number
+  signal?: SwingSignal | null
 }
+
+export type SwingSignal =
+  | 'strong_buy'
+  | 'potential_buy'
+  | 'hold'
+  | 'potential_sell'
+  | 'strong_sell'
 
 export function usePortfolio() {
   const [holdings, setHoldings] = useState<Holding[]>([])
