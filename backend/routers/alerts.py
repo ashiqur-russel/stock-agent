@@ -27,6 +27,15 @@ def get_unread_count(user=Depends(get_current_user)):
     return {"count": count}
 
 
+@router.patch("/alerts/read-all")
+def mark_all_read(user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    with get_connection() as conn:
+        conn.execute("UPDATE alerts SET is_read=1 WHERE user_id=?", (user_id,))
+        conn.commit()
+    return {"ok": True}
+
+
 @router.patch("/alerts/{alert_id}/read")
 def mark_read(alert_id: int, user=Depends(get_current_user)):
     user_id = user["user_id"]
@@ -35,15 +44,6 @@ def mark_read(alert_id: int, user=Depends(get_current_user)):
             "UPDATE alerts SET is_read=1 WHERE id=? AND user_id=?",
             (alert_id, user_id),
         )
-        conn.commit()
-    return {"ok": True}
-
-
-@router.patch("/alerts/read-all")
-def mark_all_read(user=Depends(get_current_user)):
-    user_id = user["user_id"]
-    with get_connection() as conn:
-        conn.execute("UPDATE alerts SET is_read=1 WHERE user_id=?", (user_id,))
         conn.commit()
     return {"ok": True}
 
