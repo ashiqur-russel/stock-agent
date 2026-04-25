@@ -5,14 +5,10 @@
 # Subject line rule: the first line must be  [SA-<number>] <type>: <summary>
 # (Merge / Revert / fixup! / squash!  are exempt).
 #
-# Branch names (enforced on commit): main/master/develop, or
+# Branch names (enforced on commit): develop/gh-pages, or
 #   feature/*, fix/*, hotfix/*, chore/*, docs/*, release/*
-# pre-push: blocks `git push` that updates the remote’s main or master; also runs
-# [SA-n] on the commits being pushed. (Commits while checked out to main are still
-# allowed — the block is on push. To forbid commits on main too, add
-#   no-commit-to-branch
-# from the pre-commit-hooks repo, knowing it will block local `git merge` into main
-# unless you use SKIP=… or --no-verify on that merge.)
+# Commits on main or master are rejected — use a topic branch + PR.
+# pre-push: blocks `git push` to remote main/master; also runs [SA-n] on pushes.
 #
 # If you can still push to main: (1) run `pre-commit install` in this clone after
 # pull, (2) do not use `git push --no-verify` or an IDE that skips Git hooks, (3)

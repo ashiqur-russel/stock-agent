@@ -11,11 +11,11 @@ import re
 import subprocess
 import sys
 
-# Exact names (integration / default branches)
+# Exact names where commits are still allowed. Do NOT list main/master — you must
+# use a topic branch (feature/…, fix/…) and merge via PR. (GitHub merges and PR
+# checks do not use this local hook.)
 _EXACT: frozenset[str] = frozenset(
     {
-        "main",
-        "master",
         "develop",
         "gh-pages",
     }
@@ -78,6 +78,18 @@ def main() -> None:
         return
     if is_allowed(branch):
         return
+    if branch in ("main", "master"):
+        print(
+            "Do not make commits while checked out on the default branch (main or master).\n"
+            f"  Current branch: {branch!r}\n"
+            "  Create a topic branch, commit there, and open a pull request:\n"
+            "    git checkout -b feature/SA-1-my-change\n"
+            "    # or: fix/..., hotfix/..., chore/...\n"
+            "  Merging into main on GitHub is fine; a local `git merge` on main is blocked\n"
+            "  by this hook — use the GitHub PR flow, or once:  git commit --no-verify  (rare)\n",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
     print(
         "Invalid branch name for this repository.\n"
         f"  Current: {branch!r}\n"
