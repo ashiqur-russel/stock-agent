@@ -11,6 +11,7 @@ from routers.indicators import router as indicators_router
 from routers.chat import router as chat_router
 from routers.alerts import router as alerts_router
 from routers.paper import router as paper_router
+from routers.ws import router as ws_router
 
 app = FastAPI(title="Stock Agent API", version="1.0.0")
 
@@ -29,6 +30,7 @@ app.include_router(indicators_router)
 app.include_router(chat_router)
 app.include_router(alerts_router)
 app.include_router(paper_router)
+app.include_router(ws_router)
 
 _scheduler = AsyncIOScheduler()
 
