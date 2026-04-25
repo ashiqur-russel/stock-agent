@@ -11,14 +11,17 @@ interface Props {
   holding: Holding
 }
 
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+
 function PnlText({ eur, usd, pct }: { eur: number; usd: number; pct: number }) {
   const { currency, currencySymbol } = useApp()
-  const val = currency === 'USD' ? usd : eur
+  const val = num(currency === 'USD' ? usd : eur)
+  const safePct = num(pct)
   const color = val >= 0 ? '#22c55e' : '#ef4444'
   const sign = val >= 0 ? '+' : ''
   return (
     <span style={{ color, fontWeight: 600, fontSize: 14 }}>
-      {sign}{currencySymbol}{Math.abs(val).toFixed(2)} ({pct >= 0 ? '+' : ''}{pct.toFixed(2)}%)
+      {sign}{currencySymbol}{Math.abs(val).toFixed(2)} ({safePct >= 0 ? '+' : ''}{safePct.toFixed(2)}%)
     </span>
   )
 }
@@ -28,8 +31,9 @@ export default function PortfolioCard({ holding }: Props) {
   const router = useRouter()
   const [showChart, setShowChart] = useState(false)
 
-  const marketValue = currency === 'USD' ? holding.market_value_usd : holding.market_value
-  const dayColor = holding.day_change_pct >= 0 ? '#22c55e' : '#ef4444'
+  const marketValue = num(currency === 'USD' ? holding.market_value_usd : holding.market_value)
+  const dayChangePct = num(holding.day_change_pct)
+  const dayColor = dayChangePct >= 0 ? '#22c55e' : '#ef4444'
 
   return (
     <div style={{
@@ -45,7 +49,7 @@ export default function PortfolioCard({ holding }: Props) {
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{holding.ticker}</div>
           <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-            {holding.shares_held.toFixed(4)} {t('pc_shares')}
+            {num(holding.shares_held).toFixed(4)} {t('pc_shares')}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -53,7 +57,7 @@ export default function PortfolioCard({ holding }: Props) {
             {currencySymbol}{marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: 13, color: dayColor }}>
-            {holding.day_change_pct >= 0 ? '+' : ''}{holding.day_change_pct.toFixed(2)}% today
+            {dayChangePct >= 0 ? '+' : ''}{dayChangePct.toFixed(2)}% today
           </div>
         </div>
       </div>
@@ -75,8 +79,8 @@ export default function PortfolioCard({ holding }: Props) {
         </div>
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_realized')}</div>
-          <div style={{ fontSize: 14, color: holding.realized_pnl >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600, marginTop: 2 }}>
-            {holding.realized_pnl >= 0 ? '+' : ''}{currencySymbol}{(currency === 'USD' ? holding.realized_pnl_usd : holding.realized_pnl).toFixed(2)}
+          <div style={{ fontSize: 14, color: num(holding.realized_pnl) >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600, marginTop: 2 }}>
+            {num(holding.realized_pnl) >= 0 ? '+' : ''}{currencySymbol}{num(currency === 'USD' ? holding.realized_pnl_usd : holding.realized_pnl).toFixed(2)}
           </div>
         </div>
       </div>

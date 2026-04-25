@@ -6,15 +6,16 @@ import { usePortfolio, type Holding } from '@/hooks/usePortfolio'
 import PortfolioCard from '@/components/dashboard/PortfolioCard'
 import Link from 'next/link'
 
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+
 function DashboardContent() {
   const { t, currency, currencySymbol } = useApp()
   const { holdings, loading, error, refresh } = usePortfolio()
 
-  const rate = 0.91
-  const totalValueEur = holdings.reduce((s, h) => s + h.market_value, 0)
-  const totalUnrealizedEur = holdings.reduce((s, h) => s + h.unrealized_pnl, 0)
-  const totalValueUsd = holdings.reduce((s, h) => s + h.market_value_usd, 0)
-  const totalUnrealizedUsd = holdings.reduce((s, h) => s + h.unrealized_pnl_usd, 0)
+  const totalValueEur = holdings.reduce((s, h) => s + num(h.market_value), 0)
+  const totalUnrealizedEur = holdings.reduce((s, h) => s + num(h.unrealized_pnl), 0)
+  const totalValueUsd = holdings.reduce((s, h) => s + num(h.market_value_usd), 0)
+  const totalUnrealizedUsd = holdings.reduce((s, h) => s + num(h.unrealized_pnl_usd), 0)
 
   const totalValue = currency === 'USD' ? totalValueUsd : totalValueEur
   const totalUnrealized = currency === 'USD' ? totalUnrealizedUsd : totalUnrealizedEur
