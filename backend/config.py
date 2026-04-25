@@ -12,7 +12,7 @@ CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").spl
 SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER: str = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "").replace(" ", "").replace(" ", "")
 
 # How often the background scanner runs (minutes)
 ALERT_INTERVAL_MINUTES: int = int(os.getenv("ALERT_INTERVAL_MINUTES", "30"))
