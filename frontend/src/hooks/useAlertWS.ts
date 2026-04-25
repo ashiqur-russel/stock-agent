@@ -26,7 +26,7 @@ export function useAlertWS(onAlert?: (alert: LiveAlert) => void) {
       const token = getToken()
       if (!token) return
 
-      const ws = new WebSocket(`${WS_URL}/ws/alerts?token=${token}`)
+      const ws = new WebSocket(`${WS_URL}/api/v1/ws/alerts?token=${encodeURIComponent(token)}`)
       wsRef.current = ws
 
       ws.onopen = () => setConnected(true)
