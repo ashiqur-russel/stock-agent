@@ -16,3 +16,12 @@ def init_db():
     schema = (Path(__file__).parent / "schema.sql").read_text()
     with get_connection() as conn:
         conn.executescript(schema)
+        # Safe migrations for existing databases
+        for migration in [
+            "ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0",
+        ]:
+            try:
+                conn.execute(migration)
+                conn.commit()
+            except Exception:
+                pass  # column already exists

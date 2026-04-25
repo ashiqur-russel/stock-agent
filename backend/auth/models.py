@@ -18,3 +18,13 @@ class TokenResponse(BaseModel):
     user_id: int
     name: str
     email: str
+
+
+class VerificationPending(BaseModel):
+    requires_verification: bool = True
+    email: str
+    message: str
+
+
+class ResendRequest(BaseModel):
+    email: EmailStr
