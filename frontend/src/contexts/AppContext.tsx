@@ -11,7 +11,7 @@ import {
   readMarketRegionFromStorage,
 } from '@/lib/marketHours'
 
-type Currency = 'EUR' | 'USD'
+export type Currency = 'EUR' | 'USD'
 
 interface AppCtx {
   lang: Lang

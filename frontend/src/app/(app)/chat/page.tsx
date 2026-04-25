@@ -8,8 +8,8 @@ import { usePortfolio } from '@/hooks/usePortfolio'
 import ReactMarkdown from 'react-markdown'
 
 function ChatContent() {
-  const { t } = useApp()
-  const { messages, streaming, error, send, clear } = useChat()
+  const { t, currency } = useApp()
+  const { messages, streaming, error, send, clear } = useChat(currency)
   const { holdings } = usePortfolio()
   const searchParams = useSearchParams()
   const [input, setInput] = useState('')

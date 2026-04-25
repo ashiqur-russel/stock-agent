@@ -11,7 +11,7 @@ export interface ChatMessage {
   toolCalls?: string[]
 }
 
-export function useChat() {
+export function useChat(currency: 'EUR' | 'USD' = 'EUR') {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,6 +38,7 @@ export function useChat() {
         },
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
+          currency,
         }),
       })
 
@@ -90,7 +91,7 @@ export function useChat() {
     } finally {
       setStreaming(false)
     }
-  }, [messages, streaming])
+  }, [messages, streaming, currency])
 
   const clear = useCallback(() => {
     setMessages([])
