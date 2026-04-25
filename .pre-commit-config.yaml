@@ -1,0 +1,50 @@
+# Install: pip install -r dev-requirements.txt
+#          pre-commit install
+#
+# This registers three Git hook types: pre-commit, commit-msg, pre-push.
+# Subject line rule: the first line must be  [SA-<number>] <type>: <summary>
+# (Merge / Revert / fixup! / squash!  are exempt).
+#
+# Skip once:  SKIP=sa-commit-msg,sa-pre-push-commits git commit
+#             git commit / git push --no-verify  (bypasses all hooks; use sparingly)
+
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        exclude: ^frontend/node_modules/
+      - id: end-of-file-fixer
+        exclude: ^(frontend/node_modules/|\.next/)
+      - id: trailing-whitespace
+        exclude: ^(frontend/node_modules/|\.next/)
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/.*\.py$
+      - id: ruff-format
+        files: ^backend/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: sa-commit-msg
+        name: "[SA-n] commit subject (first line)"
+        entry: python3 scripts/sa_commit_message.py
+        language: system
+        stages: [commit-msg]
+
+      - id: sa-pre-push-commits
+        name: "[SA-n] on all commits in push"
+        entry: python3 scripts/sa_commit_message.py
+        language: system
+        args: [--pre-push]
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
