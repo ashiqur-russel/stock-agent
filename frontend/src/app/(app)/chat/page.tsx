@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import AuthGuard from '@/components/layout/AuthGuard'
 import { useApp } from '@/contexts/AppContext'
 import { useChat } from '@/hooks/useChat'
 import { usePortfolio } from '@/hooks/usePortfolio'
@@ -126,10 +125,8 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <AuthGuard>
-      <Suspense fallback={<div style={{ color: '#64748b' }}>Loading…</div>}>
-        <ChatContent />
-      </Suspense>
-    </AuthGuard>
+    <Suspense fallback={<div style={{ color: '#64748b' }}>Loading…</div>}>
+      <ChatContent />
+    </Suspense>
   )
 }

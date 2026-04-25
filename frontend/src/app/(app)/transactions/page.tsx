@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import AuthGuard from '@/components/layout/AuthGuard'
 import { useApp } from '@/contexts/AppContext'
 import FormInput from '@/components/ui/FormInput'
 import { AmountLocale } from '@/components/ui/Amount'
@@ -182,5 +181,5 @@ function TransactionsContent() {
 }
 
 export default function TransactionsPage() {
-  return <AuthGuard><TransactionsContent /></AuthGuard>
+  return <TransactionsContent />
 }

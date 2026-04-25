@@ -1,6 +1,5 @@
 'use client'
 
-import AuthGuard from '@/components/layout/AuthGuard'
 import { useApp } from '@/contexts/AppContext'
 import { usePortfolio, type Holding } from '@/hooks/usePortfolio'
 import PortfolioCard from '@/components/dashboard/PortfolioCard'
@@ -76,9 +75,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <AuthGuard>
-      <DashboardContent />
-    </AuthGuard>
-  )
+  return <DashboardContent />
 }

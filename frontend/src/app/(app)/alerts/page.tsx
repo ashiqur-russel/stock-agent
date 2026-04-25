@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import AuthGuard from '@/components/layout/AuthGuard'
 import { useApp } from '@/contexts/AppContext'
 import FormInput from '@/components/ui/FormInput'
 import { alerts as alertsApi } from '@/lib/api'
@@ -169,5 +168,5 @@ function AlertsContent() {
 }
 
 export default function AlertsPage() {
-  return <AuthGuard><AlertsContent /></AuthGuard>
+  return <AlertsContent />
 }

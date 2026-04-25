@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, memo } from 'react'
-import AuthGuard from '@/components/layout/AuthGuard'
 import { useApp } from '@/contexts/AppContext'
 import { AmountLocale } from '@/components/ui/Amount'
 import MarketStatus from '@/components/ui/MarketStatus'
@@ -311,5 +310,5 @@ const WatchCard = memo(function WatchCard({ ticker, heldShares, onRemove, onTrad
 })
 
 export default function PaperPage() {
-  return <AuthGuard><PaperContent /></AuthGuard>
+  return <PaperContent />
 }
