@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
@@ -12,12 +12,28 @@ function VerifyContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  // React StrictMode (dev) runs effects twice. The 2nd call hits a now-used
+  // token and returns 400, flipping us to 'error' even though verification
+  // actually succeeded. Guard with a ref so we only fire the request once.
+  const startedRef = useRef(false)
 
   useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+
     if (!token) {
       setStatus('error')
       return
     }
+
+    // If we already have a token in localStorage from a prior successful
+    // verify on this page, don't re-call the API — just go to the dashboard.
+    if (typeof window !== 'undefined' && localStorage.getItem('stock_agent_token')) {
+      setStatus('success')
+      setTimeout(() => router.push('/dashboard'), 800)
+      return
+    }
+
     authApi.verify(token)
       .then((res) => {
         const r = res as { access_token?: string; user_id?: number; name?: string; email?: string }
