@@ -43,3 +43,21 @@ CREATE TABLE IF NOT EXISTS user_settings (
     notify_email    TEXT,
     email_alerts    INTEGER DEFAULT 1
 );
+
+-- Paper trading: each user starts with a virtual €100,000 balance
+CREATE TABLE IF NOT EXISTS paper_accounts (
+    user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    balance_eur     REAL NOT NULL DEFAULT 100000.0,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS paper_transactions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ticker      TEXT NOT NULL,
+    type        TEXT NOT NULL CHECK(type IN ('BUY', 'SELL')),
+    shares      REAL NOT NULL CHECK(shares > 0),
+    price_eur   REAL NOT NULL CHECK(price_eur > 0),
+    executed_at TEXT DEFAULT (datetime('now')),
+    notes       TEXT
+);
