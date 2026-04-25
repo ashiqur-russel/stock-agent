@@ -1,12 +1,12 @@
 import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import config
 from database import get_connection
-from services.technical import run_swing_analysis
-from services.portfolio_service import get_portfolio_for_user
 from services.market_data import get_usd_to_eur_rate
+from services.portfolio_service import get_portfolio_for_user
+from services.technical import run_swing_analysis
 
 SIGNAL_LABELS = {
     "strong_buy": "STRONG BUY",
@@ -45,7 +45,14 @@ def save_signal(user_id: int, ticker: str, signal: str):
         conn.commit()
 
 
-def create_alert(user_id: int, ticker: str, old_signal: str | None, new_signal: str, message: str, price_eur: float | None):
+def create_alert(
+    user_id: int,
+    ticker: str,
+    old_signal: str | None,
+    new_signal: str,
+    message: str,
+    price_eur: float | None,
+):
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO alerts (user_id, ticker, old_signal, new_signal, message, price_eur) VALUES (?,?,?,?,?,?)",
@@ -65,7 +72,9 @@ def get_user_notify_email(user_id: int) -> str | None:
     return None
 
 
-def send_alert_email(to_email: str, ticker: str, signal: str, message: str, price_eur: float | None):
+def send_alert_email(
+    to_email: str, ticker: str, signal: str, message: str, price_eur: float | None
+):
     if not config.SMTP_USER or not config.SMTP_PASSWORD:
         return
 
@@ -138,7 +147,10 @@ def check_all_portfolios():
 
                 if old_signal == new_signal:
                     continue
-                if new_signal not in ACTIONABLE_SIGNALS and (old_signal or "hold") not in ACTIONABLE_SIGNALS:
+                if (
+                    new_signal not in ACTIONABLE_SIGNALS
+                    and (old_signal or "hold") not in ACTIONABLE_SIGNALS
+                ):
                     continue
 
                 price_usd = analysis.get("current_price")
@@ -146,9 +158,15 @@ def check_all_portfolios():
                 support_usd = analysis.get("key_support")
                 resistance_usd = analysis.get("key_resistance")
                 support_eur = f"€{round(support_usd * eur_rate, 2)}" if support_usd else "N/A"
-                resistance_eur = f"€{round(resistance_usd * eur_rate, 2)}" if resistance_usd else "N/A"
+                resistance_eur = (
+                    f"€{round(resistance_usd * eur_rate, 2)}" if resistance_usd else "N/A"
+                )
 
-                old_label = f"{SIGNAL_EMOJI.get(old_signal, '')} {SIGNAL_LABELS.get(old_signal, 'none')}" if old_signal else "none"
+                old_label = (
+                    f"{SIGNAL_EMOJI.get(old_signal, '')} {SIGNAL_LABELS.get(old_signal, 'none')}"
+                    if old_signal
+                    else "none"
+                )
                 new_label = f"{SIGNAL_EMOJI.get(new_signal, '')} {SIGNAL_LABELS.get(new_signal, new_signal)}"
 
                 message = (

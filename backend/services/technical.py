@@ -1,6 +1,6 @@
-import yfinance as yf
 import pandas as pd
 import pandas_ta as ta
+import yfinance as yf
 
 
 def compute_indicators(ticker: str) -> dict:
@@ -43,12 +43,21 @@ def compute_indicators(ticker: str) -> dict:
         trend = "unknown"
 
     # MACD signal
-    macd_col = next((c for c in df.columns if c.startswith("MACD_") and "s" not in c.lower() and "h" not in c.lower()), None)
+    macd_col = next(
+        (
+            c
+            for c in df.columns
+            if c.startswith("MACD_") and "s" not in c.lower() and "h" not in c.lower()
+        ),
+        None,
+    )
     signal_col = next((c for c in df.columns if c.startswith("MACDs_")), None)
     hist_col = next((c for c in df.columns if c.startswith("MACDh_")), None)
 
     macd_val = float(last[macd_col]) if macd_col and not pd.isna(last.get(macd_col)) else None
-    signal_val = float(last[signal_col]) if signal_col and not pd.isna(last.get(signal_col)) else None
+    signal_val = (
+        float(last[signal_col]) if signal_col and not pd.isna(last.get(signal_col)) else None
+    )
     hist_val = float(last[hist_col]) if hist_col and not pd.isna(last.get(hist_col)) else None
 
     if macd_val is not None and signal_val is not None:
@@ -70,8 +79,12 @@ def compute_indicators(ticker: str) -> dict:
     bb_mid_col = next((c for c in df.columns if c.startswith("BBM_")), None)
     bb_pct_col = next((c for c in df.columns if c.startswith("BBP_")), None)
 
-    bb_upper = float(last[bb_upper_col]) if bb_upper_col and not pd.isna(last.get(bb_upper_col)) else None
-    bb_lower = float(last[bb_lower_col]) if bb_lower_col and not pd.isna(last.get(bb_lower_col)) else None
+    bb_upper = (
+        float(last[bb_upper_col]) if bb_upper_col and not pd.isna(last.get(bb_upper_col)) else None
+    )
+    bb_lower = (
+        float(last[bb_lower_col]) if bb_lower_col and not pd.isna(last.get(bb_lower_col)) else None
+    )
     bb_mid = float(last[bb_mid_col]) if bb_mid_col and not pd.isna(last.get(bb_mid_col)) else None
     bb_pct = float(last[bb_pct_col]) if bb_pct_col and not pd.isna(last.get(bb_pct_col)) else None
 
@@ -112,17 +125,43 @@ def compute_indicators(ticker: str) -> dict:
 
 def run_swing_analysis(ticker: str) -> dict:
     from services.market_data import fetch_news
+
     indicators = compute_indicators(ticker)
     if "error" in indicators:
         return indicators
 
     news = fetch_news(ticker)
     news_titles = " ".join(n["title"].lower() for n in news)
-    positive_words = ["surge", "beat", "record", "rally", "upgrade", "buy", "strong", "gain", "profit"]
-    negative_words = ["fall", "drop", "miss", "downgrade", "sell", "weak", "loss", "decline", "risk", "concern"]
+    positive_words = [
+        "surge",
+        "beat",
+        "record",
+        "rally",
+        "upgrade",
+        "buy",
+        "strong",
+        "gain",
+        "profit",
+    ]
+    negative_words = [
+        "fall",
+        "drop",
+        "miss",
+        "downgrade",
+        "sell",
+        "weak",
+        "loss",
+        "decline",
+        "risk",
+        "concern",
+    ]
     pos_score = sum(1 for w in positive_words if w in news_titles)
     neg_score = sum(1 for w in negative_words if w in news_titles)
-    news_sentiment = "positive" if pos_score > neg_score else ("negative" if neg_score > pos_score else "neutral")
+    news_sentiment = (
+        "positive"
+        if pos_score > neg_score
+        else ("negative" if neg_score > pos_score else "neutral")
+    )
 
     rsi = indicators.get("rsi_14")
     trend = indicators.get("trend")

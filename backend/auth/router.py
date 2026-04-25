@@ -1,9 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, status
-from database import get_connection
-from auth.models import RegisterRequest, LoginRequest, TokenResponse, VerificationPending, ResendRequest
+
 from auth import service
+from auth.models import (
+    LoginRequest,
+    RegisterRequest,
+    ResendRequest,
+    TokenResponse,
+    VerificationPending,
+)
+from database import get_connection
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,7 +32,9 @@ def register(body: RegisterRequest):
         conn.commit()
 
     token = service.generate_verification_token()
-    expires = (datetime.now(timezone.utc) + timedelta(hours=service.VERIFY_TOKEN_EXPIRE_HOURS)).isoformat()
+    expires = (
+        datetime.now(timezone.utc) + timedelta(hours=service.VERIFY_TOKEN_EXPIRE_HOURS)
+    ).isoformat()
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?,?,?)",
@@ -63,10 +72,17 @@ def verify_email(token: str):
         conn.execute("UPDATE email_verifications SET used=1 WHERE id=?", (row["id"],))
         conn.commit()
 
-        user = conn.execute("SELECT id, email, name FROM users WHERE id=?", (row["user_id"],)).fetchone()
+        user = conn.execute(
+            "SELECT id, email, name FROM users WHERE id=?", (row["user_id"],)
+        ).fetchone()
 
     jwt_token = service.create_jwt(user["id"], user["email"])
-    return TokenResponse(access_token=jwt_token, user_id=user["id"], name=user["name"], email=user["email"])
+    return TokenResponse(
+        access_token=jwt_token,
+        user_id=user["id"],
+        name=user["name"],
+        email=user["email"],
+    )
 
 
 @router.post("/resend-verification")
@@ -83,7 +99,9 @@ def resend_verification(body: ResendRequest):
         return {"message": "Account is already verified"}
 
     token = service.generate_verification_token()
-    expires = (datetime.now(timezone.utc) + timedelta(hours=service.VERIFY_TOKEN_EXPIRE_HOURS)).isoformat()
+    expires = (
+        datetime.now(timezone.utc) + timedelta(hours=service.VERIFY_TOKEN_EXPIRE_HOURS)
+    ).isoformat()
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?,?,?)",
@@ -110,4 +128,6 @@ def login(body: LoginRequest):
         raise HTTPException(403, "Please verify your email before logging in")
 
     jwt_token = service.create_jwt(row["id"], body.email)
-    return TokenResponse(access_token=jwt_token, user_id=row["id"], name=row["name"], email=body.email)
+    return TokenResponse(
+        access_token=jwt_token, user_id=row["id"], name=row["name"], email=body.email
+    )

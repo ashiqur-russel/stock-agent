@@ -2,12 +2,11 @@ import asyncio
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
-from fastapi import HTTPException
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from auth.service import decode_jwt
-from services.portfolio_service import get_portfolio_for_user
 from services.market_data import fetch_quote
+from services.portfolio_service import get_portfolio_for_user
 from services.technical import run_swing_analysis
 
 router = APIRouter()
@@ -16,9 +15,9 @@ router = APIRouter()
 # rate-limited and not a true tick feed, so we keep a small but visible cadence
 # whenever a market is "live" (US stock hours OR any subscribed crypto ticker)
 # and back off significantly when literally everything is closed.
-PRICES_TICK_INTERVAL_OPEN = 3      # seconds between polls when something is live
-PRICES_TICK_INTERVAL_CLOSED = 30   # seconds between polls when only closed stocks are subscribed
-PRICES_MAX_TICKERS = 50            # safety cap per connection
+PRICES_TICK_INTERVAL_OPEN = 3  # seconds between polls when something is live
+PRICES_TICK_INTERVAL_CLOSED = 30  # seconds between polls when only closed stocks are subscribed
+PRICES_MAX_TICKERS = 50  # safety cap per connection
 
 # Heuristic for crypto tickers — yfinance crypto symbols are like "BTC-USD".
 _CRYPTO_SUFFIXES = ("-USD", "-EUR", "-USDT", "-USDC", "-BTC")
@@ -30,6 +29,7 @@ def _is_crypto_ticker(ticker: str) -> bool:
 
 def _has_always_open_ticker(tickers) -> bool:
     return any(_is_crypto_ticker(t) for t in tickers)
+
 
 PRICE_MOVE_THRESHOLD = 2.0  # % intraday move to trigger alert
 SIGNAL_CHECK_INTERVAL = 600  # recompute full analysis every 10 min
@@ -46,8 +46,8 @@ SIGNAL_CHECK_INTERVAL = 600  # recompute full analysis every 10 min
 # tick stream — see the "Real-Time Data" section in /docs for the options
 # (Finnhub / Polygon / Tradier / Binance for crypto). When you swap the data
 # source, drop these intervals to ~1s or use the WS tick directly.
-MARKET_HOURS_INTERVAL = 30   # seconds between checks during US market hours
-OFF_HOURS_INTERVAL = 300     # seconds between checks outside market hours
+MARKET_HOURS_INTERVAL = 30  # seconds between checks during US market hours
+OFF_HOURS_INTERVAL = 300  # seconds between checks outside market hours
 
 
 def is_market_open() -> bool:
@@ -65,7 +65,12 @@ def _is_closed_socket_error(exc: BaseException) -> bool:
         return True
     # Starlette/uvicorn raise these once the peer has disappeared.
     name = type(exc).__name__
-    if name in ("ClientDisconnected", "ConnectionClosed", "ConnectionClosedOK", "ConnectionClosedError"):
+    if name in (
+        "ClientDisconnected",
+        "ConnectionClosed",
+        "ConnectionClosedOK",
+        "ConnectionClosedError",
+    ):
         return True
     msg = str(exc)
     return (
@@ -123,11 +128,14 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
     }
     last_signal_check = asyncio.get_event_loop().time()
 
-    if not await _safe_send(websocket, {
-        "type": "connected",
-        "tickers": tickers,
-        "market_open": is_market_open(),
-    }):
+    if not await _safe_send(
+        websocket,
+        {
+            "type": "connected",
+            "tickers": tickers,
+            "market_open": is_market_open(),
+        },
+    ):
         return
 
     try:
@@ -169,14 +177,17 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 ticker_live = market_open or _is_crypto_ticker(ticker)
 
                 # Price update (always sent — the UI uses these even off-hours)
-                if not await _safe_send(websocket, {
-                    "type": "price_update",
-                    "ticker": ticker,
-                    "price": price,
-                    "change_pct": round(pct, 2),
-                    "day_change_pct": quote.get("day_change_pct", 0),
-                    "market_open": ticker_live,
-                }):
+                if not await _safe_send(
+                    websocket,
+                    {
+                        "type": "price_update",
+                        "ticker": ticker,
+                        "price": price,
+                        "change_pct": round(pct, 2),
+                        "day_change_pct": quote.get("day_change_pct", 0),
+                        "market_open": ticker_live,
+                    },
+                ):
                     return
 
                 if not ticker_live:
@@ -185,35 +196,44 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 # Intraday move alert
                 if abs(pct) >= PRICE_MOVE_THRESHOLD:
                     direction = "SHARP RALLY" if pct > 0 else "SHARP DROP"
-                    if not await _safe_send(websocket, {
-                        "type": "price_alert",
-                        "ticker": ticker,
-                        "title": f"{direction}: {ticker}",
-                        "message": f"Price moved {pct:+.2f}% to €{price:.4f} in last {interval}s",
-                        "severity": "high",
-                    }):
+                    if not await _safe_send(
+                        websocket,
+                        {
+                            "type": "price_alert",
+                            "ticker": ticker,
+                            "title": f"{direction}: {ticker}",
+                            "message": f"Price moved {pct:+.2f}% to €{price:.4f} in last {interval}s",
+                            "severity": "high",
+                        },
+                    ):
                         return
 
                 # Support broken
                 if support and prev > support and price <= support:
-                    if not await _safe_send(websocket, {
-                        "type": "price_alert",
-                        "ticker": ticker,
-                        "title": f"SUPPORT BROKEN: {ticker}",
-                        "message": f"Price €{price:.4f} broke below key support €{support:.4f} — consider stop-loss",
-                        "severity": "critical",
-                    }):
+                    if not await _safe_send(
+                        websocket,
+                        {
+                            "type": "price_alert",
+                            "ticker": ticker,
+                            "title": f"SUPPORT BROKEN: {ticker}",
+                            "message": f"Price €{price:.4f} broke below key support €{support:.4f} — consider stop-loss",
+                            "severity": "critical",
+                        },
+                    ):
                         return
 
                 # Resistance broken
                 if resistance and prev < resistance and price >= resistance:
-                    if not await _safe_send(websocket, {
-                        "type": "price_alert",
-                        "ticker": ticker,
-                        "title": f"BREAKOUT: {ticker}",
-                        "message": f"Price €{price:.4f} broke above resistance €{resistance:.4f} — potential breakout",
-                        "severity": "high",
-                    }):
+                    if not await _safe_send(
+                        websocket,
+                        {
+                            "type": "price_alert",
+                            "ticker": ticker,
+                            "title": f"BREAKOUT: {ticker}",
+                            "message": f"Price €{price:.4f} broke above resistance €{resistance:.4f} — potential breakout",
+                            "severity": "high",
+                        },
+                    ):
                         return
 
             # Full signal recheck every 10 min
@@ -230,15 +250,18 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                     new_signal = new_a.get("swing_setup_quality")
                     analysis_cache[ticker] = new_a
                     if old_signal and new_signal and old_signal != new_signal:
-                        if not await _safe_send(websocket, {
-                            "type": "signal_change",
-                            "ticker": ticker,
-                            "title": f"Signal Changed: {ticker}",
-                            "old_signal": old_signal,
-                            "new_signal": new_signal,
-                            "message": f"{old_signal.upper()} → {new_signal.upper()}",
-                            "severity": "high",
-                        }):
+                        if not await _safe_send(
+                            websocket,
+                            {
+                                "type": "signal_change",
+                                "ticker": ticker,
+                                "title": f"Signal Changed: {ticker}",
+                                "old_signal": old_signal,
+                                "new_signal": new_signal,
+                                "message": f"{old_signal.upper()} → {new_signal.upper()}",
+                                "severity": "high",
+                            },
+                        ):
                             return
 
             # Sleep AFTER the poll so the first scan runs immediately on connect.
@@ -273,19 +296,23 @@ async def _broadcast_prices(websocket: WebSocket, tickers: list[str], market_ope
     for ticker, quote in zip(tickers, quotes):
         if isinstance(quote, Exception):
             continue
-        payload.append({
-            "ticker": ticker,
-            "current_price": quote.get("current_price", 0),
-            "current_price_usd": quote.get("current_price_usd", 0),
-            "day_change_pct": quote.get("day_change_pct", 0),
-            "eur_rate": quote.get("eur_rate", 0.91),
-        })
-    await websocket.send_json({
-        "type": "prices",
-        "market_open": market_open,
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "quotes": payload,
-    })
+        payload.append(
+            {
+                "ticker": ticker,
+                "current_price": quote.get("current_price", 0),
+                "current_price_usd": quote.get("current_price_usd", 0),
+                "day_change_pct": quote.get("day_change_pct", 0),
+                "eur_rate": quote.get("eur_rate", 0.91),
+            }
+        )
+    await websocket.send_json(
+        {
+            "type": "prices",
+            "market_open": market_open,
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "quotes": payload,
+        }
+    )
 
 
 @router.websocket("/api/v1/ws/prices")
@@ -343,11 +370,13 @@ async def ws_prices(websocket: WebSocket, token: str = Query(...)):
     reader_task = asyncio.create_task(reader())
 
     try:
-        await websocket.send_json({
-            "type": "connected",
-            "market_open": is_market_open(),
-            "tick_interval": PRICES_TICK_INTERVAL_OPEN,
-        })
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "market_open": is_market_open(),
+                "tick_interval": PRICES_TICK_INTERVAL_OPEN,
+            }
+        )
 
         while not closed.is_set():
             tickers = sorted(subscribed)

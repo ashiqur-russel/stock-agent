@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from middleware.auth import get_current_user
+
 from database import get_connection
+from middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1", tags=["alerts"])
 
@@ -88,7 +89,10 @@ def get_notification_settings(user=Depends(get_current_user)):
             (user_id,),
         ).fetchone()
     if row:
-        return {"notify_email": row["notify_email"], "email_alerts": bool(row["email_alerts"])}
+        return {
+            "notify_email": row["notify_email"],
+            "email_alerts": bool(row["email_alerts"]),
+        }
     return {"notify_email": None, "email_alerts": True}
 
 

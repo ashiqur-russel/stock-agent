@@ -1,16 +1,16 @@
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import config
-from database import init_db
 from auth.router import router as auth_router
-from routers.portfolio import router as portfolio_router
-from routers.market import router as market_router
-from routers.indicators import router as indicators_router
-from routers.chat import router as chat_router
+from database import init_db
 from routers.alerts import router as alerts_router
+from routers.chat import router as chat_router
+from routers.indicators import router as indicators_router
+from routers.market import router as market_router
 from routers.paper import router as paper_router
+from routers.portfolio import router as portfolio_router
 from routers.ws import router as ws_router
 
 app = FastAPI(title="Stock Agent API", version="1.0.0")
@@ -39,6 +39,7 @@ _scheduler = AsyncIOScheduler()
 def startup():
     init_db()
     from services.alert_service import check_all_portfolios
+
     _scheduler.add_job(
         check_all_portfolios,
         "interval",

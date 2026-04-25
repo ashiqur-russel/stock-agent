@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from middleware.auth import get_current_user
 from services.technical import compute_indicators, run_swing_analysis
 

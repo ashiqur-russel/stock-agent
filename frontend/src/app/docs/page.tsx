@@ -365,7 +365,7 @@ ALERT_INTERVAL_MINUTES=30`}</Code>
             <H3>frontend/.env.local</H3>
             <Code block>{`NEXT_PUBLIC_API_URL=http://localhost:8000`}</Code>
 
-            <Note>In production, point <Code>NEXT_PUBLIC_API_URL</Code> to your backend's public URL (e.g. <Code>https://api.yourdomain.com</Code>).</Note>
+            <Note>In production, point <Code>NEXT_PUBLIC_API_URL</Code> to your backend&apos;s public URL (e.g. <Code>https://api.yourdomain.com</Code>).</Note>
           </Section>
 
           {/* ── Running ── */}
@@ -611,7 +611,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
             <P>Go to <Code>/register</Code> and fill in your name, email and password.</P>
 
             <H3>With SMTP configured</H3>
-            <P>After submitting, you receive a verification email. Click the link to activate your account, then log in normally. The verification link expires after <strong style={{ color: '#f1f5f9' }}>24 hours</strong>. Use the "Resend" button if it expires.</P>
+            <P>After submitting, you receive a verification email. Click the link to activate your account, then log in normally. The verification link expires after <strong style={{ color: '#f1f5f9' }}>24 hours</strong>. Use the Resend button if it expires.</P>
 
             <H3>Without SMTP (local dev)</H3>
             <P>If <Code>SMTP_USER</Code> and <Code>SMTP_PASSWORD</Code> are empty, the account is auto-verified and you get a JWT immediately.</P>
@@ -680,7 +680,7 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
             <H3>Streaming</H3>
             <P>Responses stream via <strong style={{ color: '#f1f5f9' }}>Server-Sent Events (SSE)</strong>. Text tokens appear in real time. Tool calls are shown as pill badges. The stream auto-scrolls to the latest message.</P>
             <H3>Quick actions</H3>
-            <P>When you have holdings, the sidebar shows one button per ticker (e.g. "📈 AAPL"). Clicking pre-fills the input with <em>"Analyze AAPL for a swing trade"</em>.</P>
+            <P>When you have holdings, the sidebar shows one button per ticker (e.g. &quot;📈 AAPL&quot;). Clicking pre-fills the input with <em>&quot;Analyze AAPL for a swing trade&quot;</em>.</P>
           </Section>
 
           {/* ── Guide: Alerts ── */}

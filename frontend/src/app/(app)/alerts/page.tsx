@@ -24,7 +24,7 @@ interface NotifSettings {
   email_alerts: boolean
 }
 
-const VALID_SIGNALS: ReadonlySet<SwingSignal> = new Set([
+const VALID_SIGNALS: ReadonlySet<SwingSignal> = new Set<SwingSignal>([
   'strong_buy',
   'potential_buy',
   'hold',

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from middleware.auth import get_current_user
+
 from database import get_connection
+from middleware.auth import get_current_user
 from services.market_data import fetch_quote, get_usd_to_eur_rate
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper"])
@@ -91,20 +92,22 @@ def get_account(
             2,
         )
         portfolio_value_eur += value_eur
-        holdings.append({
-            "ticker": ticker,
-            "shares": round(shares, 6),
-            "avg_cost": round(avg_cost_eur, 4),
-            "current_price": price_eur,
-            "current_price_usd": price_usd,
-            "value": value_eur,
-            "value_usd": value_usd,
-            "pnl": pnl_eur,
-            "pnl_usd": pnl_usd,
-            "pnl_pct": pnl_pct,
-            "day_change_pct": quote.get("day_change_pct", 0),
-            "realized_pnl": round(h.get("realized_pnl", 0), 2),
-        })
+        holdings.append(
+            {
+                "ticker": ticker,
+                "shares": round(shares, 6),
+                "avg_cost": round(avg_cost_eur, 4),
+                "current_price": price_eur,
+                "current_price_usd": price_usd,
+                "value": value_eur,
+                "value_usd": value_usd,
+                "pnl": pnl_eur,
+                "pnl_usd": pnl_usd,
+                "pnl_pct": pnl_pct,
+                "day_change_pct": quote.get("day_change_pct", 0),
+                "realized_pnl": round(h.get("realized_pnl", 0), 2),
+            }
+        )
 
     cash_eur = round(balance_eur, 2)
     cash_usd = round(cash_eur * usd_per_eur, 2)
@@ -149,19 +152,27 @@ def paper_trade(body: PaperTradeBody, user=Depends(get_current_user)):
 
         if body.type == "BUY":
             if cost > balance:
-                raise HTTPException(400, f"Insufficient funds. Need €{cost:.2f}, have €{balance:.2f}")
+                raise HTTPException(
+                    400, f"Insufficient funds. Need €{cost:.2f}, have €{balance:.2f}"
+                )
             new_balance = balance - cost
         else:
             held = holdings.get(ticker, {}).get("shares", 0)
             if body.shares > held:
-                raise HTTPException(400, f"Not enough shares. Held: {held:.4f}, trying to sell: {body.shares}")
+                raise HTTPException(
+                    400,
+                    f"Not enough shares. Held: {held:.4f}, trying to sell: {body.shares}",
+                )
             new_balance = balance + cost
 
         conn.execute(
             "INSERT INTO paper_transactions (user_id, ticker, type, shares, price_eur, notes) VALUES (?,?,?,?,?,?)",
             (user_id, ticker, body.type, body.shares, price_eur, body.notes),
         )
-        conn.execute("UPDATE paper_accounts SET balance_eur=? WHERE user_id=?", (new_balance, user_id))
+        conn.execute(
+            "UPDATE paper_accounts SET balance_eur=? WHERE user_id=?",
+            (new_balance, user_id),
+        )
         conn.commit()
 
     return {
@@ -201,6 +212,7 @@ def reset_account(body: ResetBody | None = None, user=Depends(get_current_user))
 # ---------------------------------------------------------------------------
 # Watchlist persistence
 # ---------------------------------------------------------------------------
+
 
 class WatchlistBody(BaseModel):
     ticker: str

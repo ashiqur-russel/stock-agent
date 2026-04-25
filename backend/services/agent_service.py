@@ -1,8 +1,10 @@
 import json
+
 from groq import Groq
+
 import config
+from services import market_data, portfolio_service, technical
 from tools.definitions import TOOL_DEFINITIONS
-from services import market_data, technical, portfolio_service
 
 _client = Groq(api_key=config.GROQ_API_KEY)
 MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -236,6 +238,7 @@ async def stream_agent_response(messages: list[dict], user_id: int, currency: st
         for tc in tool_calls:
             yield f"data: {json.dumps({'type': 'tool_call', 'name': tc.function.name})}\n\n"
 
+        # Add assistant message with tool calls to conversation
         conversation.append(
             {
                 "role": "assistant",
@@ -244,7 +247,10 @@ async def stream_agent_response(messages: list[dict], user_id: int, currency: st
                     {
                         "id": tc.id,
                         "type": "function",
-                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
                     }
                     for tc in tool_calls
                 ],
