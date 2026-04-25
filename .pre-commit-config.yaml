@@ -7,8 +7,11 @@
 #
 # Branch names (enforced on commit): main/master/develop, or
 #   feature/*, fix/*, hotfix/*, chore/*, docs/*, release/*
-# Skip once:  SKIP=sa-commit-msg,sa-pre-push-commits,branch-name git commit
-#             git commit / git push --no-verify  (bypasses all hooks; use sparingly)
+# pre-push: also blocks `git push` to remote main/master (use topic branch + PR).
+# Also runs [SA-n] on pushed commits. Bypass push hook: `git push --no-verify` or
+#   ALLOW_PUSH_TO_MAIN=1 git push  (emergency only)
+# Skip on commit:  SKIP=sa-commit-msg,branch-name git commit
+# Skip a hook:      SKIP=sa-pre-push-commits,block-push-to-main git push
 
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
 default_language_version:
@@ -48,6 +51,14 @@ repos:
         entry: python3 scripts/sa_commit_message.py
         language: system
         stages: [commit-msg]
+
+      - id: block-push-to-main
+        name: block direct push to main/master
+        entry: python3 scripts/pre_push_block_main.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
 
       - id: sa-pre-push-commits
         name: "[SA-n] on all commits in push"
