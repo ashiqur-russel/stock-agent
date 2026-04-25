@@ -5,6 +5,7 @@ import { useApp } from '@/contexts/AppContext'
 import { AmountLocale } from '@/components/ui/Amount'
 import MarketStatus from '@/components/ui/MarketStatus'
 import TradeModal from '@/components/paper/TradeModal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { LivePrice, LiveDayChange } from '@/components/ui/LivePrice'
 import { paper as paperApi } from '@/lib/api'
 
@@ -46,8 +47,9 @@ function PaperContent() {
   const [account, setAccount] = useState<Account | null>(null)
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [newTicker, setNewTicker] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [modal, setModal] = useState<{ ticker: string; mode: 'BUY' | 'SELL' } | null>(null)
+  const [resetOpen, setResetOpen] = useState(false)
 
   const loadAccount = useCallback(async () => {
     try {
@@ -100,11 +102,10 @@ function PaperContent() {
     }
   }
 
-  const resetAccount = async () => {
-    const resetAmount = `${currencySymbol}1,000,000`
-    if (!confirm(`${t('pt_reset_confirm')} ${resetAmount} ${t('pt_reset_confirm2')}`)) return
+  const performReset = async () => {
     await paperApi.reset(currency)
     await loadAccount()
+    setResetOpen(false)
   }
 
   const getHolding = (ticker: string) => account?.holdings.find((h) => h.ticker === ticker)
@@ -119,7 +120,7 @@ function PaperContent() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{t('pt_title')}</h1>
-        <button onClick={resetAccount} style={{ padding: '6px 14px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontSize: 13 }}>
+        <button onClick={() => setResetOpen(true)} style={{ padding: '6px 14px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontSize: 13 }}>
           {t('pt_reset')}
         </button>
       </div>
@@ -245,6 +246,25 @@ function PaperContent() {
           onDone={() => { setModal(null); loadAccount() }}
         />
       )}
+
+      <ConfirmDialog
+        open={resetOpen}
+        title={t('pt_reset_title')}
+        message={
+          <>
+            {t('pt_reset_body')}{' '}
+            <strong style={{ color: '#f1f5f9' }}>
+              {currencySymbol}1,000,000
+            </strong>
+            . {t('pt_reset_body_tail')}
+          </>
+        }
+        confirmLabel={t('pt_reset_yes')}
+        cancelLabel={t('pt_cancel')}
+        tone='danger'
+        onConfirm={performReset}
+        onClose={() => setResetOpen(false)}
+      />
     </div>
   )
 }
