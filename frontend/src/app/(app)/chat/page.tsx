@@ -353,6 +353,20 @@ function ChatContent() {
           >
             {t('chat_disclaimer')}
           </p>
+          <p
+            style={{
+              fontSize: 11,
+              color: '#64748b',
+              marginTop: 6,
+              textAlign: 'center',
+              lineHeight: 1.55,
+              maxWidth: 560,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}
+          >
+            {t('chat_sources')}
+          </p>
         </div>
       </div>
     </div>
