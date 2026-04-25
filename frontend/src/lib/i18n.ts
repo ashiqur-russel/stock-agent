@@ -171,6 +171,8 @@ export const translations = {
 
     // Chat
     chat_title: 'AI Trading Advisor',
+    chat_role_you: 'You',
+    chat_role_advisor: 'Advisor',
     chat_placeholder: 'Ask about any stock…',
     chat_send: 'Send',
     chat_clear: 'Clear',
@@ -399,6 +401,8 @@ export const translations = {
 
     // Chat
     chat_title: 'KI-Handelsberater',
+    chat_role_you: 'Sie',
+    chat_role_advisor: 'Berater',
     chat_placeholder: 'Fragen Sie zu einem beliebigen Wertpapier…',
     chat_send: 'Senden',
     chat_clear: 'Löschen',
