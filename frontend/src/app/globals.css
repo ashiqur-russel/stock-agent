@@ -3,25 +3,29 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #060e20;
+  --surface: #0d1a33;
+  --surface-2: #112040;
+  --border: #1e3050;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  font-size: 14px;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.prose p { margin-bottom: 0.5rem; line-height: 1.6; }
+.prose ul { margin-left: 1.25rem; margin-bottom: 0.5rem; }
+.prose li { margin-bottom: 0.25rem; }
+.prose strong { color: white; }
+.prose code { background: var(--surface-2); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
