@@ -11,3 +11,7 @@ node_modules/
 *.egg-info/
 dist/
 build/
+
+# OS
+.DS_Store
+**/.DS_Store

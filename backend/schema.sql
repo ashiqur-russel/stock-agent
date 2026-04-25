@@ -71,3 +71,14 @@ CREATE TABLE IF NOT EXISTS paper_transactions (
     executed_at TEXT DEFAULT (datetime('now')),
     notes       TEXT
 );
+
+-- Persisted paper-trading watchlist per user
+CREATE TABLE IF NOT EXISTS paper_watchlist (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ticker      TEXT NOT NULL,
+    created_at  TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, ticker)
+);
+
+CREATE INDEX IF NOT EXISTS idx_paper_watchlist_user ON paper_watchlist(user_id);

@@ -1,20 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from middleware.auth import get_current_user
 from database import get_connection
-from services.market_data import fetch_quote
+from services.market_data import fetch_quote, get_usd_to_eur_rate
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper"])
 
-STARTING_BALANCE = 100_000.0
+# Starting balance for a new paper account.
+#
+# Stored internally in EUR. When the user creates their account in USD-display
+# mode, we seed the EUR balance such that the *displayed* value is exactly
+# $1,000,000 — i.e. EUR_balance × (1 / eur_rate) ≈ 1,000,000. EUR users get
+# €1,000,000 flat.
+STARTING_BALANCE_DISPLAY = 1_000_000.0
 
 
-def _ensure_account(user_id: int, conn) -> float:
-    row = conn.execute("SELECT balance_eur FROM paper_accounts WHERE user_id=?", (user_id,)).fetchone()
+def _starting_balance_eur(currency: str) -> float:
+    """EUR amount to seed so the user's currency view shows exactly 1M."""
+    if (currency or "EUR").upper() == "USD":
+        rate = get_usd_to_eur_rate() or 0.91  # USD → EUR
+        return round(STARTING_BALANCE_DISPLAY * rate, 2)
+    return STARTING_BALANCE_DISPLAY
+
+
+def _ensure_account(user_id: int, conn, currency: str = "EUR") -> float:
+    row = conn.execute(
+        "SELECT balance_eur FROM paper_accounts WHERE user_id=?", (user_id,)
+    ).fetchone()
     if not row:
-        conn.execute("INSERT INTO paper_accounts (user_id, balance_eur) VALUES (?,?)", (user_id, STARTING_BALANCE))
+        starting = _starting_balance_eur(currency)
+        conn.execute(
+            "INSERT INTO paper_accounts (user_id, balance_eur) VALUES (?,?)",
+            (user_id, starting),
+        )
         conn.commit()
-        return STARTING_BALANCE
+        return starting
     return row["balance_eur"]
 
 
@@ -27,13 +47,14 @@ def _calc_holdings(user_id: int, conn) -> dict:
     for tx in rows:
         t = tx["ticker"]
         if t not in holdings:
-            holdings[t] = {"shares": 0.0, "avg_cost": 0.0}
+            holdings[t] = {"shares": 0.0, "avg_cost": 0.0, "realized_pnl": 0.0}
         h = holdings[t]
         if tx["type"] == "BUY":
             total = h["shares"] * h["avg_cost"] + tx["shares"] * tx["price_eur"]
             h["shares"] += tx["shares"]
             h["avg_cost"] = total / h["shares"]
         else:
+            h["realized_pnl"] += (tx["price_eur"] - h["avg_cost"]) * tx["shares"]
             h["shares"] -= tx["shares"]
             if h["shares"] < 0:
                 h["shares"] = 0.0
@@ -41,43 +62,61 @@ def _calc_holdings(user_id: int, conn) -> dict:
 
 
 @router.get("/account")
-def get_account(user=Depends(get_current_user)):
+def get_account(
+    user=Depends(get_current_user),
+    currency: str = Query("EUR", regex="^(USD|EUR)$"),
+):
     user_id = user["user_id"]
     with get_connection() as conn:
-        balance = _ensure_account(user_id, conn)
+        balance_eur = _ensure_account(user_id, conn, currency=currency)
         holdings_raw = _calc_holdings(user_id, conn)
-        rows = conn.execute(
-            "SELECT * FROM paper_transactions WHERE user_id=? ORDER BY executed_at DESC",
-            (user_id,),
-        ).fetchall()
+
+    eur_rate = get_usd_to_eur_rate() or 0.91  # USD → EUR
+    usd_per_eur = (1 / eur_rate) if eur_rate else 1.0
 
     holdings = []
-    total_value = balance
+    portfolio_value_eur = 0.0
     for ticker, h in holdings_raw.items():
         quote = fetch_quote(ticker)
-        price = quote["current_price"]
-        market_val = round(h["shares"] * price, 2)
-        unrealized = round((price - h["avg_cost"]) * h["shares"], 2)
-        unrealized_pct = round(unrealized / (h["avg_cost"] * h["shares"]) * 100, 2) if h["avg_cost"] and h["shares"] else 0
-        total_value += market_val
+        price_eur = quote.get("current_price", 0.0) or 0.0
+        price_usd = quote.get("current_price_usd", 0.0) or 0.0
+        shares = h["shares"]
+        avg_cost_eur = h["avg_cost"]
+        value_eur = round(shares * price_eur, 2)
+        value_usd = round(shares * price_usd, 2)
+        pnl_eur = round((price_eur - avg_cost_eur) * shares, 2)
+        pnl_usd = round(pnl_eur * usd_per_eur, 2)
+        pnl_pct = round(
+            (pnl_eur / (avg_cost_eur * shares) * 100) if avg_cost_eur and shares else 0,
+            2,
+        )
+        portfolio_value_eur += value_eur
         holdings.append({
             "ticker": ticker,
-            "shares": round(h["shares"], 6),
-            "avg_cost": round(h["avg_cost"], 4),
-            "current_price": price,
-            "market_value": market_val,
-            "unrealized_pnl": unrealized,
-            "unrealized_pnl_pct": unrealized_pct,
-            "day_change_pct": quote["day_change_pct"],
+            "shares": round(shares, 6),
+            "avg_cost": round(avg_cost_eur, 4),
+            "current_price": price_eur,
+            "current_price_usd": price_usd,
+            "value": value_eur,
+            "value_usd": value_usd,
+            "pnl": pnl_eur,
+            "pnl_usd": pnl_usd,
+            "pnl_pct": pnl_pct,
+            "day_change_pct": quote.get("day_change_pct", 0),
+            "realized_pnl": round(h.get("realized_pnl", 0), 2),
         })
 
+    cash_eur = round(balance_eur, 2)
+    cash_usd = round(cash_eur * usd_per_eur, 2)
+    portfolio_value_usd = round(portfolio_value_eur * usd_per_eur, 2)
+
     return {
-        "balance_eur": round(balance, 2),
-        "total_value": round(total_value, 2),
-        "pnl": round(total_value - STARTING_BALANCE, 2),
-        "pnl_pct": round((total_value - STARTING_BALANCE) / STARTING_BALANCE * 100, 2),
+        "cash": cash_eur,
+        "cash_usd": cash_usd,
+        "portfolio_value": round(portfolio_value_eur, 2),
+        "portfolio_value_usd": portfolio_value_usd,
         "holdings": holdings,
-        "transactions": [dict(r) for r in rows],
+        "eur_rate": eur_rate,
     }
 
 
@@ -136,14 +175,75 @@ def paper_trade(body: PaperTradeBody, user=Depends(get_current_user)):
     }
 
 
+class ResetBody(BaseModel):
+    currency: str = "EUR"  # USD or EUR — picks how much to seed
+
+
 @router.post("/reset")
-def reset_account(user=Depends(get_current_user)):
+def reset_account(body: ResetBody | None = None, user=Depends(get_current_user)):
+    """Wipe paper transactions and reset balance to the 1M starter (in the
+    user's currently selected currency, so the displayed value is exactly 1M)."""
     user_id = user["user_id"]
+    currency = (body.currency if body else "EUR").upper()
+    if currency not in ("USD", "EUR"):
+        currency = "EUR"
+    starting = _starting_balance_eur(currency)
     with get_connection() as conn:
         conn.execute("DELETE FROM paper_transactions WHERE user_id=?", (user_id,))
         conn.execute(
             "INSERT INTO paper_accounts (user_id, balance_eur) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET balance_eur=?",
-            (user_id, STARTING_BALANCE, STARTING_BALANCE),
+            (user_id, starting, starting),
         )
         conn.commit()
-    return {"ok": True, "balance_eur": STARTING_BALANCE}
+    return {"ok": True, "balance_eur": starting, "currency": currency}
+
+
+# ---------------------------------------------------------------------------
+# Watchlist persistence
+# ---------------------------------------------------------------------------
+
+class WatchlistBody(BaseModel):
+    ticker: str
+
+
+def _normalize_ticker(raw: str) -> str:
+    return raw.strip().upper()
+
+
+@router.get("/watchlist")
+def list_watchlist(user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT ticker FROM paper_watchlist WHERE user_id=? ORDER BY created_at ASC",
+            (user_id,),
+        ).fetchall()
+    return {"tickers": [r["ticker"] for r in rows]}
+
+
+@router.post("/watchlist")
+def add_to_watchlist(body: WatchlistBody, user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    ticker = _normalize_ticker(body.ticker)
+    if not ticker:
+        raise HTTPException(400, "ticker is required")
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO paper_watchlist (user_id, ticker) VALUES (?,?)",
+            (user_id, ticker),
+        )
+        conn.commit()
+    return {"ok": True, "ticker": ticker}
+
+
+@router.delete("/watchlist/{ticker}")
+def remove_from_watchlist(ticker: str, user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    ticker = _normalize_ticker(ticker)
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM paper_watchlist WHERE user_id=? AND ticker=?",
+            (user_id, ticker),
+        )
+        conn.commit()
+    return {"ok": True, "ticker": ticker}
