@@ -32,14 +32,17 @@ def usd_to_eur(usd: float) -> float:
 
 
 def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[dict]:
+    import pandas as pd
     df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
     if df.empty:
         return []
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
     eur_rate = get_usd_to_eur_rate()
     df = df.reset_index()
     records = []
     for _, row in df.iterrows():
-        date_val = row["Date"] if "Date" in row else row["Datetime"]
+        date_val = row["Date"] if "Date" in row.index else row.get("Datetime")
         records.append({
             "time": date_val.strftime("%Y-%m-%d") if hasattr(date_val, "strftime") else str(date_val)[:10],
             "open": round(float(row["Open"]) * eur_rate, 4),
