@@ -19,26 +19,27 @@ def register(body: RegisterRequest):
         password_hash = service.hash_password(body.password)
         cursor = conn.execute(
             "INSERT INTO users (email, name, password_hash, is_verified) VALUES (?,?,?,?)",
-            (body.email, body.name, password_hash, 0 if SMTP_CONFIGURED else 1),
+            (body.email, body.name, password_hash, 0),
         )
         user_id = cursor.lastrowid
         conn.commit()
 
-    if SMTP_CONFIGURED:
-        token = service.generate_verification_token()
-        expires = (datetime.now(timezone.utc) + timedelta(hours=service.VERIFY_TOKEN_EXPIRE_HOURS)).isoformat()
-        with get_connection() as conn:
-            conn.execute(
-                "INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?,?,?)",
-                (user_id, token, expires),
-            )
-            conn.commit()
-        service.send_verification_email(body.email, body.name, token)
-        return VerificationPending(email=body.email, message="Check your email to verify your account")
+    token = service.generate_verification_token()
+    expires = (datetime.now(timezone.utc) + timedelta(hours=service.VERIFY_TOKEN_EXPIRE_HOURS)).isoformat()
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?,?,?)",
+            (user_id, token, expires),
+        )
+        conn.commit()
 
-    # SMTP not configured — auto-verify for local dev
-    jwt_token = service.create_jwt(user_id, body.email)
-    return TokenResponse(access_token=jwt_token, user_id=user_id, name=body.name, email=body.email)
+    if SMTP_CONFIGURED:
+        service.send_verification_email(body.email, body.name, token)
+    else:
+        verify_url = f"{service.FRONTEND_URL}/verify?token={token}"
+        print(f"[auth] SMTP not configured — visit this link to verify: {verify_url}")
+
+    return VerificationPending(email=body.email, message="Check your email to verify your account")
 
 
 @router.get("/verify")

@@ -11,7 +11,7 @@ interface Props {
 }
 
 interface OHLCVBar {
-  date: string
+  time: string
   open: number
   high: number
   low: number
@@ -56,7 +56,7 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
         const formatted = data
           .filter((bar) => bar.open && bar.high && bar.low && bar.close)
           .map((bar) => ({
-            time: bar.date as unknown as import('lightweight-charts').Time,
+            time: bar.time as unknown as import('lightweight-charts').Time,
             open: bar.open,
             high: bar.high,
             low: bar.low,

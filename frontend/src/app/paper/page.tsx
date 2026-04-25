@@ -91,12 +91,20 @@ function PaperContent() {
     return () => clearInterval(interval)
   }, [watchlist.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const normalizeTicker = (input: string): string => {
+    const CRYPTO = new Set(['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LTC', 'LINK', 'UNI', 'ATOM', 'XLM', 'TRX', 'ETC', 'FIL', 'HBAR', 'ICP', 'APT', 'ARB', 'OP', 'NEAR', 'ALGO', 'VET', 'SAND', 'MANA', 'AXS', 'SHIB', 'PEPE'])
+    if (CRYPTO.has(input) && !input.includes('-')) return `${input}-USD`
+    return input
+  }
+
   const addToWatchlist = () => {
     const raw = newTicker.trim().toUpperCase()
-    if (!raw || watchlist.some((w) => w.ticker === raw)) { setNewTicker(''); return }
-    setWatchlist((prev) => [...prev, { ticker: raw, quote: null, loading: true }])
+    if (!raw) { setNewTicker(''); return }
+    const ticker = normalizeTicker(raw)
+    if (watchlist.some((w) => w.ticker === ticker)) { setNewTicker(''); return }
+    setWatchlist((prev) => [...prev, { ticker, quote: null, loading: true }])
     setNewTicker('')
-    fetchQuote(raw)
+    fetchQuote(ticker)
   }
 
   const removeFromWatchlist = (ticker: string) => {
