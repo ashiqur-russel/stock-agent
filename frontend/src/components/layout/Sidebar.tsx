@@ -19,7 +19,7 @@ const links = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { t, lang, setLang, currency, setCurrency } = useApp()
+  const { t, lang, setLang, currency, setCurrency, marketRegion, setMarketRegion } = useApp()
   const { logout } = useAuth()
   const [unread, setUnread] = useState(0)
 
@@ -111,6 +111,13 @@ export default function Sidebar() {
           value={currency}
           onChange={(v) => setCurrency(v as 'EUR' | 'USD')}
           activeColor='#22c55e'
+        />
+        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{t('pt_hours_label')}</div>
+        <Toggle
+          options={['DE', 'US']}
+          value={marketRegion}
+          onChange={(v) => setMarketRegion(v as 'DE' | 'US')}
+          activeColor='#0ea5e9'
         />
         <button
           onClick={logout}

@@ -39,6 +39,9 @@ export const translations = {
     db_add_first: 'Add your first transaction to get started.',
     db_refresh: 'Refresh',
     db_go_transactions: 'Add Transaction',
+    // Reference market for open/closed indicator (UI only; can move to user settings later)
+    market_hours_de_caption: 'Mon–Fri 7:30 AM – 11:00 PM (Europe/Berlin)',
+    market_hours_us_caption: 'Mon–Fri 9:30 AM – 4:00 PM ET (NYSE, US)',
 
     // Portfolio Card
     pc_market_value: 'Market Value',
@@ -265,6 +268,8 @@ export const translations = {
     db_add_first: 'Fügen Sie Ihre erste Transaktion hinzu.',
     db_refresh: 'Aktualisieren',
     db_go_transactions: 'Transaktion hinzufügen',
+    market_hours_de_caption: 'Mo–Fr 7:30 – 23:00 Uhr (Europe/Berlin)',
+    market_hours_us_caption: 'Mo–Fr 9:30 – 16:00 Uhr Ortszeit New York (NYSE)',
 
     // Portfolio Card
     pc_market_value: 'Marktwert',

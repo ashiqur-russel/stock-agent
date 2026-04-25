@@ -582,7 +582,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   │   ├── Amount.tsx         # EUR↔USD money display
 │   │   ├── Toggle.tsx         # Two-option toggle button
 │   │   ├── FormInput.tsx      # Labelled input
-│   │   └── MarketStatus.tsx   # NYSE open/closed indicator
+│   │   └── MarketStatus.tsx   # Open/closed by DE (Berlin) or US (NYSE) user toggle
 │   ├── dashboard/
 │   │   ├── PortfolioCard.tsx  # Per-ticker card with P&L + chart
 │   │   └── SignalBadge.tsx    # BUY/SELL/HOLD badge

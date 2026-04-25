@@ -3,6 +3,7 @@
 import { useApp } from '@/contexts/AppContext'
 import { usePortfolio, type Holding } from '@/hooks/usePortfolio'
 import PortfolioCard from '@/components/dashboard/PortfolioCard'
+import MarketStatus from '@/components/ui/MarketStatus'
 import Link from 'next/link'
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
@@ -23,7 +24,8 @@ function DashboardContent() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{t('nav_dashboard')}</h1>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <MarketStatus type='stock' />
           <span style={{ fontSize: 12, color: '#22c55e', background: '#0d2d0d', border: '1px solid #166534', borderRadius: 10, padding: '2px 10px' }}>
             {t('db_live')}
           </span>
