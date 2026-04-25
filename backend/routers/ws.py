@@ -59,6 +59,34 @@ def is_market_open() -> bool:
     return 14 * 60 + 30 <= minutes < 21 * 60
 
 
+def _is_closed_socket_error(exc: BaseException) -> bool:
+    """True when an exception just means the websocket is gone."""
+    if isinstance(exc, WebSocketDisconnect):
+        return True
+    # Starlette/uvicorn raise these once the peer has disappeared.
+    name = type(exc).__name__
+    if name in ("ClientDisconnected", "ConnectionClosed", "ConnectionClosedOK", "ConnectionClosedError"):
+        return True
+    msg = str(exc)
+    return (
+        "websocket.send" in msg
+        or "websocket.close" in msg
+        or "after sending" in msg
+        or "response already completed" in msg
+    )
+
+
+async def _safe_send(websocket: WebSocket, payload: dict) -> bool:
+    """Send JSON; return False if the peer is gone (caller should stop)."""
+    try:
+        await websocket.send_json(payload)
+        return True
+    except Exception as e:
+        if _is_closed_socket_error(e):
+            return False
+        raise
+
+
 @router.websocket("/api/v1/ws/alerts")
 async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
     try:
@@ -95,11 +123,12 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
     }
     last_signal_check = asyncio.get_event_loop().time()
 
-    await websocket.send_json({
+    if not await _safe_send(websocket, {
         "type": "connected",
         "tickers": tickers,
         "market_open": is_market_open(),
-    })
+    }):
+        return
 
     try:
         # Cadence depends on whether *anything* is live. US market hours OR
@@ -140,14 +169,15 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 ticker_live = market_open or _is_crypto_ticker(ticker)
 
                 # Price update (always sent — the UI uses these even off-hours)
-                await websocket.send_json({
+                if not await _safe_send(websocket, {
                     "type": "price_update",
                     "ticker": ticker,
                     "price": price,
                     "change_pct": round(pct, 2),
                     "day_change_pct": quote.get("day_change_pct", 0),
                     "market_open": ticker_live,
-                })
+                }):
+                    return
 
                 if not ticker_live:
                     continue
@@ -155,33 +185,36 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 # Intraday move alert
                 if abs(pct) >= PRICE_MOVE_THRESHOLD:
                     direction = "SHARP RALLY" if pct > 0 else "SHARP DROP"
-                    await websocket.send_json({
+                    if not await _safe_send(websocket, {
                         "type": "price_alert",
                         "ticker": ticker,
                         "title": f"{direction}: {ticker}",
                         "message": f"Price moved {pct:+.2f}% to €{price:.4f} in last {interval}s",
                         "severity": "high",
-                    })
+                    }):
+                        return
 
                 # Support broken
                 if support and prev > support and price <= support:
-                    await websocket.send_json({
+                    if not await _safe_send(websocket, {
                         "type": "price_alert",
                         "ticker": ticker,
                         "title": f"SUPPORT BROKEN: {ticker}",
                         "message": f"Price €{price:.4f} broke below key support €{support:.4f} — consider stop-loss",
                         "severity": "critical",
-                    })
+                    }):
+                        return
 
                 # Resistance broken
                 if resistance and prev < resistance and price >= resistance:
-                    await websocket.send_json({
+                    if not await _safe_send(websocket, {
                         "type": "price_alert",
                         "ticker": ticker,
                         "title": f"BREAKOUT: {ticker}",
                         "message": f"Price €{price:.4f} broke above resistance €{resistance:.4f} — potential breakout",
                         "severity": "high",
-                    })
+                    }):
+                        return
 
             # Full signal recheck every 10 min
             if now_loop - last_signal_check >= SIGNAL_CHECK_INTERVAL:
@@ -197,7 +230,7 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                     new_signal = new_a.get("swing_setup_quality")
                     analysis_cache[ticker] = new_a
                     if old_signal and new_signal and old_signal != new_signal:
-                        await websocket.send_json({
+                        if not await _safe_send(websocket, {
                             "type": "signal_change",
                             "ticker": ticker,
                             "title": f"Signal Changed: {ticker}",
@@ -205,7 +238,8 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                             "new_signal": new_signal,
                             "message": f"{old_signal.upper()} → {new_signal.upper()}",
                             "severity": "high",
-                        })
+                        }):
+                            return
 
             # Sleep AFTER the poll so the first scan runs immediately on connect.
             await asyncio.sleep(interval)
@@ -213,7 +247,8 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        print(f"[ws] connection error: {e}")
+        if not _is_closed_socket_error(e):
+            print(f"[ws/alerts] connection error: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -266,18 +301,6 @@ async def ws_prices(websocket: WebSocket, token: str = Query(...)):
     subscribed: set[str] = set()
     pending_change = asyncio.Event()
     closed = asyncio.Event()
-
-    def _is_closed_socket_error(exc: BaseException) -> bool:
-        """Whether an exception is just the socket being gone."""
-        if isinstance(exc, WebSocketDisconnect):
-            return True
-        msg = str(exc)
-        return (
-            "websocket.send" in msg
-            or "websocket.close" in msg
-            or "after sending" in msg
-            or "response already completed" in msg
-        )
 
     async def reader() -> None:
         """Listens for subscribe / unsubscribe messages from the client."""
