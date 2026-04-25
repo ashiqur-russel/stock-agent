@@ -80,10 +80,27 @@ def fetch_news(ticker: str) -> list[dict]:
     news = t.news or []
     results = []
     for item in news[:10]:
-        results.append({
-            "title": item.get("title", ""),
-            "publisher": item.get("publisher", ""),
-            "published_at": datetime.fromtimestamp(item.get("providerPublishTime", 0)).isoformat(),
-            "url": item.get("link", ""),
-        })
+        # yfinance >= 0.2.50 wraps news in a "content" key
+        content = item.get("content", item)
+        title = content.get("title") or item.get("title", "")
+        publisher = (
+            content.get("provider", {}).get("displayName")
+            or item.get("publisher", "")
+        )
+        pub_time = content.get("pubDate") or item.get("providerPublishTime")
+        url = (
+            (content.get("canonicalUrl") or {}).get("url")
+            or item.get("link", "")
+        )
+        try:
+            if isinstance(pub_time, (int, float)):
+                published_at = datetime.fromtimestamp(pub_time).isoformat()
+            elif pub_time:
+                published_at = str(pub_time)
+            else:
+                published_at = ""
+        except Exception:
+            published_at = ""
+        if title:
+            results.append({"title": title, "publisher": publisher, "published_at": published_at, "url": url})
     return results
