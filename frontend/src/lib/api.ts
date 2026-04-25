@@ -102,14 +102,18 @@ export const paper = {
 
 export const alerts = {
   list: () => apiFetch('/api/v1/alerts'),
-  create: (body: { ticker: string; condition: string; target_price: number }) =>
-    apiFetch('/api/v1/alerts', { method: 'POST', body: JSON.stringify(body) }),
-  delete: (id: number) => apiFetch(`/api/v1/alerts/${id}`, { method: 'DELETE' }),
-  markRead: (id: number) => apiFetch(`/api/v1/alerts/${id}/read`, { method: 'POST' }),
-  markAllRead: () => apiFetch('/api/v1/alerts/read-all', { method: 'POST' }),
-  getNotifSettings: () => apiFetch('/api/v1/settings/notifications'),
-  saveNotifSettings: (body: { email_enabled: boolean }) =>
-    apiFetch('/api/v1/settings/notifications', { method: 'POST', body: JSON.stringify(body) }),
+  unreadCount: () => apiFetch<{ count: number }>('/api/v1/alerts/unread-count'),
+  markRead: (id: number) => apiFetch(`/api/v1/alerts/${id}/read`, { method: 'PATCH' }),
+  markAllRead: () => apiFetch('/api/v1/alerts/read-all', { method: 'PATCH' }),
+  getNotifSettings: () =>
+    apiFetch<{ notify_email: string | null; email_alerts: boolean }>(
+      '/api/v1/settings/notifications',
+    ),
+  saveNotifSettings: (body: { notify_email: string | null; email_alerts: boolean }) =>
+    apiFetch('/api/v1/settings/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
 }
 
 export { API_URL, getToken }

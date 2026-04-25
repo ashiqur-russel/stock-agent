@@ -6,7 +6,7 @@ import { useApp } from '@/contexts/AppContext'
 import Toggle from '@/components/ui/Toggle'
 import { useAuth } from '@/hooks/useAuth'
 import { useState, useEffect } from 'react'
-import { apiFetch } from '@/lib/api'
+import { alerts as alertsApi } from '@/lib/api'
 
 const links = [
   { href: '/dashboard', labelKey: 'nav_dashboard' as const, icon: '📊' },
@@ -26,8 +26,8 @@ export default function Sidebar() {
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const data = await apiFetch<{ unread_count: number }>('/api/v1/alerts/unread-count')
-        setUnread(data.unread_count ?? 0)
+        const data = await alertsApi.unreadCount()
+        setUnread(data.count ?? 0)
       } catch {
         // ignore
       }
