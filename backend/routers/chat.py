@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
 from middleware.auth import get_current_user
 from services.agent_service import stream_agent_response
 

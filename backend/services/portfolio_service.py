@@ -33,7 +33,15 @@ def _signal_for(ticker: str) -> str | None:
     return sig
 
 
-def add_transaction(user_id: int, ticker: str, tx_type: str, shares: float, price: float, executed_at: str, notes: str = None) -> dict:
+def add_transaction(
+    user_id: int,
+    ticker: str,
+    tx_type: str,
+    shares: float,
+    price: float,
+    executed_at: str,
+    notes: str = None,
+) -> dict:
     ticker = ticker.upper()
     with get_connection() as conn:
         cursor = conn.execute(
@@ -46,7 +54,9 @@ def add_transaction(user_id: int, ticker: str, tx_type: str, shares: float, pric
 
 def delete_transaction(tx_id: int, user_id: int) -> bool:
     with get_connection() as conn:
-        row = conn.execute("SELECT id FROM transactions WHERE id = ? AND user_id = ?", (tx_id, user_id)).fetchone()
+        row = conn.execute(
+            "SELECT id FROM transactions WHERE id = ? AND user_id = ?", (tx_id, user_id)
+        ).fetchone()
         if not row:
             return False
         conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
@@ -97,7 +107,11 @@ def _calculate_holdings(transactions: list[dict]) -> dict:
     for tx in sorted(transactions, key=lambda t: (t["executed_at"], t["created_at"])):
         ticker = tx["ticker"]
         if ticker not in holdings:
-            holdings[ticker] = {"shares_held": 0.0, "avg_cost": 0.0, "realized_pnl": 0.0}
+            holdings[ticker] = {
+                "shares_held": 0.0,
+                "avg_cost": 0.0,
+                "realized_pnl": 0.0,
+            }
         h = holdings[ticker]
 
         if tx["type"] == "BUY":
@@ -141,22 +155,28 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
         avg_cost_eur = h["avg_cost"]  # user enters price in EUR (Scalable Capital shows EUR)
         market_value = shares_held * current_price_eur
         unrealized_pnl = (current_price_eur - avg_cost_eur) * shares_held
-        unrealized_pnl_pct = (unrealized_pnl / (avg_cost_eur * shares_held) * 100) if avg_cost_eur and shares_held else 0.0
+        unrealized_pnl_pct = (
+            (unrealized_pnl / (avg_cost_eur * shares_held) * 100)
+            if avg_cost_eur and shares_held
+            else 0.0
+        )
 
-        result.append({
-            "ticker": ticker,
-            "shares_held": round(shares_held, 6),
-            "avg_cost": round(avg_cost_eur, 4),      # EUR
-            "current_price": current_price_eur,       # EUR
-            "current_price_usd": quote.get("current_price_usd", 0),
-            "market_value": round(market_value, 2),   # EUR
-            "unrealized_pnl": round(unrealized_pnl, 2),
-            "unrealized_pnl_pct": round(unrealized_pnl_pct, 2),
-            "realized_pnl": round(h["realized_pnl"], 2),
-            "day_change_pct": quote["day_change_pct"],
-            "currency": "EUR",
-            "eur_rate": quote.get("eur_rate", 0.92),
-            "signal": signals.get(ticker),
-        })
+        result.append(
+            {
+                "ticker": ticker,
+                "shares_held": round(shares_held, 6),
+                "avg_cost": round(avg_cost_eur, 4),  # EUR
+                "current_price": current_price_eur,  # EUR
+                "current_price_usd": quote.get("current_price_usd", 0),
+                "market_value": round(market_value, 2),  # EUR
+                "unrealized_pnl": round(unrealized_pnl, 2),
+                "unrealized_pnl_pct": round(unrealized_pnl_pct, 2),
+                "realized_pnl": round(h["realized_pnl"], 2),
+                "day_change_pct": quote["day_change_pct"],
+                "currency": "EUR",
+                "eur_rate": quote.get("eur_rate", 0.92),
+                "signal": signals.get(ticker),
+            }
+        )
 
     return result

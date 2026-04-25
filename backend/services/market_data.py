@@ -1,7 +1,8 @@
-import yfinance as yf
-from datetime import datetime
 import threading
 import time
+from datetime import datetime
+
+import yfinance as yf
 
 # Cache the EUR rate for 5 minutes to avoid fetching on every request
 _eur_cache: dict = {"rate": None, "fetched_at": 0}
@@ -33,6 +34,7 @@ def usd_to_eur(usd: float) -> float:
 
 def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[dict]:
     import pandas as pd
+
     df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
     if df.empty:
         return []
@@ -43,14 +45,18 @@ def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[
     records = []
     for _, row in df.iterrows():
         date_val = row["Date"] if "Date" in row.index else row.get("Datetime")
-        records.append({
-            "time": date_val.strftime("%Y-%m-%d") if hasattr(date_val, "strftime") else str(date_val)[:10],
-            "open": round(float(row["Open"]) * eur_rate, 4),
-            "high": round(float(row["High"]) * eur_rate, 4),
-            "low": round(float(row["Low"]) * eur_rate, 4),
-            "close": round(float(row["Close"]) * eur_rate, 4),
-            "volume": int(row["Volume"]),
-        })
+        records.append(
+            {
+                "time": date_val.strftime("%Y-%m-%d")
+                if hasattr(date_val, "strftime")
+                else str(date_val)[:10],
+                "open": round(float(row["Open"]) * eur_rate, 4),
+                "high": round(float(row["High"]) * eur_rate, 4),
+                "low": round(float(row["Low"]) * eur_rate, 4),
+                "close": round(float(row["Close"]) * eur_rate, 4),
+                "volume": int(row["Volume"]),
+            }
+        )
     return records
 
 
@@ -60,7 +66,9 @@ def fetch_quote(ticker: str) -> dict:
     try:
         current_price_usd = float(info.last_price)
         prev_close_usd = float(info.previous_close)
-        day_change_pct = ((current_price_usd - prev_close_usd) / prev_close_usd) * 100 if prev_close_usd else 0.0
+        day_change_pct = (
+            ((current_price_usd - prev_close_usd) / prev_close_usd) * 100 if prev_close_usd else 0.0
+        )
         eur_rate = get_usd_to_eur_rate()
         return {
             "ticker": ticker.upper(),
@@ -72,7 +80,15 @@ def fetch_quote(ticker: str) -> dict:
             "eur_rate": round(eur_rate, 6),
         }
     except Exception:
-        return {"ticker": ticker.upper(), "current_price": 0.0, "current_price_usd": 0.0, "prev_close": 0.0, "day_change_pct": 0.0, "currency": "EUR", "eur_rate": 0.91}
+        return {
+            "ticker": ticker.upper(),
+            "current_price": 0.0,
+            "current_price_usd": 0.0,
+            "prev_close": 0.0,
+            "day_change_pct": 0.0,
+            "currency": "EUR",
+            "eur_rate": 0.91,
+        }
 
 
 def fetch_news(ticker: str) -> list[dict]:
@@ -83,15 +99,9 @@ def fetch_news(ticker: str) -> list[dict]:
         # yfinance >= 0.2.50 wraps news in a "content" key
         content = item.get("content", item)
         title = content.get("title") or item.get("title", "")
-        publisher = (
-            content.get("provider", {}).get("displayName")
-            or item.get("publisher", "")
-        )
+        publisher = content.get("provider", {}).get("displayName") or item.get("publisher", "")
         pub_time = content.get("pubDate") or item.get("providerPublishTime")
-        url = (
-            (content.get("canonicalUrl") or {}).get("url")
-            or item.get("link", "")
-        )
+        url = (content.get("canonicalUrl") or {}).get("url") or item.get("link", "")
         try:
             if isinstance(pub_time, (int, float)):
                 published_at = datetime.fromtimestamp(pub_time).isoformat()
@@ -102,5 +112,12 @@ def fetch_news(ticker: str) -> list[dict]:
         except Exception:
             published_at = ""
         if title:
-            results.append({"title": title, "publisher": publisher, "published_at": published_at, "url": url})
+            results.append(
+                {
+                    "title": title,
+                    "publisher": publisher,
+                    "published_at": published_at,
+                    "url": url,
+                }
+            )
     return results

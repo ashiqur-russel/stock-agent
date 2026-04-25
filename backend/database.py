@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import sqlite3
 from pathlib import Path
 
 DB_PATH = os.getenv("DATABASE_PATH", "./portfolio.db")

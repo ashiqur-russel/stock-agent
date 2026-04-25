@@ -8,9 +8,18 @@ TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "ticker": {"type": "string", "description": "Stock ticker symbol, e.g. 'AAPL', 'TSLA', 'BYND'"},
-                    "period": {"type": "string", "description": "Time period: '5d', '1mo', '3mo', '6mo', '1y'. Default: '3mo'"},
-                    "interval": {"type": "string", "description": "Candle interval: '1d' or '1h'. Default: '1d'"},
+                    "ticker": {
+                        "type": "string",
+                        "description": "Stock ticker symbol, e.g. 'AAPL', 'TSLA', 'BYND'",
+                    },
+                    "period": {
+                        "type": "string",
+                        "description": "Time period: '5d', '1mo', '3mo', '6mo', '1y'. Default: '3mo'",
+                    },
+                    "interval": {
+                        "type": "string",
+                        "description": "Candle interval: '1d' or '1h'. Default: '1d'",
+                    },
                 },
                 "required": ["ticker"],
             },

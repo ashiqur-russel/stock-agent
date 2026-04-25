@@ -1,0 +1,4 @@
+# Developer tooling (repo root). Do not use in production containers.
+#   pip install -r dev-requirements.txt
+#   pre-commit install
+pre-commit>=3.7.0

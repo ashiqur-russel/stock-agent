@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
 from middleware.auth import get_current_user
 from services import portfolio_service
 

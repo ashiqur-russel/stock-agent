@@ -5,8 +5,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import bcrypt
-from jose import jwt, JWTError
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
+
 import config
 
 ALGORITHM = "HS256"
@@ -47,7 +48,9 @@ def generate_verification_token() -> str:
 
 def send_verification_email(to_email: str, name: str, token: str):
     if not config.SMTP_USER or not config.SMTP_PASSWORD:
-        print(f"[auth] SMTP not configured — verification link: {FRONTEND_URL}/verify?token={token}")
+        print(
+            f"[auth] SMTP not configured — verification link: {FRONTEND_URL}/verify?token={token}"
+        )
         return
 
     verify_url = f"{FRONTEND_URL}/verify?token={token}"

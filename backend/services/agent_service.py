@@ -1,8 +1,10 @@
 import json
+
 from groq import Groq
+
 import config
+from services import market_data, portfolio_service, technical
 from tools.definitions import TOOL_DEFINITIONS
-from services import market_data, technical, portfolio_service
 
 _client = Groq(api_key=config.GROQ_API_KEY)
 MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -47,9 +49,7 @@ def _format_holding_line(h: dict, currency: str) -> str:
         sym = "€"
         avg = h["avg_cost"]
         cur = h["current_price"]
-    return (
-        f"  - {t}: {sh} shares @ avg {sym}{avg:.2f} | current {sym}{cur:.2f} | P&L {pnl_sign}{h['unrealized_pnl_pct']:.1f}%"
-    )
+    return f"  - {t}: {sh} shares @ avg {sym}{avg:.2f} | current {sym}{cur:.2f} | P&L {pnl_sign}{h['unrealized_pnl_pct']:.1f}%"
 
 
 def _build_system_prompt(user_id: int, currency: str) -> str:
@@ -81,9 +81,15 @@ def _simplify_portfolio_for_currency(holdings: list, currency: str) -> list[dict
                     "ticker": h["ticker"],
                     "shares_held": h["shares_held"],
                     "avg_cost": round(h["avg_cost"] / r, 4),
-                    "current_price": round(float(h.get("current_price_usd", h["current_price"] / r)), 4),
-                    "market_value": round(h["market_value"] / r, 2) if h.get("market_value") is not None else None,
-                    "unrealized_pnl": round(h["unrealized_pnl"] / r, 2) if h.get("unrealized_pnl") is not None else None,
+                    "current_price": round(
+                        float(h.get("current_price_usd", h["current_price"] / r)), 4
+                    ),
+                    "market_value": round(h["market_value"] / r, 2)
+                    if h.get("market_value") is not None
+                    else None,
+                    "unrealized_pnl": round(h["unrealized_pnl"] / r, 2)
+                    if h.get("unrealized_pnl") is not None
+                    else None,
                     "unrealized_pnl_pct": h["unrealized_pnl_pct"],
                     "realized_pnl": round(h.get("realized_pnl", 0) / r, 2),
                     "day_change_pct": h.get("day_change_pct"),
@@ -236,6 +242,7 @@ async def stream_agent_response(messages: list[dict], user_id: int, currency: st
         for tc in tool_calls:
             yield f"data: {json.dumps({'type': 'tool_call', 'name': tc.function.name})}\n\n"
 
+        # Add assistant message with tool calls to conversation
         conversation.append(
             {
                 "role": "assistant",
@@ -244,7 +251,10 @@ async def stream_agent_response(messages: list[dict], user_id: int, currency: st
                     {
                         "id": tc.id,
                         "type": "function",
-                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
                     }
                     for tc in tool_calls
                 ],
