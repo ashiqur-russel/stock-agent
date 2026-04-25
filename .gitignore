@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.db
+.env
+backend/.env
+.env.local
+node_modules/
+.next/
+*.egg-info/
+dist/
+build/
