@@ -11,6 +11,7 @@ from routers.indicators import router as indicators_router
 from routers.market import router as market_router
 from routers.paper import router as paper_router
 from routers.portfolio import router as portfolio_router
+from routers.public_landing import router as public_landing_router
 from routers.ws import router as ws_router
 
 app = FastAPI(title="Stock Agent API", version="1.0.0")
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(public_landing_router)
 app.include_router(portfolio_router)
 app.include_router(market_router)
 app.include_router(indicators_router)

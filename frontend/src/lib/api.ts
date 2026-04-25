@@ -79,6 +79,36 @@ export const portfolio = {
     apiFetch(`/api/v1/portfolio/transaction/${id}`, { method: 'DELETE' }),
 }
 
+/** Public landing page — no JWT (server cached). */
+export async function fetchPublicLandingQuotes(): Promise<{
+  quotes: Array<{
+    ticker: string
+    ok?: boolean
+    current_price?: number
+    current_price_usd?: number
+    day_change_pct?: number
+    eur_rate?: number
+  }>
+  cache_ttl_sec?: number
+}> {
+  const res = await fetch(`${API_URL}/api/v1/public/landing-quotes`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { detail?: string })?.detail ?? `HTTP ${res.status}`)
+  }
+  return res.json() as Promise<{
+    quotes: Array<{
+      ticker: string
+      ok?: boolean
+      current_price?: number
+      current_price_usd?: number
+      day_change_pct?: number
+      eur_rate?: number
+    }>
+    cache_ttl_sec?: number
+  }>
+}
+
 export const market = {
   quote: (ticker: string) => apiFetch(`/api/v1/market/quote/${ticker}`),
   history: (ticker: string, period = '3mo') =>

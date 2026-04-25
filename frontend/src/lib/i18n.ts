@@ -219,6 +219,7 @@ export const translations = {
     land_free: 'Free. No credit card required.',
     land_register: 'Register',
     land_disclaimer: 'Not financial advice. For educational purposes only.',
+    land_ticker_source: 'Yahoo Finance quotes · not tick-by-tick; prices may be delayed a few minutes.',
     land_docs: 'Docs',
 
     // Common
@@ -451,6 +452,7 @@ export const translations = {
     land_free: 'Kostenlos. Keine Kreditkarte erforderlich.',
     land_register: 'Registrieren',
     land_disclaimer: 'Keine Finanzberatung. Nur zu Bildungszwecken.',
+    land_ticker_source: 'Kurse via Yahoo Finance · kein Echtzeit-Tick; ggf. einige Minuten verzögert.',
     land_docs: 'Docs',
 
     // Common

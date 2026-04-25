@@ -1,28 +1,39 @@
 'use client'
 
 import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useApp } from '@/contexts/AppContext'
+import { fetchPublicLandingQuotes } from '@/lib/api'
 import Toggle from '@/components/ui/Toggle'
 import GlowCard from '@/components/ui/GlowCard'
 import BackgroundBeams from '@/components/ui/BackgroundBeams'
 import { SpotlightCard } from '@/components/ui/Spotlight'
 
-// ── ticker data (EUR prices; converted to USD on display) ─────────────────
-const TICKERS = [
-  { sym: 'AAPL',    eurPrice: 177.80, chgPct: 1.24,  up: true  },
-  { sym: 'TSLA',    eurPrice: 162.90, chgPct: 2.31,  up: false },
-  { sym: 'NVDA',    eurPrice: 797.10, chgPct: 3.05,  up: true  },
-  { sym: 'MSFT',    eurPrice: 383.10, chgPct: 0.87,  up: true  },
-  { sym: 'GOOGL',   eurPrice: 156.90, chgPct: 0.45,  up: false },
-  { sym: 'AMZN',    eurPrice: 169.40, chgPct: 1.60,  up: true  },
-  { sym: 'META',    eurPrice: 464.70, chgPct: 2.18,  up: true  },
-  { sym: 'BTC-USD', eurPrice: 61400,  chgPct: 4.32,  up: true  },
-  { sym: 'ETH-USD', eurPrice: 3205,   chgPct: 3.10,  up: true  },
-  { sym: 'SPY',     eurPrice: 481.00, chgPct: 0.62,  up: true  },
-  { sym: 'QQQ',     eurPrice: 406.80, chgPct: 0.95,  up: true  },
-  { sym: 'AMD',     eurPrice: 147.80, chgPct: 1.20,  up: false },
-]
+// Keep in sync with backend LANDING_TICKERS in `routers/public_landing.py`
+const LANDING_ORDER = [
+  'AAPL',
+  'TSLA',
+  'NVDA',
+  'MSFT',
+  'GOOGL',
+  'AMZN',
+  'META',
+  'BTC-USD',
+  'ETH-USD',
+  'SPY',
+  'QQQ',
+  'AMD',
+] as const
+
+type LandingRow = {
+  sym: string
+  eur: number
+  usd: number
+  chgPct: number
+  up: boolean
+  ok: boolean
+}
 
 // ── fake SVG path data for MacBook charts ─────────────────────────────────
 const PATH1 = 'M0,80 L20,72 L40,68 L60,75 L80,58 L100,50 L120,55 L140,42 L160,35 L180,38 L200,28 L220,20 L240,25 L260,15 L280,10'
@@ -32,8 +43,6 @@ const CANDLES = [
   [90,25,38,40,22],[110,28,35,37,25],[130,20,30,32,18],[150,15,25,27,12],
   [170,18,22,24,15],[190,12,20,22,10],[210,8,15,17,6],[230,10,14,16,8],
 ]
-
-const EUR_TO_USD = 1 / 0.91
 
 const features = [
   { icon: '📊', title: 'Portfolio Tracking',   desc: 'Log every buy and sell. Auto-calculated holdings, average cost, and P&L in real time.' },
@@ -57,6 +66,45 @@ const fadeUp = {
 
 export default function Home() {
   const { t, lang, setLang, currency, setCurrency, currencySymbol } = useApp()
+  const [tickerRows, setTickerRows] = useState<LandingRow[] | null>(null)
+
+  const loadQuotes = useCallback(() => {
+    fetchPublicLandingQuotes()
+      .then((data) => {
+        setTickerRows(
+          data.quotes.map((q) => {
+            const chg = typeof q.day_change_pct === 'number' ? q.day_change_pct : 0
+            const ok = q.ok === true
+            return {
+              sym: (q.ticker || '').toUpperCase(),
+              eur: q.current_price ?? 0,
+              usd: q.current_price_usd ?? 0,
+              chgPct: chg,
+              up: chg >= 0,
+              ok,
+            }
+          })
+        )
+      })
+      .catch(() => {
+        setTickerRows(
+          LANDING_ORDER.map((sym) => ({
+            sym,
+            eur: 0,
+            usd: 0,
+            chgPct: 0,
+            up: true,
+            ok: false,
+          }))
+        )
+      })
+  }, [])
+
+  useEffect(() => {
+    loadQuotes()
+    const id = setInterval(loadQuotes, 60_000)
+    return () => clearInterval(id)
+  }, [loadQuotes])
 
   // When language changes, auto-switch currency to match region expectation
   const handleLangChange = (v: string) => {
@@ -65,14 +113,30 @@ export default function Home() {
     setCurrency(l === 'de' ? 'EUR' : 'USD')
   }
 
-  const formatTickerPrice = (eurPrice: number) => {
-    const val = currency === 'USD' ? eurPrice * EUR_TO_USD : eurPrice
+  const formatPair = (eur: number, usd: number) => {
+    const val = currency === 'USD' ? usd : eur
     if (val >= 10000) return `${currencySymbol}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-    if (val >= 1000)  return `${currencySymbol}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+    if (val >= 1000) return `${currencySymbol}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
     return `${currencySymbol}${val.toFixed(2)}`
   }
 
-  const tickerRow = [...TICKERS, ...TICKERS]
+  const loadingTickers = tickerRows === null
+  const scrollRows = useMemo(() => {
+    const base: LandingRow[] =
+      tickerRows && tickerRows.length > 0
+        ? tickerRows
+        : LANDING_ORDER.map((sym) => ({
+            sym,
+            eur: 0,
+            usd: 0,
+            chgPct: 0,
+            up: true,
+            ok: false,
+          }))
+    return [...base, ...base]
+  }, [tickerRows])
+  const qAapl = tickerRows?.find((r) => r.sym === 'AAPL')
+  const qNvda = tickerRows?.find((r) => r.sym === 'NVDA')
 
   return (
     <div style={{ minHeight: '100vh', background: '#060e20', color: '#f1f5f9', fontFamily: 'var(--font-geist-sans)', overflowX: 'hidden' }}>
@@ -137,28 +201,43 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ── Ticker Strip ── */}
+      {/* ── Ticker Strip (live quotes via public API) ── */}
       <div style={{
         background: 'rgba(4,10,24,0.95)',
         borderBottom: '1px solid rgba(34,197,94,0.08)',
-        overflow: 'hidden', height: 38,
-        display: 'flex', alignItems: 'center',
+        overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', alignItems: 'stretch',
       }}>
-        <div className='ticker-track'>
-          {tickerRow.map((tk, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '0 24px',
-              borderRight: '1px solid rgba(255,255,255,0.04)',
-              whiteSpace: 'nowrap',
-            }}>
-              <span style={{ fontWeight: 700, fontSize: 12, color: '#e2e8f0', letterSpacing: '0.05em' }}>{tk.sym}</span>
-              <span style={{ fontSize: 12, color: '#64748b' }}>{formatTickerPrice(tk.eurPrice)}</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: tk.up ? '#22c55e' : '#ef4444' }}>
-                {tk.up ? '▲' : '▼'} {tk.chgPct.toFixed(2)}%
-              </span>
-            </div>
-          ))}
+        <div style={{ height: 38, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+          <div className='ticker-track'>
+            {scrollRows.map((tk, i) => (
+              <div key={`${tk.sym}-${i}`} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '0 24px',
+                borderRight: '1px solid rgba(255,255,255,0.04)',
+                whiteSpace: 'nowrap',
+              }}>
+                <span style={{ fontWeight: 700, fontSize: 12, color: '#e2e8f0', letterSpacing: '0.05em' }}>{tk.sym}</span>
+                <span style={{ fontSize: 12, color: '#64748b' }}>
+                  {loadingTickers
+                    ? '…'
+                    : tk.ok
+                      ? formatPair(tk.eur, tk.usd)
+                      : '—'}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: tk.ok ? (tk.up ? '#22c55e' : '#ef4444') : '#334155' }}>
+                  {loadingTickers
+                    ? '…'
+                    : tk.ok
+                      ? `${tk.up ? '▲' : '▼'} ${tk.chgPct.toFixed(2)}%`
+                      : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ fontSize: 9, color: '#334155', textAlign: 'center', padding: '0 8px 4px' }}>
+          {t('land_ticker_source')}
         </div>
       </div>
 
@@ -258,8 +337,28 @@ export default function Home() {
                       <span style={{ fontSize: 10, color: '#334155', marginLeft: 6 }}>Apple Inc.</span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{formatTickerPrice(177.80)}</div>
-                      <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 600 }}>▲ +1.24%</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>
+                        {loadingTickers
+                          ? '…'
+                          : qAapl?.ok
+                            ? formatPair(qAapl.eur, qAapl.usd)
+                            : '—'}
+                      </div>
+                      <div style={{
+                        fontSize: 10,
+                        color: !qAapl?.ok
+                          ? '#334155'
+                          : qAapl.up
+                            ? '#22c55e'
+                            : '#ef4444',
+                        fontWeight: 600,
+                      }}>
+                        {loadingTickers
+                          ? '…'
+                          : qAapl?.ok
+                            ? `${qAapl.up ? '▲' : '▼'} ${qAapl.chgPct >= 0 ? '+' : ''}${qAapl.chgPct.toFixed(2)}%`
+                            : '—'}
+                      </div>
                     </div>
                   </div>
                   <svg viewBox='0 0 280 90' style={{ width: '100%', height: 90 }}>
@@ -293,8 +392,28 @@ export default function Home() {
                       <span style={{ fontSize: 10, color: '#334155', marginLeft: 6 }}>NVIDIA Corp.</span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{formatTickerPrice(797.10)}</div>
-                      <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 600 }}>▲ +3.05%</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>
+                        {loadingTickers
+                          ? '…'
+                          : qNvda?.ok
+                            ? formatPair(qNvda.eur, qNvda.usd)
+                            : '—'}
+                      </div>
+                      <div style={{
+                        fontSize: 10,
+                        color: !qNvda?.ok
+                          ? '#334155'
+                          : qNvda.up
+                            ? '#22c55e'
+                            : '#ef4444',
+                        fontWeight: 600,
+                      }}>
+                        {loadingTickers
+                          ? '…'
+                          : qNvda?.ok
+                            ? `${qNvda.up ? '▲' : '▼'} ${qNvda.chgPct >= 0 ? '+' : ''}${qNvda.chgPct.toFixed(2)}%`
+                            : '—'}
+                      </div>
                     </div>
                   </div>
                   <svg viewBox='0 0 280 90' style={{ width: '100%', height: 90 }}>
