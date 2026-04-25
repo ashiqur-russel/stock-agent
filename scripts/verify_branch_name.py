@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Require branch names to follow a simple prefix convention (e.g. feature/*, fix/*).
+Require branch names: topic branches use a prefix (feature/, fix/, …) and must
+include a ticket id right after the prefix: SA-<digits>, e.g. feature/SA-4-user-prefs.
 
 Skipped when in detached HEAD (rebase, etc.) so we do not block those flows.
 """
@@ -37,6 +38,9 @@ _AUTO_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+# After e.g. "feature/", the rest must start with SA-<ticket> (e.g. SA-4, SA-12)
+_SA_PREFIX = re.compile(r"^SA-\d+(-[a-zA-Z0-9._/-]+)*$")
+
 
 def _current_branch() -> str:
     r = subprocess.run(
@@ -56,9 +60,21 @@ def is_allowed(name: str) -> bool:
     if _AUTO_PREFIX.match(name):
         return True
     for p in _PREFIXES:
-        if name.startswith(p) and len(name) > len(p):
+        if not (name.startswith(p) and len(name) > len(p)):
+            continue
+        rest = name[len(p) :]
+        if _SA_PREFIX.match(rest):
             return True
+        return False
     return False
+
+
+def _topic_prefix_and_rest(name: str) -> tuple[str, str] | None:
+    """If name uses a topic prefix, return (prefix, rest); else None."""
+    for p in _PREFIXES:
+        if name.startswith(p) and len(name) > len(p):
+            return (p, name[len(p) :])
+    return None
 
 
 def main() -> None:
@@ -82,11 +98,23 @@ def main() -> None:
         print(
             "Do not make commits while checked out on the default branch (main or master).\n"
             f"  Current branch: {branch!r}\n"
-            "  Create a topic branch, commit there, and open a pull request:\n"
-            "    git checkout -b feature/SA-1-my-change\n"
-            "    # or: fix/..., hotfix/..., chore/...\n"
-            "  Merging into main on GitHub is fine; a local `git merge` on main is blocked\n"
-            "  by this hook — use the GitHub PR flow, or once:  git commit --no-verify  (rare)\n",
+            "  Create a topic branch and open a pull request, for example:\n"
+            "    git checkout -b feature/SA-1-short-description\n"
+            "    # also: fix/SA-2-…, hotfix/SA-3-…, chore/SA-4-…\n"
+            "  (Ticket id is SA-<number> right after the prefix.)\n"
+            "  Merges on GitHub are fine; a local `git merge` on main is blocked by this hook.\n"
+            "  Rare exception:  git commit --no-verify  (e.g. emergency merge on main)\n",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    bad_topic = _topic_prefix_and_rest(branch)
+    if bad_topic is not None and not _SA_PREFIX.match(bad_topic[1]):
+        p, rest = bad_topic
+        print(
+            "Branch name must include a ticket id immediately after the prefix: SA-<number>.\n"
+            f"  Current: {branch!r}\n"
+            f"  After {p!r} the name must look like: SA-12 or SA-12-my-slug (not: {rest!r})\n"
+            "  Example:  feature/SA-4-live-quotes,  fix/SA-5-branch-guard,  hotfix/SA-1-patch\n",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -95,8 +123,8 @@ def main() -> None:
         f"  Current: {branch!r}\n"
         "  Use one of:\n"
         f"    {', '.join(sorted(_EXACT))}\n"
-        "    or a prefixed branch:\n"
-        f"     {', '.join(p + '…' for p in _PREFIXES)}\n"
+        "    or a topic branch:  <prefix>SA-<number>[-description]\n"
+        f"     prefixes: {', '.join(_PREFIXES)}\n"
         "  (also allowed: dependabot/*, renovate/*, …)\n",
         file=sys.stderr,
     )
