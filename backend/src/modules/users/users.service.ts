@@ -3,6 +3,8 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './entities/user.entity';
 
+const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
+
 @Injectable()
 export class UsersService {
   // In-memory store for demo; replace with a real DB (TypeORM/Prisma) in production
@@ -14,8 +16,7 @@ export class UsersService {
       throw new ConflictException('Email already in use');
     }
 
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     const user: User = {
       id: uuidv4(),
       email: email.toLowerCase().trim(),

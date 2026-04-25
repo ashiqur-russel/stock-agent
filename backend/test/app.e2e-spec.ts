@@ -29,6 +29,18 @@ describe('AppController (e2e)', () => {
       email: 'e2e@example.com',
       password: 'Password123!',
     };
+
+    it('POST /api/v1/auth/register — registers a new user', () => {
+      return request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send(testUser)
+        .expect(201)
+        .expect((res) => {
+          expect(res.body.accessToken).toBeDefined();
+          expect(res.body.user.email).toBe(testUser.email);
+        });
+    });
+
     it('POST /api/v1/auth/login — logs in existing user', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
