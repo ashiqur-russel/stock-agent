@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { auth as authApi } from '@/lib/api'
+import { dispatchAuthSessionChanged } from '@/lib/authEvents'
 
 function VerifyContent() {
   const { t } = useApp()
@@ -40,6 +41,7 @@ function VerifyContent() {
         if (r.access_token) {
           localStorage.setItem('stock_agent_token', r.access_token)
           localStorage.setItem('stock_agent_user', JSON.stringify({ user_id: r.user_id, name: r.name, email: r.email }))
+          dispatchAuthSessionChanged()
         }
         setStatus('success')
         setTimeout(() => router.push('/dashboard'), 1500)

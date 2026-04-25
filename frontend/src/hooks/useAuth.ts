@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/api'
+import { dispatchAuthSessionChanged } from '@/lib/authEvents'
 
 interface StoredUser {
   user_id: number
@@ -34,6 +35,7 @@ export function useAuth() {
   const saveSession = (token: string, user: StoredUser) => {
     localStorage.setItem('stock_agent_token', token)
     localStorage.setItem('stock_agent_user', JSON.stringify(user))
+    dispatchAuthSessionChanged()
   }
 
   const login = async (email: string, password: string) => {
@@ -80,6 +82,7 @@ export function useAuth() {
   const logout = () => {
     localStorage.removeItem('stock_agent_token')
     localStorage.removeItem('stock_agent_user')
+    dispatchAuthSessionChanged()
     router.push('/login')
   }
 

@@ -64,7 +64,7 @@ def _calc_holdings(user_id: int, conn) -> dict:
 @router.get("/account")
 def get_account(
     user=Depends(get_current_user),
-    currency: str = Query("EUR", regex="^(USD|EUR)$"),
+    currency: str = Query("EUR", pattern="^(USD|EUR)$"),
 ):
     user_id = user["user_id"]
     with get_connection() as conn:

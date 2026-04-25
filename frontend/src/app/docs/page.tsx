@@ -935,6 +935,12 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
   "notify_email": "user@example.com",
   "email_alerts": true
 }`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/settings/preferences' auth desc='User UI preferences (reference market for open/close hours, stored per account).' />
+            <Code block>{`{ "market_region": "DE" }`}</Code>
+
+            <Endpoint method='PUT' path='/api/v1/settings/preferences' auth desc='Update UI preferences. `market_region` is `DE` (Europe/Berlin hours) or `US` (NYSE hours) for the Market Open/Closed indicator.' />
+            <Code block>{`{ "market_region": "US" }`}</Code>
           </Section>
 
           {/* ── API: Chat ── */}
@@ -944,8 +950,10 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
             <Code block>{`{
   "messages": [
     { "role": "user", "content": "Analyze AAPL for a swing trade" }
-  ]
+  ],
+  "currency": "EUR"
 }`}</Code>
+            <P>Optional <Code>currency</Code> <Code>EUR</Code> or <Code>USD</Code> (default <Code>EUR</Code>) — must match the in-app currency toggle. Tool results and the system prompt are normalized so the model answers in that currency.</P>
             <H3>SSE event types</H3>
             <Code block>{`// Text token
 data: {"type": "text_delta", "text": "AAPL is currently..."}
@@ -959,7 +967,7 @@ data: {"type": "done"}`}</Code>
             <Code block>{`const res = await fetch('/api/v1/chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${token}\` },
-  body: JSON.stringify({ messages }),
+  body: JSON.stringify({ messages, currency: 'EUR' }),
 })
 const reader = res.body.getReader()
 // read lines, parse JSON after "data: " prefix`}</Code>
