@@ -1,8 +1,39 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from middleware.auth import get_current_user
 from database import get_connection
 
 router = APIRouter(prefix="/api/v1", tags=["alerts"])
+
+
+@router.get("/settings/preferences")
+def get_preferences(user=Depends(get_current_user)):
+    """User UI preferences (e.g. reference market for open/closed hours)."""
+    user_id = user["user_id"]
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT market_region FROM user_settings WHERE user_id=?",
+            (user_id,),
+        ).fetchone()
+    if row and row["market_region"] in ("DE", "US"):
+        return {"market_region": row["market_region"]}
+    return {"market_region": "DE"}
+
+
+@router.put("/settings/preferences")
+def put_preferences(body: dict, user=Depends(get_current_user)):
+    mr = body.get("market_region", "DE")
+    if mr not in ("DE", "US"):
+        raise HTTPException(status_code=400, detail="market_region must be DE or US")
+    user_id = user["user_id"]
+    with get_connection() as conn:
+        conn.execute(
+            """INSERT INTO user_settings (user_id, market_region)
+               VALUES (?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET market_region=excluded.market_region""",
+            (user_id, mr),
+        )
+        conn.commit()
+    return {"ok": True}
 
 
 @router.get("/alerts")

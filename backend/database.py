@@ -19,6 +19,7 @@ def init_db():
         # Safe migrations for existing databases
         for migration in [
             "ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0",
+            "ALTER TABLE user_settings ADD COLUMN market_region TEXT NOT NULL DEFAULT 'DE'",
         ]:
             try:
                 conn.execute(migration)

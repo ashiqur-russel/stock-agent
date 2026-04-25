@@ -11,7 +11,7 @@ const storageRows = [
   { key: 'cookie_consent_v1', purpose: 'Records your cookie consent', duration: '1 year' },
   { key: 'app_lang', purpose: 'Language preference (EN/DE)', duration: 'Persistent' },
   { key: 'app_currency', purpose: 'Currency preference (EUR/USD)', duration: 'Persistent' },
-  { key: 'app_market_region', purpose: 'Reference market for open/close hours (DE or US)', duration: 'Persistent' },
+  { key: 'app_market_region', purpose: 'Reference market for open/close (DE/US); synced to your account when logged in', duration: 'Persistent' },
 ]
 
 export default function CookieBanner() {

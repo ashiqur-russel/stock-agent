@@ -935,6 +935,12 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
   "notify_email": "user@example.com",
   "email_alerts": true
 }`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/settings/preferences' auth desc='User UI preferences (reference market for open/close hours, stored per account).' />
+            <Code block>{`{ "market_region": "DE" }`}</Code>
+
+            <Endpoint method='PUT' path='/api/v1/settings/preferences' auth desc='Update UI preferences. `market_region` is `DE` (Europe/Berlin hours) or `US` (NYSE hours) for the Market Open/Closed indicator.' />
+            <Code block>{`{ "market_region": "US" }`}</Code>
           </Section>
 
           {/* ── API: Chat ── */}

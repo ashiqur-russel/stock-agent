@@ -131,4 +131,14 @@ export const alerts = {
     }),
 }
 
+export const settings = {
+  getPreferences: () =>
+    apiFetch<{ market_region: 'DE' | 'US' }>('/api/v1/settings/preferences'),
+  putPreferences: (body: { market_region: 'DE' | 'US' }) =>
+    apiFetch('/api/v1/settings/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+}
+
 export { API_URL, getToken }

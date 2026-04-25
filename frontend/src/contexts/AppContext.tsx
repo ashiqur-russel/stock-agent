@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { type Lang, type TranslationKey, t as translate } from '@/lib/i18n'
+import { getToken, settings } from '@/lib/api'
+import { AUTH_SESSION_EVENT } from '@/lib/authEvents'
 import {
   getDefaultMarketRegion,
   type MarketRegion,
@@ -39,6 +41,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (savedRegion) setMarketRegionState(savedRegion)
   }, [])
 
+  // When logged in, server-backed `market_region` is the source of truth (overrides localStorage).
+  useEffect(() => {
+    const loadMarketRegionFromServer = () => {
+      if (typeof window === 'undefined' || !getToken()) return
+      settings
+        .getPreferences()
+        .then((p) => {
+          if (p.market_region === 'DE' || p.market_region === 'US') {
+            setMarketRegionState(p.market_region)
+            localStorage.setItem(MARKET_REGION_STORAGE_KEY, p.market_region)
+          }
+        })
+        .catch(() => {
+          // offline / not logged in — keep local value
+        })
+    }
+    loadMarketRegionFromServer()
+    if (typeof window !== 'undefined') {
+      window.addEventListener(AUTH_SESSION_EVENT, loadMarketRegionFromServer)
+      return () => window.removeEventListener(AUTH_SESSION_EVENT, loadMarketRegionFromServer)
+    }
+  }, [])
+
   const setLang = (l: Lang) => {
     setLangState(l)
     localStorage.setItem('app_lang', l)
@@ -52,6 +77,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setMarketRegion = (m: MarketRegion) => {
     setMarketRegionState(m)
     localStorage.setItem(MARKET_REGION_STORAGE_KEY, m)
+    if (getToken()) {
+      settings.putPreferences({ market_region: m }).catch(() => {
+        // keep UI state; retry on next session sync
+      })
+    }
   }
 
   const currencySymbol = currency === 'EUR' ? '€' : '$'

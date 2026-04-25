@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS alerts (
 CREATE TABLE IF NOT EXISTS user_settings (
     user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     notify_email    TEXT,
-    email_alerts    INTEGER DEFAULT 1
+    email_alerts    INTEGER DEFAULT 1,
+    market_region   TEXT NOT NULL DEFAULT 'DE' CHECK (market_region IN ('DE', 'US'))
 );
 
 -- Paper trading: each user starts with a virtual €100,000 balance
