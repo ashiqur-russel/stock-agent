@@ -7,11 +7,20 @@
 #
 # Branch names (enforced on commit): main/master/develop, or
 #   feature/*, fix/*, hotfix/*, chore/*, docs/*, release/*
-# pre-push: also blocks `git push` to remote main/master (use topic branch + PR).
-# Also runs [SA-n] on pushed commits. Bypass push hook: `git push --no-verify` or
-#   ALLOW_PUSH_TO_MAIN=1 git push  (emergency only)
+# pre-push: blocks `git push` that updates the remote’s main or master; also runs
+# [SA-n] on the commits being pushed. (Commits while checked out to main are still
+# allowed — the block is on push. To forbid commits on main too, add
+#   no-commit-to-branch
+# from the pre-commit-hooks repo, knowing it will block local `git merge` into main
+# unless you use SKIP=… or --no-verify on that merge.)
+#
+# If you can still push to main: (1) run `pre-commit install` in this clone after
+# pull, (2) do not use `git push --no-verify` or an IDE that skips Git hooks, (3)
+# enforce the same on GitHub: Settings → Branches → lock main (no direct push).
+# Bypass: `git push --no-verify` or `ALLOW_PUSH_TO_MAIN=1 git push` (emergency)
+#
 # Skip on commit:  SKIP=sa-commit-msg,branch-name git commit
-# Skip a hook:      SKIP=sa-pre-push-commits,block-push-to-main git push
+# Skip a hook:     SKIP=sa-pre-push-commits,block-push-to-main git push
 
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
 default_language_version:

@@ -1,4 +1,7 @@
 # Developer tooling (repo root). Do not use in production containers.
 #   pip install -r dev-requirements.txt
 #   pre-commit install
+#
+# The install step is required: without it, .git/hooks is not wired and
+# commit-msg / pre-push (block main, [SA-n], etc.) will not run.
 pre-commit>=3.7.0
