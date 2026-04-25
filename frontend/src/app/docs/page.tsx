@@ -20,6 +20,7 @@ const NAV = [
       { id: 'installation', label: 'Installation' },
       { id: 'env-vars', label: 'Environment Variables' },
       { id: 'running', label: 'Running Locally' },
+      { id: 'dev-db', label: 'Database Management (dev)' },
     ],
   },
   {
@@ -384,6 +385,55 @@ npm run dev`}</Code>
 # → {"status":"ok"}`}</Code>
           </Section>
 
+          {/* ── Database management (dev) ── */}
+          <Section id='dev-db' title='Database Management (Dev)'>
+            <P>The app uses a single SQLite file at <Code>backend/portfolio.db</Code>. The schema is created automatically on first startup from <Code>backend/schema.sql</Code>, so you can delete the file at any time and it will be re-created — useful when you want a clean slate.</P>
+
+            <H3>List all users</H3>
+            <Code block>{`sqlite3 -header -column backend/portfolio.db \\
+  "SELECT id, email, name, is_verified, created_at FROM users ORDER BY id;"`}</Code>
+
+            <H3>Check if a specific email is registered</H3>
+            <P>Useful before wiping — if the user already exists, you might just want to re-verify or resend the verification email instead.</P>
+            <Code block>{`sqlite3 backend/portfolio.db \\
+  "SELECT id, is_verified FROM users WHERE email='you@example.com';"`}</Code>
+
+            <H3>Inspect any table</H3>
+            <Code block>{`# All tables
+sqlite3 backend/portfolio.db ".tables"
+
+# Schema for one table
+sqlite3 backend/portfolio.db ".schema transactions"
+
+# Recent transactions
+sqlite3 -header -column backend/portfolio.db \\
+  "SELECT * FROM transactions ORDER BY id DESC LIMIT 10;"`}</Code>
+
+            <H3>Delete a single user (cascades to all their data)</H3>
+            <Code block>{`sqlite3 backend/portfolio.db \\
+  "PRAGMA foreign_keys=ON; DELETE FROM users WHERE email='you@example.com';"`}</Code>
+            <Warn>The <Code>PRAGMA foreign_keys=ON</Code> is required. The sqlite3 CLI defaults to foreign keys <strong>OFF</strong>, even though the app turns them on inside <Code>get_connection()</Code>. Without it, the user row is deleted but transactions / alerts / paper_account / paper_watchlist rows are left orphaned.</Warn>
+
+            <H3>Wipe data but keep tables</H3>
+            <P>Useful when you want to reset state but skip the &quot;backend creates schema&quot; step.</P>
+            <Code block>{`sqlite3 backend/portfolio.db <<'SQL'
+PRAGMA foreign_keys = ON;
+DELETE FROM users;             -- cascades to all per-user tables
+DELETE FROM email_verifications;
+SQL`}</Code>
+
+            <H3>Full nuke (recommended for &quot;restart app&quot;)</H3>
+            <Code block>{`# 1. Stop uvicorn  (Ctrl+C in the backend terminal)
+# 2. Delete the DB file
+rm backend/portfolio.db
+# 3. Start uvicorn again — schema is auto-created from schema.sql
+cd backend && uvicorn main:app --reload --port 8000`}</Code>
+            <Warn>After a full wipe, also clear the frontend&apos;s saved JWT or you&apos;ll keep getting <Code>401 Unauthorized</Code> with a token that points at a non-existent user. In the browser DevTools: <strong>Application → Local Storage → http://localhost:3000</strong> → delete <Code>stock_agent_token</Code> and <Code>stock_agent_user</Code>, then hard-refresh (<Code>Cmd+Shift+R</Code>) and register again.</Warn>
+
+            <H3>One-liner: wipe DB + clear my own user (no CLI)</H3>
+            <P>If you just want to reset your own paper-trading account without nuking the whole DB, use the in-app button on the Paper Trading page (<Code>POST /api/v1/paper/reset</Code>) — it clears positions and restores the €100,000 starting balance without touching your login.</P>
+          </Section>
+
           {/* ── Backend structure ── */}
           <Section id='structure-backend' title='Backend Layout'>
             <Code block>{`backend/
@@ -405,7 +455,7 @@ npm run dev`}</Code>
 │   ├── paper.py               # GET account, POST trade, POST reset
 │   ├── alerts.py              # CRUD alerts + notification settings
 │   ├── chat.py                # POST /api/v1/chat → SSE stream
-│   └── ws.py                  # WebSocket /ws/alerts
+│   └── ws.py                  # WebSockets: /api/v1/ws/alerts, /api/v1/ws/prices
 └── services/
     ├── market_data.py         # fetch_quote(), fetch_ohlcv(), fetch_news() via yfinance
     ├── technical.py           # compute_indicators(), run_swing_analysis()
@@ -543,7 +593,7 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
           <Section id='guide-alerts' title='Price Alerts'>
             <P>Set alerts on any ticker. Choose <strong style={{ color: '#f1f5f9' }}>above</strong> or <strong style={{ color: '#f1f5f9' }}>below</strong> a target price. The backend scans all user portfolios every <Code>ALERT_INTERVAL_MINUTES</Code> (default: 30 minutes).</P>
             <P>When triggered, the alert is stored in the database, the unread counter in the sidebar increments, and if email notifications are enabled, an email is sent to the address in your notification settings.</P>
-            <P>Live alerts also push in real time through the WebSocket connection (<Code>/ws/alerts</Code>) as toast notifications.</P>
+            <P>Live alerts also push in real time through the WebSocket connection (<Code>/api/v1/ws/alerts</Code>) as toast notifications.</P>
           </Section>
 
           {/* ──────────────────────── API REFERENCE ──────────────────────── */}
@@ -823,7 +873,8 @@ const reader = res.body.getReader()
 
           {/* ── API: WS ── */}
           <Section id='api-ws' title='API — WebSocket'>
-            <Endpoint method='WS' path='/ws/alerts?token=<jwt>' desc='Real-time alert push channel. Connect with the JWT as a query parameter. The server pushes a JSON object whenever an alert is triggered.' />
+            <Endpoint method='WS' path='/api/v1/ws/alerts?token=<jwt>' desc='Real-time alert push channel. Connect with the JWT as a query parameter. The server pushes a JSON object whenever an alert is triggered.' />
+            <Endpoint method='WS' path='/api/v1/ws/prices?token=<jwt>' desc='Live price stream. Send {action:"subscribe"|"unsubscribe"|"set", tickers:[...]} to manage the subscription. Server pushes {type:"prices", quotes:[...]} on a 3s cadence when any subscribed ticker is live, 30s otherwise.' />
             <H3>Message format</H3>
             <Code block>{`{
   "id": "alert-42",
