@@ -14,10 +14,22 @@ router = APIRouter()
 
 # Streaming intervals for the lightweight /ws/prices endpoint. yfinance is
 # rate-limited and not a true tick feed, so we keep a small but visible cadence
-# during market hours and back off significantly when markets are closed.
-PRICES_TICK_INTERVAL_OPEN = 5      # seconds between price polls during US market hours
-PRICES_TICK_INTERVAL_CLOSED = 30   # seconds between polls outside market hours
+# whenever a market is "live" (US stock hours OR any subscribed crypto ticker)
+# and back off significantly when literally everything is closed.
+PRICES_TICK_INTERVAL_OPEN = 3      # seconds between polls when something is live
+PRICES_TICK_INTERVAL_CLOSED = 30   # seconds between polls when only closed stocks are subscribed
 PRICES_MAX_TICKERS = 50            # safety cap per connection
+
+# Heuristic for crypto tickers — yfinance crypto symbols are like "BTC-USD".
+_CRYPTO_SUFFIXES = ("-USD", "-EUR", "-USDT", "-USDC", "-BTC")
+
+
+def _is_crypto_ticker(ticker: str) -> bool:
+    return any(ticker.upper().endswith(s) for s in _CRYPTO_SUFFIXES)
+
+
+def _has_always_open_ticker(tickers) -> bool:
+    return any(_is_crypto_ticker(t) for t in tickers)
 
 PRICE_MOVE_THRESHOLD = 2.0  # % intraday move to trigger alert
 SIGNAL_CHECK_INTERVAL = 600  # recompute full analysis every 10 min
@@ -226,57 +238,89 @@ async def ws_prices(websocket: WebSocket, token: str = Query(...)):
 
     subscribed: set[str] = set()
     pending_change = asyncio.Event()
+    closed = asyncio.Event()
+
+    def _is_closed_socket_error(exc: BaseException) -> bool:
+        """Whether an exception is just the socket being gone."""
+        if isinstance(exc, WebSocketDisconnect):
+            return True
+        msg = str(exc)
+        return (
+            "websocket.send" in msg
+            or "websocket.close" in msg
+            or "after sending" in msg
+            or "response already completed" in msg
+        )
 
     async def reader() -> None:
         """Listens for subscribe / unsubscribe messages from the client."""
-        while True:
-            msg = await websocket.receive_text()
-            try:
-                data = json.loads(msg)
-            except json.JSONDecodeError:
-                continue
-            action = data.get("action")
-            tickers = data.get("tickers") or []
-            if not isinstance(tickers, list):
-                continue
-            normalized = [str(t).strip().upper() for t in tickers if str(t).strip()]
-            if action == "subscribe":
-                for t in normalized:
-                    if len(subscribed) >= PRICES_MAX_TICKERS:
-                        break
-                    subscribed.add(t)
-                pending_change.set()
-            elif action == "unsubscribe":
-                for t in normalized:
-                    subscribed.discard(t)
-                pending_change.set()
-            elif action == "set":
-                subscribed.clear()
-                for t in normalized[:PRICES_MAX_TICKERS]:
-                    subscribed.add(t)
-                pending_change.set()
+        try:
+            while True:
+                msg = await websocket.receive_text()
+                try:
+                    data = json.loads(msg)
+                except json.JSONDecodeError:
+                    continue
+                action = data.get("action")
+                tickers = data.get("tickers") or []
+                if not isinstance(tickers, list):
+                    continue
+                normalized = [str(t).strip().upper() for t in tickers if str(t).strip()]
+                if action == "subscribe":
+                    for t in normalized:
+                        if len(subscribed) >= PRICES_MAX_TICKERS:
+                            break
+                        subscribed.add(t)
+                    pending_change.set()
+                elif action == "unsubscribe":
+                    for t in normalized:
+                        subscribed.discard(t)
+                    pending_change.set()
+                elif action == "set":
+                    subscribed.clear()
+                    for t in normalized[:PRICES_MAX_TICKERS]:
+                        subscribed.add(t)
+                    pending_change.set()
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            if not _is_closed_socket_error(e):
+                print(f"[ws/prices] reader error: {e}")
+        finally:
+            closed.set()
+            pending_change.set()
 
     reader_task = asyncio.create_task(reader())
 
-    await websocket.send_json({
-        "type": "connected",
-        "market_open": is_market_open(),
-        "tick_interval": PRICES_TICK_INTERVAL_OPEN,
-    })
-
     try:
-        while True:
-            market_open = is_market_open()
+        await websocket.send_json({
+            "type": "connected",
+            "market_open": is_market_open(),
+            "tick_interval": PRICES_TICK_INTERVAL_OPEN,
+        })
+
+        while not closed.is_set():
             tickers = sorted(subscribed)
+            us_market_open = is_market_open()
+            # We're "live" if US stocks are tradeable OR any subscribed ticker
+            # is crypto (which trades 24/7). This keeps the cadence snappy on a
+            # crypto-only or mixed watchlist even when US markets are closed.
+            live = us_market_open or _has_always_open_ticker(tickers)
+
             if tickers:
                 try:
-                    await _broadcast_prices(websocket, tickers, market_open)
+                    await _broadcast_prices(websocket, tickers, us_market_open)
                 except Exception as e:
+                    if _is_closed_socket_error(e):
+                        break  # client gone, exit cleanly
                     print(f"[ws/prices] broadcast error: {e}")
 
-            interval = PRICES_TICK_INTERVAL_OPEN if market_open else PRICES_TICK_INTERVAL_CLOSED
-            # Wake early if the client changed its subscription so the new
-            # tickers are reflected in the next push without waiting a full tick.
+            if closed.is_set():
+                break
+
+            interval = PRICES_TICK_INTERVAL_OPEN if live else PRICES_TICK_INTERVAL_CLOSED
+            # Wake early if the client changed its subscription (or disconnected)
+            # so we don't sit on a closed socket for up to a full tick.
             try:
                 await asyncio.wait_for(pending_change.wait(), timeout=interval)
             except asyncio.TimeoutError:
@@ -285,6 +329,11 @@ async def ws_prices(websocket: WebSocket, token: str = Query(...)):
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        print(f"[ws/prices] connection error: {e}")
+        if not _is_closed_socket_error(e):
+            print(f"[ws/prices] connection error: {e}")
     finally:
         reader_task.cancel()
+        try:
+            await reader_task
+        except (asyncio.CancelledError, Exception):
+            pass
