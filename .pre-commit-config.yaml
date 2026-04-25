@@ -5,7 +5,9 @@
 # Subject line rule: the first line must be  [SA-<number>] <type>: <summary>
 # (Merge / Revert / fixup! / squash!  are exempt).
 #
-# Skip once:  SKIP=sa-commit-msg,sa-pre-push-commits git commit
+# Branch names (enforced on commit): main/master/develop, or
+#   feature/*, fix/*, hotfix/*, chore/*, docs/*, release/*
+# Skip once:  SKIP=sa-commit-msg,sa-pre-push-commits,branch-name git commit
 #             git commit / git push --no-verify  (bypasses all hooks; use sparingly)
 
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
@@ -34,6 +36,13 @@ repos:
 
   - repo: local
     hooks:
+      - id: branch-name
+        name: branch name (feature/*, fix/*, hotfix/*, …)
+        entry: python3 scripts/verify_branch_name.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: sa-commit-msg
         name: "[SA-n] commit subject (first line)"
         entry: python3 scripts/sa_commit_message.py
