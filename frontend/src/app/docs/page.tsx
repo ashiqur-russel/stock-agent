@@ -1,95 +1,910 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 
-const sections = [
+// ── sidebar structure ───────────────────────────────────────────────────────
+const NAV = [
   {
-    title: 'Getting Started',
+    group: 'Introduction',
     items: [
-      { q: 'How do I create an account?', a: 'Click "Register" on the homepage. Enter your name, email, and password. If email verification is enabled, check your inbox for a confirmation link.' },
-      { q: 'What currencies are supported?', a: 'EUR and USD. Toggle between them in the sidebar. The backend returns EUR; USD is converted in real time using live rates.' },
-      { q: 'Is this financial advice?', a: 'No. StockAgent is an educational tool. All AI analysis is for informational purposes only. Always do your own research before making investment decisions.' },
+      { id: 'overview', label: 'Overview' },
+      { id: 'stack', label: 'Tech Stack' },
     ],
   },
   {
-    title: 'Portfolio & Transactions',
+    group: 'Getting Started',
     items: [
-      { q: 'How is my portfolio calculated?', a: 'Your holdings are computed from the transaction ledger. Every BUY increases your average cost; every SELL realizes P&L against that average. The current price is fetched live from Yahoo Finance.' },
-      { q: 'Can I delete a transaction?', a: 'Yes — go to Transactions, click the delete button next to any row. The portfolio recalculates automatically.' },
-      { q: 'What tickers are supported?', a: 'Any ticker available on Yahoo Finance: US stocks (AAPL, TSLA), ETFs (SPY, QQQ), crypto (BTC-USD, ETH-USD), and many international exchanges.' },
+      { id: 'prerequisites', label: 'Prerequisites' },
+      { id: 'installation', label: 'Installation' },
+      { id: 'env-vars', label: 'Environment Variables' },
+      { id: 'running', label: 'Running Locally' },
     ],
   },
   {
-    title: 'AI Chat',
+    group: 'Project Structure',
     items: [
-      { q: 'What AI model powers the chat?', a: 'The chat is powered by the Groq-hosted Llama 4 Scout model (or configurable to Anthropic Claude). It uses live data tools to fetch prices, indicators, and news before answering.' },
-      { q: 'What tools does the AI use?', a: 'get_stock_data (OHLCV history), get_technical_indicators (RSI, MACD, Bollinger Bands, EMA), get_portfolio (your holdings), get_news_headlines, and analyze_swing_setup (composite signal).' },
-      { q: 'How do I ask about a stock?', a: 'Just type naturally: "Should I buy NVDA?" or "Analyze AAPL for a swing trade". You can also click a ticker in the quick-actions sidebar.' },
+      { id: 'structure-backend', label: 'Backend Layout' },
+      { id: 'structure-frontend', label: 'Frontend Layout' },
     ],
   },
   {
-    title: 'Paper Trading',
+    group: 'User Guide',
     items: [
-      { q: 'What is paper trading?', a: 'Paper trading lets you buy and sell stocks with a virtual account (€100,000) using real live prices. No real money is involved.' },
-      { q: 'Can I reset my paper account?', a: 'Yes — click "Reset Account" at the top of the Paper Trading page. This clears all positions and restores the starting balance.' },
-      { q: 'What are the trading hours?', a: 'US stock markets (NYSE/NASDAQ) are open Monday–Friday, 9:30 AM – 4:00 PM ET (15:30 – 22:00 CET/CEST). Crypto trades 24/7.' },
+      { id: 'guide-auth', label: 'Registration & Login' },
+      { id: 'guide-portfolio', label: 'Portfolio & Transactions' },
+      { id: 'guide-paper', label: 'Paper Trading' },
+      { id: 'guide-chat', label: 'AI Chat' },
+      { id: 'guide-alerts', label: 'Price Alerts' },
     ],
   },
   {
-    title: 'Price Alerts',
+    group: 'API Reference',
     items: [
-      { q: 'How do price alerts work?', a: 'Set a ticker, choose "above" or "below", and enter a target price. The backend checks prices every 30 minutes and triggers an alert when your condition is met.' },
-      { q: 'Do I get email notifications?', a: 'Yes, if you have enabled email notifications in the Alerts settings and the backend SMTP is configured.' },
+      { id: 'api-auth', label: 'Authentication' },
+      { id: 'api-portfolio', label: 'Portfolio' },
+      { id: 'api-market', label: 'Market Data' },
+      { id: 'api-indicators', label: 'Indicators' },
+      { id: 'api-paper', label: 'Paper Trading' },
+      { id: 'api-alerts', label: 'Alerts' },
+      { id: 'api-chat', label: 'AI Chat (SSE)' },
+      { id: 'api-ws', label: 'WebSocket' },
+    ],
+  },
+  {
+    group: 'Deployment',
+    items: [
+      { id: 'deploy-docker', label: 'Docker' },
+      { id: 'deploy-env', label: 'Production Env' },
     ],
   },
 ]
 
+// ── helper components ────────────────────────────────────────────────────────
+const METHODS: Record<string, string> = {
+  GET: '#1d4ed8',
+  POST: '#15803d',
+  DELETE: '#b91c1c',
+  PATCH: '#92400e',
+  PUT: '#6b21a8',
+  WS: '#0e7490',
+}
+
+function Badge({ method }: { method: string }) {
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 8px', borderRadius: 4,
+      background: METHODS[method] ?? '#334155', color: '#fff',
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', marginRight: 8,
+      verticalAlign: 'middle',
+    }}>
+      {method}
+    </span>
+  )
+}
+
+function Code({ children, block }: { children: string; block?: boolean }) {
+  if (!block) {
+    return (
+      <code style={{ background: '#1e293b', color: '#67e8f9', padding: '2px 6px', borderRadius: 4, fontSize: 13, fontFamily: 'monospace' }}>
+        {children}
+      </code>
+    )
+  }
+  return (
+    <pre style={{
+      background: '#0d1117', border: '1px solid #1e293b', borderRadius: 8,
+      padding: '16px 20px', overflowX: 'auto', fontSize: 13,
+      fontFamily: 'ui-monospace, monospace', lineHeight: 1.7, color: '#e2e8f0',
+      margin: '12px 0',
+    }}>
+      <code>{children}</code>
+    </pre>
+  )
+}
+
+function Endpoint({ method, path, auth, desc }: { method: string; path: string; auth?: boolean; desc: string }) {
+  return (
+    <div style={{ background: '#0d1117', border: '1px solid #1e293b', borderRadius: 8, padding: '14px 18px', margin: '10px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Badge method={method} />
+        <code style={{ color: '#67e8f9', fontSize: 14, fontFamily: 'monospace' }}>{path}</code>
+        {auth && <span style={{ fontSize: 11, color: '#f59e0b', border: '1px solid #78350f', background: '#1c1100', borderRadius: 4, padding: '1px 6px' }}>🔒 JWT</span>}
+      </div>
+      <p style={{ margin: '8px 0 0', fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>{desc}</p>
+    </div>
+  )
+}
+
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} style={{ marginBottom: 64, scrollMarginTop: 80 }}>
+      <h2 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', margin: '0 0 6px', paddingTop: 4 }}>{title}</h2>
+      <div style={{ width: 40, height: 3, background: '#22c55e', borderRadius: 2, marginBottom: 20 }} />
+      <div style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.8 }}>{children}</div>
+    </section>
+  )
+}
+
+function H3({ children }: { children: React.ReactNode }) {
+  return <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', margin: '24px 0 10px' }}>{children}</h3>
+}
+
+function P({ children }: { children: React.ReactNode }) {
+  return <p style={{ margin: '8px 0', lineHeight: 1.8 }}>{children}</p>
+}
+
+function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ background: '#0f2433', border: '1px solid #1e4d6b', borderRadius: 8, padding: '12px 16px', margin: '12px 0', fontSize: 13, color: '#7dd3fc' }}>
+      ℹ️ {children}
+    </div>
+  )
+}
+
+function Warn({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ background: '#1c1100', border: '1px solid #78350f', borderRadius: 8, padding: '12px 16px', margin: '12px 0', fontSize: 13, color: '#fbbf24' }}>
+      ⚠️ {children}
+    </div>
+  )
+}
+
+// ── main page ────────────────────────────────────────────────────────────────
 export default function DocsPage() {
   const { t } = useApp()
+  const [active, setActive] = useState('overview')
+
+  useEffect(() => {
+    const ids = NAV.flatMap((g) => g.items.map((i) => i.id))
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setActive(e.target.id)
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px' }
+    )
+    ids.forEach((id) => {
+      const el = document.getElementById(id)
+      if (el) obs.observe(el)
+    })
+    return () => obs.disconnect()
+  }, [])
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#020617', color: '#f1f5f9', fontFamily: 'var(--font-geist-sans)' }}>
-      <nav style={{ borderBottom: '1px solid #1e293b', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href='/' style={{ fontSize: 18, fontWeight: 700, color: '#22c55e', textDecoration: 'none' }}>📈 StockAgent</Link>
-        <div style={{ display: 'flex', gap: 16 }}>
+    <div style={{ minHeight: '100vh', background: '#060e20', color: '#f1f5f9', fontFamily: 'var(--font-geist-sans)' }}>
+
+      {/* Top nav */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(6,14,32,0.95)', backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid #1e293b', padding: '0 32px',
+        height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <Link href='/' style={{ fontSize: 18, fontWeight: 700, color: '#22c55e', textDecoration: 'none' }}>
+            📈 StockAgent
+          </Link>
+          <span style={{ color: '#1e293b' }}>|</span>
+          <span style={{ fontSize: 14, color: '#64748b' }}>Documentation</span>
+        </div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
-          <Link href='/register' style={{ padding: '8px 18px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>{t('land_get_started')}</Link>
+          <Link href='/register' style={{ padding: '7px 16px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+            {t('land_get_started')}
+          </Link>
         </div>
       </nav>
 
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '60px 32px' }}>
-        <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 8 }}>Documentation</h1>
-        <p style={{ color: '#94a3b8', fontSize: 16, marginBottom: 48, lineHeight: 1.6 }}>
-          Everything you need to know about using StockAgent.
-        </p>
+      <div style={{ display: 'flex', maxWidth: 1200, margin: '0 auto' }}>
 
-        {sections.map((section) => (
-          <div key={section.title} style={{ marginBottom: 48 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#22c55e', marginBottom: 20, paddingBottom: 8, borderBottom: '1px solid #1e293b' }}>
-              {section.title}
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {section.items.map((item) => (
-                <div key={item.q} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '16px 20px' }}>
-                  <div style={{ fontWeight: 600, color: '#f1f5f9', marginBottom: 6, fontSize: 15 }}>
-                    {item.q}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7 }}>
-                    {item.a}
-                  </div>
+        {/* Sidebar */}
+        <aside style={{
+          width: 240, flexShrink: 0,
+          position: 'sticky', top: 60, height: 'calc(100vh - 60px)',
+          overflowY: 'auto', padding: '28px 0',
+          borderRight: '1px solid #1e293b',
+        }}>
+          {NAV.map((group) => (
+            <div key={group.group} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 20px 6px' }}>
+                {group.group}
+              </div>
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollTo(item.id)}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '6px 20px 6px 24px', fontSize: 13,
+                    background: active === item.id ? '#0d2a1a' : 'transparent',
+                    color: active === item.id ? '#22c55e' : '#94a3b8',
+                    borderLeft: active === item.id ? '2px solid #22c55e' : '2px solid transparent',
+                    border: 'none', cursor: 'pointer',
+                    transition: 'all 0.1s',
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </aside>
+
+        {/* Content */}
+        <main style={{ flex: 1, padding: '40px 48px 80px', minWidth: 0 }}>
+
+          {/* ── Overview ── */}
+          <Section id='overview' title='Overview'>
+            <P>
+              <strong style={{ color: '#f1f5f9' }}>StockAgent</strong> is a self-hosted, multi-user stock portfolio tracker with an AI-powered swing trading advisor.
+              Users can register their own accounts, log every buy and sell transaction, watch live prices, paper trade with a virtual account, and get AI analysis of any stock.
+            </P>
+            <P>The AI advisor uses real-time market data (Yahoo Finance), technical indicators (RSI, MACD, Bollinger Bands, EMA), and news headlines to provide structured swing trading analysis.</P>
+            <Note>StockAgent is an educational tool. Nothing here constitutes financial advice.</Note>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginTop: 20 }}>
+              {[
+                { icon: '📊', t: 'Live Portfolio', d: 'Real-time holdings with P&L calculated from transactions' },
+                { icon: '🤖', t: 'AI Advisor', d: 'Streaming analysis using live data tools' },
+                { icon: '📝', t: 'Paper Trading', d: 'Virtual €100k account with live prices' },
+                { icon: '🔔', t: 'Price Alerts', d: 'WebSocket push + email notifications' },
+                { icon: '🌍', t: 'EUR / USD', d: 'Instant currency toggle across all views' },
+                { icon: '🔒', t: 'Auth + JWT', d: 'Email verification, bcrypt, 30-day tokens' },
+              ].map((f) => (
+                <div key={f.t} style={{ background: '#0d1a33', border: '1px solid #1e3050', borderRadius: 8, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 22, marginBottom: 6 }}>{f.icon}</div>
+                  <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 14, marginBottom: 4 }}>{f.t}</div>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>{f.d}</div>
                 </div>
               ))}
             </div>
-          </div>
-        ))}
+          </Section>
 
-        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 24, textAlign: 'center', marginTop: 20 }}>
-          <p style={{ color: '#94a3b8', marginBottom: 16, fontSize: 15 }}>Ready to start tracking your portfolio?</p>
-          <Link href='/register' style={{ padding: '12px 28px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            {t('land_cta_create')}
-          </Link>
-        </div>
+          {/* ── Stack ── */}
+          <Section id='stack' title='Tech Stack'>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {[
+                { side: 'Backend', items: ['Python 3.12 + FastAPI', 'SQLite via stdlib sqlite3', 'Groq SDK (Llama 4 Scout)', 'yfinance + pandas-ta', 'python-jose (JWT) + passlib (bcrypt)', 'APScheduler (alert scans)', 'Nodemailer / SMTP'] },
+                { side: 'Frontend', items: ['Next.js 14 App Router + TypeScript', 'Tailwind CSS v3', 'lightweight-charts v5 (TradingView)', 'react-markdown', 'SSE for AI streaming', 'WebSocket for live alerts', 'AppContext (lang + currency)'] },
+              ].map(({ side, items }) => (
+                <div key={side} style={{ background: '#0d1a33', border: '1px solid #1e3050', borderRadius: 8, padding: 18 }}>
+                  <div style={{ fontWeight: 700, color: '#22c55e', marginBottom: 10, fontSize: 15 }}>{side}</div>
+                  {items.map((i) => (
+                    <div key={i} style={{ fontSize: 13, color: '#94a3b8', padding: '3px 0', display: 'flex', gap: 8 }}>
+                      <span style={{ color: '#22c55e' }}>•</span> {i}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* ── Prerequisites ── */}
+          <Section id='prerequisites' title='Prerequisites'>
+            <P>Before setting up the project, make sure you have the following installed:</P>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '12px 0' }}>
+              {[
+                ['Python 3.12+', 'python --version'],
+                ['Node.js 18+', 'node --version'],
+                ['npm 9+', 'npm --version'],
+                ['Git', 'git --version'],
+              ].map(([label, cmd]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#0d1a33', border: '1px solid #1e3050', borderRadius: 8, padding: '10px 16px' }}>
+                  <span style={{ minWidth: 120, color: '#f1f5f9', fontSize: 14, fontWeight: 500 }}>{label}</span>
+                  <Code>{cmd}</Code>
+                </div>
+              ))}
+            </div>
+            <P>You also need a <strong style={{ color: '#f1f5f9' }}>Groq API key</strong> (free at <code style={{ color: '#67e8f9' }}>console.groq.com</code>) to power the AI chat.</P>
+            <P>Optional: a Gmail App Password for email verification and price alert emails.</P>
+          </Section>
+
+          {/* ── Installation ── */}
+          <Section id='installation' title='Installation'>
+            <H3>1. Clone the repository</H3>
+            <Code block>{`git clone https://github.com/your-org/stock-agent.git
+cd stock-agent`}</Code>
+
+            <H3>2. Set up the backend</H3>
+            <Code block>{`cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\\Scripts\\activate
+pip install -r requirements.txt`}</Code>
+
+            <H3>3. Set up the frontend</H3>
+            <Code block>{`cd ../frontend
+npm install`}</Code>
+
+            <H3>4. Configure environment variables</H3>
+            <P>See the <button onClick={() => scrollTo('env-vars')} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', textDecoration: 'underline', fontSize: 14, padding: 0 }}>Environment Variables</button> section below.</P>
+
+            <H3>5. Run the database migration</H3>
+            <P>The database is created automatically on first startup — no manual migration needed. The backend calls <Code>init_db()</Code> on startup which creates all tables from <Code>schema.sql</Code>.</P>
+          </Section>
+
+          {/* ── Env vars ── */}
+          <Section id='env-vars' title='Environment Variables'>
+            <H3>backend/.env</H3>
+            <Code block>{`# App
+APP_HOST=0.0.0.0
+APP_PORT=8000
+
+# Database
+DATABASE_PATH=./portfolio.db
+
+# Auth
+JWT_SECRET=your-random-secret-here-min-32-chars
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=43200   # 30 days
+
+# Groq (AI)
+GROQ_API_KEY=gsk_...
+
+# CORS
+CORS_ORIGINS=http://localhost:3000
+
+# Email / SMTP (optional — leave blank to skip email verification)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=xxxx xxxx xxxx xxxx   # 16-char Gmail App Password
+
+# Alert scanner interval
+ALERT_INTERVAL_MINUTES=30`}</Code>
+
+            <Warn>If you copy a Gmail App Password, paste it carefully — some editors insert non-breaking spaces (U+00A0) between groups that will cause authentication to fail. The app strips them automatically but verify the raw value.</Warn>
+
+            <H3>frontend/.env.local</H3>
+            <Code block>{`NEXT_PUBLIC_API_URL=http://localhost:8000`}</Code>
+
+            <Note>In production, point <Code>NEXT_PUBLIC_API_URL</Code> to your backend's public URL (e.g. <Code>https://api.yourdomain.com</Code>).</Note>
+          </Section>
+
+          {/* ── Running ── */}
+          <Section id='running' title='Running Locally'>
+            <H3>Start the backend</H3>
+            <Code block>{`cd backend
+source .venv/bin/activate
+uvicorn main:app --reload --port 8000`}</Code>
+            <P>The API is now running at <Code>http://localhost:8000</Code>. Interactive Swagger UI is available at <Code>http://localhost:8000/docs</Code>.</P>
+
+            <H3>Start the frontend</H3>
+            <Code block>{`cd frontend
+npm run dev`}</Code>
+            <P>The app is available at <Code>http://localhost:3000</Code>.</P>
+
+            <H3>Verify</H3>
+            <Code block>{`curl http://localhost:8000/api/v1/health
+# → {"status":"ok"}`}</Code>
+          </Section>
+
+          {/* ── Backend structure ── */}
+          <Section id='structure-backend' title='Backend Layout'>
+            <Code block>{`backend/
+├── main.py                    # FastAPI app factory, CORS, routers, scheduler
+├── config.py                  # .env loader — all settings
+├── database.py                # get_connection(), init_db()
+├── schema.sql                 # CREATE TABLE statements
+├── requirements.txt
+├── auth/
+│   ├── models.py              # Pydantic: RegisterRequest, LoginRequest, TokenResponse
+│   ├── service.py             # hash_password, verify_password, create_jwt, decode_jwt
+│   └── router.py              # POST /auth/register  POST /auth/login
+├── middleware/
+│   └── auth.py                # get_current_user() — JWT dependency
+├── routers/
+│   ├── portfolio.py           # GET/POST/DELETE portfolio & transactions
+│   ├── market.py              # GET quote / history / news
+│   ├── indicators.py          # GET RSI, MACD, BB, EMA, swing signal
+│   ├── paper.py               # GET account, POST trade, POST reset
+│   ├── alerts.py              # CRUD alerts + notification settings
+│   ├── chat.py                # POST /api/v1/chat → SSE stream
+│   └── ws.py                  # WebSocket /ws/alerts
+└── services/
+    ├── market_data.py         # fetch_quote(), fetch_ohlcv(), fetch_news() via yfinance
+    ├── technical.py           # compute_indicators(), run_swing_analysis()
+    ├── portfolio_service.py   # get_portfolio_for_user(), add/delete transaction
+    ├── agent_service.py       # system prompt, tool dispatcher, stream_agent_response()
+    └── alert_service.py       # check_all_portfolios() — runs every 30 min`}</Code>
+          </Section>
+
+          {/* ── Frontend structure ── */}
+          <Section id='structure-frontend' title='Frontend Layout'>
+            <Code block>{`frontend/src/
+├── app/
+│   ├── layout.tsx             # Root layout — Providers + CookieBanner
+│   ├── page.tsx               # Landing page
+│   ├── login/page.tsx
+│   ├── register/page.tsx
+│   ├── verify/page.tsx        # Email verification (Suspense-wrapped)
+│   ├── dashboard/page.tsx     # Portfolio overview
+│   ├── transactions/page.tsx  # Add/delete transactions
+│   ├── paper/page.tsx         # Paper trading + watchlist
+│   ├── chat/page.tsx          # AI chat (SSE streaming)
+│   ├── alerts/page.tsx        # Price alerts + notification settings
+│   └── docs/page.tsx          # This page
+├── components/
+│   ├── layout/
+│   │   ├── Sidebar.tsx        # Nav + language + currency toggles
+│   │   ├── AuthGuard.tsx      # JWT check → redirect, wraps WebSocket listener
+│   │   └── LiveAlertToast.tsx # Bottom-right toast notifications
+│   ├── ui/
+│   │   ├── Amount.tsx         # EUR↔USD money display
+│   │   ├── Toggle.tsx         # Two-option toggle button
+│   │   ├── FormInput.tsx      # Labelled input
+│   │   └── MarketStatus.tsx   # NYSE open/closed indicator
+│   ├── dashboard/
+│   │   ├── PortfolioCard.tsx  # Per-ticker card with P&L + chart
+│   │   └── SignalBadge.tsx    # BUY/SELL/HOLD badge
+│   ├── charts/
+│   │   └── CandlestickChart.tsx  # lightweight-charts v5
+│   ├── paper/
+│   │   └── TradeModal.tsx     # Buy/Sell modal with live price
+│   ├── CookieBanner.tsx       # GDPR cookie consent
+│   └── Providers.tsx          # AppContext provider wrapper
+├── contexts/
+│   └── AppContext.tsx         # lang, currency, formatPrice, t()
+├── hooks/
+│   ├── useAuth.ts             # login, register, logout
+│   ├── usePortfolio.ts        # fetch + 30s auto-refresh
+│   ├── useChat.ts             # SSE streaming hook
+│   └── useAlertWS.ts          # WebSocket reconnect hook
+├── lib/
+│   ├── api.ts                 # apiFetch + all route namespaces
+│   └── i18n.ts                # EN/DE translation dictionary
+└── types/
+    └── css.d.ts`}</Code>
+          </Section>
+
+          {/* ── Guide: Auth ── */}
+          <Section id='guide-auth' title='Registration & Login'>
+            <P>Go to <Code>/register</Code> and fill in your name, email and password.</P>
+
+            <H3>With SMTP configured</H3>
+            <P>After submitting, you receive a verification email. Click the link to activate your account, then log in normally. The verification link expires after <strong style={{ color: '#f1f5f9' }}>24 hours</strong>. Use the "Resend" button if it expires.</P>
+
+            <H3>Without SMTP (local dev)</H3>
+            <P>If <Code>SMTP_USER</Code> and <Code>SMTP_PASSWORD</Code> are empty, the account is auto-verified and you get a JWT immediately.</P>
+
+            <H3>JWT storage</H3>
+            <P>The access token is stored in <Code>localStorage</Code> under the key <Code>stock_agent_token</Code> and sent as a <Code>Authorization: Bearer &lt;token&gt;</Code> header on every API request. Tokens are valid for <strong style={{ color: '#f1f5f9' }}>30 days</strong>.</P>
+          </Section>
+
+          {/* ── Guide: Portfolio ── */}
+          <Section id='guide-portfolio' title='Portfolio & Transactions'>
+            <P>Navigate to <strong style={{ color: '#f1f5f9' }}>Transactions</strong> to log trades. Every entry requires a ticker, type (BUY or SELL), number of shares, price per share, and the date the trade was executed.</P>
+
+            <H3>How portfolio is calculated</H3>
+            <P>There is no stored portfolio table. Holdings are always computed live from the transaction ledger:</P>
+            <Code block>{`BUY  → new_avg = (shares_held × avg_cost + buy_shares × buy_price) / new_total_shares
+SELL → realized_pnl += (sell_price − avg_cost) × sell_shares
+       shares_held   -= sell_shares   (avg_cost stays unchanged)
+
+unrealized_pnl     = (live_price − avg_cost) × shares_held
+unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
+            <P>Live prices are fetched from Yahoo Finance. Deleting a transaction fully recalculates the portfolio.</P>
+
+            <H3>Supported tickers</H3>
+            <P>Any Yahoo Finance symbol: <Code>AAPL</Code>, <Code>TSLA</Code>, <Code>SPY</Code>, <Code>BTC-USD</Code>, <Code>ETH-USD</Code>, <Code>IWDA.AS</Code>, etc.</P>
+          </Section>
+
+          {/* ── Guide: Paper ── */}
+          <Section id='guide-paper' title='Paper Trading'>
+            <P>Paper trading gives you a virtual <strong style={{ color: '#f1f5f9' }}>€100,000</strong> account to practise trading with real live prices. No real money is involved.</P>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '12px 0' }}>
+              {[
+                ['Add to watchlist', 'Type any ticker in the Watchlist panel and press Add. The card fetches the live price and refreshes every 30 seconds.'],
+                ['Buy', 'Click Buy on a watchlist card or holdings row. Enter shares or amount. The modal shows the live price and calculates cost.'],
+                ['Sell', 'Only available if you hold that ticker. Enter shares to sell. Proceeds are added to your cash balance.'],
+                ['Reset account', 'Clears all positions and restores the €100,000 starting balance. Requires confirmation.'],
+              ].map(([title, desc]) => (
+                <div key={title as string} style={{ background: '#0d1a33', border: '1px solid #1e3050', borderRadius: 8, padding: '12px 16px' }}>
+                  <span style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 14 }}>{title}</span>
+                  <span style={{ color: '#64748b' }}> — </span>
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+            <H3>Trading Hours indicator</H3>
+            <P>The header shows whether the US stock market (NYSE/NASDAQ) is currently open. Hours are <strong style={{ color: '#f1f5f9' }}>9:30 AM – 4:00 PM ET</strong>, which is <strong style={{ color: '#f1f5f9' }}>15:30 – 22:00 CET/CEST</strong>. Crypto markets are always open (24/7).</P>
+          </Section>
+
+          {/* ── Guide: Chat ── */}
+          <Section id='guide-chat' title='AI Chat'>
+            <P>The chat page connects to a Groq-hosted <strong style={{ color: '#f1f5f9' }}>Llama 4 Scout</strong> model with five built-in tools for real-time data.</P>
+            <H3>Available tools</H3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '12px 0' }}>
+              {[
+                ['get_stock_data', 'OHLCV candlestick history (ticker, period, interval)'],
+                ['get_technical_indicators', 'RSI-14, MACD, Bollinger Bands, 20 EMA, 50 EMA'],
+                ['get_portfolio', "Current user's holdings with live P&L"],
+                ['get_news_headlines', 'Top Yahoo Finance headlines for a ticker'],
+                ['analyze_swing_setup', 'Composite signal: support/resistance, MACD, BB, swing quality score'],
+              ].map(([name, desc]) => (
+                <div key={name as string} style={{ display: 'flex', gap: 12, background: '#0d1a33', border: '1px solid #1e3050', borderRadius: 8, padding: '10px 14px' }}>
+                  <Code>{name as string}</Code>
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+            <H3>Streaming</H3>
+            <P>Responses stream via <strong style={{ color: '#f1f5f9' }}>Server-Sent Events (SSE)</strong>. Text tokens appear in real time. Tool calls are shown as pill badges. The stream auto-scrolls to the latest message.</P>
+            <H3>Quick actions</H3>
+            <P>When you have holdings, the sidebar shows one button per ticker (e.g. "📈 AAPL"). Clicking pre-fills the input with <em>"Analyze AAPL for a swing trade"</em>.</P>
+          </Section>
+
+          {/* ── Guide: Alerts ── */}
+          <Section id='guide-alerts' title='Price Alerts'>
+            <P>Set alerts on any ticker. Choose <strong style={{ color: '#f1f5f9' }}>above</strong> or <strong style={{ color: '#f1f5f9' }}>below</strong> a target price. The backend scans all user portfolios every <Code>ALERT_INTERVAL_MINUTES</Code> (default: 30 minutes).</P>
+            <P>When triggered, the alert is stored in the database, the unread counter in the sidebar increments, and if email notifications are enabled, an email is sent to the address in your notification settings.</P>
+            <P>Live alerts also push in real time through the WebSocket connection (<Code>/ws/alerts</Code>) as toast notifications.</P>
+          </Section>
+
+          {/* ──────────────────────── API REFERENCE ──────────────────────── */}
+
+          {/* ── API: Auth ── */}
+          <Section id='api-auth' title='API — Authentication'>
+            <P>All endpoints except the auth routes require a JWT in the <Code>Authorization: Bearer &lt;token&gt;</Code> header.</P>
+
+            <Endpoint method='POST' path='/auth/register' desc='Register a new user. Returns JWT immediately (local dev) or sends a verification email (SMTP configured).' />
+            <H3>Request body</H3>
+            <Code block>{`{
+  "email": "user@example.com",
+  "name": "Jane Doe",
+  "password": "mypassword"
+}`}</Code>
+            <H3>Response — auto-verified (no SMTP)</H3>
+            <Code block>{`{
+  "access_token": "eyJ...",
+  "user_id": 1,
+  "name": "Jane Doe",
+  "email": "user@example.com"
+}`}</Code>
+            <H3>Response — SMTP configured</H3>
+            <Code block>{`{
+  "email": "user@example.com",
+  "message": "Check your email to verify your account"
+}`}</Code>
+
+            <Endpoint method='GET' path='/auth/verify?token=<token>' desc='Verifies the email token from the verification link. Returns a JWT on success.' />
+
+            <Endpoint method='POST' path='/auth/resend-verification' desc='Resends the verification email for the given address.' />
+            <Code block>{`{ "email": "user@example.com" }`}</Code>
+
+            <Endpoint method='POST' path='/auth/login' desc='Log in with email and password. Returns a JWT token.' />
+            <Code block>{`// Request
+{ "email": "user@example.com", "password": "mypassword" }
+
+// Response
+{
+  "access_token": "eyJ...",
+  "user_id": 1,
+  "name": "Jane Doe",
+  "email": "user@example.com"
+}`}</Code>
+          </Section>
+
+          {/* ── API: Portfolio ── */}
+          <Section id='api-portfolio' title='API — Portfolio'>
+            <Endpoint method='GET' path='/api/v1/portfolio' auth desc='Returns all holdings calculated from transactions, enriched with live prices and P&L.' />
+            <H3>Response</H3>
+            <Code block>{`[
+  {
+    "ticker": "AAPL",
+    "shares_held": 10.0,
+    "avg_cost": 185.50,
+    "current_price": 195.20,       // EUR
+    "current_price_usd": 214.35,
+    "market_value": 1952.00,       // EUR
+    "market_value_usd": 2143.52,
+    "unrealized_pnl": 97.00,
+    "unrealized_pnl_usd": 106.59,
+    "unrealized_pnl_pct": 5.23,
+    "realized_pnl": 0.00,
+    "realized_pnl_usd": 0.00,
+    "day_change_pct": 1.20,
+    "eur_rate": 0.91
+  }
+]`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/portfolio/transactions' auth desc='Returns the full transaction history for the authenticated user, newest first.' />
+            <Code block>{`[
+  {
+    "id": 42,
+    "ticker": "AAPL",
+    "type": "BUY",
+    "shares": 10.0,
+    "price": 185.50,
+    "executed_at": "2025-04-20",
+    "notes": "bought on earnings dip",
+    "created_at": "2025-04-20T14:22:00"
+  }
+]`}</Code>
+
+            <Endpoint method='POST' path='/api/v1/portfolio/transaction' auth desc='Log a BUY or SELL transaction. Returns the created transaction object.' />
+            <Code block>{`// Request
+{
+  "ticker": "AAPL",
+  "type": "BUY",           // "BUY" | "SELL"
+  "shares": 10,
+  "price": 185.50,
+  "executed_at": "2025-04-20",
+  "notes": "optional"
+}
+
+// Response
+{ "id": 42, "ticker": "AAPL", ... }`}</Code>
+
+            <Endpoint method='DELETE' path='/api/v1/portfolio/transaction/{id}' auth desc='Deletes a transaction by ID. Only the owning user can delete.' />
+            <Code block>{`{ "deleted": true }`}</Code>
+          </Section>
+
+          {/* ── API: Market ── */}
+          <Section id='api-market' title='API — Market Data'>
+            <Note>All market data comes from Yahoo Finance via <Code>yfinance</Code>. Data is live — not cached.</Note>
+
+            <Endpoint method='GET' path='/api/v1/market/quote/{ticker}' auth desc='Current price, day change %, and EUR/USD rate for a ticker.' />
+            <Code block>{`{
+  "ticker": "AAPL",
+  "current_price": 195.20,       // EUR
+  "current_price_usd": 214.35,
+  "day_change_pct": 1.20,
+  "eur_rate": 0.91
+}`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/market/history/{ticker}?period=3mo&interval=1d' auth desc='OHLCV candlestick data. period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y. interval: 1m, 5m, 1h, 1d, 1wk.' />
+            <Code block>{`[
+  {
+    "date": "2025-01-15",
+    "open": 182.10,
+    "high": 185.80,
+    "low": 181.50,
+    "close": 184.20,
+    "volume": 58234100
+  }
+]`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/market/news/{ticker}' auth desc='Top 10 Yahoo Finance news headlines for the ticker.' />
+            <Code block>{`[
+  {
+    "title": "Apple beats earnings estimates",
+    "published": "2025-04-20T18:00:00",
+    "url": "https://..."
+  }
+]`}</Code>
+          </Section>
+
+          {/* ── API: Indicators ── */}
+          <Section id='api-indicators' title='API — Technical Indicators'>
+            <Endpoint method='GET' path='/api/v1/indicators/{ticker}' auth desc='Computes RSI-14, MACD, Bollinger Bands (20,2), 20 EMA, and 50 EMA from daily OHLCV data.' />
+            <Code block>{`{
+  "ticker": "AAPL",
+  "rsi": 58.4,
+  "macd": 1.23,
+  "macd_signal": 0.87,
+  "macd_hist": 0.36,
+  "bb_upper": 198.50,
+  "bb_middle": 190.20,
+  "bb_lower": 181.90,
+  "bb_pct": 0.72,          // 0=at lower band, 1=at upper band
+  "ema20": 191.30,
+  "ema50": 186.40
+}`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/indicators/{ticker}/swing' auth desc='Composite swing setup analysis combining indicators, key levels, and news.' />
+            <Code block>{`{
+  "ticker": "AAPL",
+  "swing_setup_quality": "GOOD",    // EXCELLENT | GOOD | FAIR | POOR
+  "signal": "BUY",                  // BUY | SELL | HOLD
+  "key_support": 188.00,
+  "key_resistance": 200.00,
+  "macd_signal": "bullish_crossover",
+  "bb_position": "middle",
+  "rsi": 58.4,
+  "summary": "AAPL is trading above both EMAs with a bullish MACD crossover..."
+}`}</Code>
+          </Section>
+
+          {/* ── API: Paper ── */}
+          <Section id='api-paper' title='API — Paper Trading'>
+            <Endpoint method='GET' path='/api/v1/paper/account' auth desc='Returns the full paper trading account: cash balance, holdings with live P&L, and recent transactions.' />
+            <Code block>{`{
+  "balance_eur": 87234.50,
+  "total_value": 102450.00,
+  "pnl": 2450.00,
+  "pnl_pct": 2.45,
+  "holdings": [
+    {
+      "ticker": "NVDA",
+      "shares": 5.0,
+      "avg_cost": 830.00,
+      "current_price": 875.20,
+      "market_value": 4376.00,
+      "unrealized_pnl": 226.00,
+      "unrealized_pnl_pct": 5.45,
+      "day_change_pct": 2.10
+    }
+  ],
+  "transactions": [ ... ]
+}`}</Code>
+
+            <Endpoint method='POST' path='/api/v1/paper/trade' auth desc='Execute a paper BUY or SELL at the current live price. Returns the trade result and new cash balance.' />
+            <Code block>{`// Request
+{
+  "ticker": "NVDA",
+  "type": "BUY",     // "BUY" | "SELL"
+  "shares": 2.5,
+  "notes": ""
+}
+
+// Response
+{
+  "ok": true,
+  "ticker": "NVDA",
+  "type": "BUY",
+  "shares": 2.5,
+  "price_eur": 875.20,
+  "total": 2188.00,
+  "new_balance": 85046.50
+}`}</Code>
+
+            <Endpoint method='POST' path='/api/v1/paper/reset' auth desc='Resets the paper account to €100,000. All positions and transaction history are deleted.' />
+            <Code block>{`{ "ok": true, "balance_eur": 100000.0 }`}</Code>
+          </Section>
+
+          {/* ── API: Alerts ── */}
+          <Section id='api-alerts' title='API — Alerts'>
+            <Endpoint method='GET' path='/api/v1/alerts' auth desc='List all alerts for the authenticated user, newest first (max 50).' />
+            <Code block>{`[
+  {
+    "id": 7,
+    "ticker": "AAPL",
+    "condition": "above",
+    "target_price": 200.00,
+    "is_active": true,
+    "triggered_at": null,
+    "is_read": false,
+    "created_at": "2025-04-20T10:00:00"
+  }
+]`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/alerts/unread-count' auth desc='Returns the count of unread alert notifications.' />
+            <Code block>{`{ "count": 3 }`}</Code>
+
+            <Endpoint method='PATCH' path='/api/v1/alerts/read-all' auth desc='Marks all alerts as read.' />
+            <Endpoint method='PATCH' path='/api/v1/alerts/{id}/read' auth desc='Marks a single alert as read.' />
+
+            <Endpoint method='GET' path='/api/v1/settings/notifications' auth desc='Get notification settings for the current user.' />
+            <Code block>{`{
+  "notify_email": "user@example.com",
+  "email_alerts": true
+}`}</Code>
+
+            <Endpoint method='PUT' path='/api/v1/settings/notifications' auth desc='Update notification settings.' />
+            <Code block>{`{
+  "notify_email": "user@example.com",
+  "email_alerts": true
+}`}</Code>
+          </Section>
+
+          {/* ── API: Chat ── */}
+          <Section id='api-chat' title='API — AI Chat (SSE)'>
+            <Endpoint method='POST' path='/api/v1/chat' auth desc='Starts the agentic loop and streams the response as Server-Sent Events.' />
+            <H3>Request</H3>
+            <Code block>{`{
+  "messages": [
+    { "role": "user", "content": "Analyze AAPL for a swing trade" }
+  ]
+}`}</Code>
+            <H3>SSE event types</H3>
+            <Code block>{`// Text token
+data: {"type": "text_delta", "text": "AAPL is currently..."}
+
+// Tool being called
+data: {"type": "tool_call", "name": "analyze_swing_setup"}
+
+// Stream finished
+data: {"type": "done"}`}</Code>
+            <H3>Frontend usage</H3>
+            <Code block>{`const res = await fetch('/api/v1/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${token}\` },
+  body: JSON.stringify({ messages }),
+})
+const reader = res.body.getReader()
+// read lines, parse JSON after "data: " prefix`}</Code>
+          </Section>
+
+          {/* ── API: WS ── */}
+          <Section id='api-ws' title='API — WebSocket'>
+            <Endpoint method='WS' path='/ws/alerts?token=<jwt>' desc='Real-time alert push channel. Connect with the JWT as a query parameter. The server pushes a JSON object whenever an alert is triggered.' />
+            <H3>Message format</H3>
+            <Code block>{`{
+  "id": "alert-42",
+  "ticker": "AAPL",
+  "condition": "above",
+  "target_price": 200.00,
+  "current_price": 201.35,
+  "message": "AAPL crossed above €200.00 (now €201.35)",
+  "timestamp": "2025-04-20T18:30:00Z"
+}`}</Code>
+            <H3>Reconnection</H3>
+            <P>The frontend <Code>useAlertWS</Code> hook reconnects automatically after <strong style={{ color: '#f1f5f9' }}>10 seconds</strong> if the connection drops.</P>
+          </Section>
+
+          {/* ── Deploy: Docker ── */}
+          <Section id='deploy-docker' title='Deployment — Docker'>
+            <P>Both services have Dockerfiles. Use the root <Code>docker-compose.yml</Code> to run everything together.</P>
+            <H3>Build and start</H3>
+            <Code block>{`# from the stock-agent/ root
+docker compose up --build -d`}</Code>
+            <H3>docker-compose.yml overview</H3>
+            <Code block>{`services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    env_file: ./backend/.env
+    volumes: ["./data:/app/data"]   # persists the SQLite DB
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000`}</Code>
+            <H3>Frontend Dockerfile</H3>
+            <Code block>{`FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]`}</Code>
+          </Section>
+
+          {/* ── Deploy: Env ── */}
+          <Section id='deploy-env' title='Deployment — Production Env'>
+            <Warn>Never commit <Code>.env</Code> files with real secrets to version control.</Warn>
+            <P>For production deployments (OVH, VPS, etc.) set these environment variables on the server:</P>
+            <Code block>{`# backend
+JWT_SECRET=<cryptographically random 64-char string>
+CORS_ORIGINS=https://yourdomain.com
+DATABASE_PATH=/app/data/portfolio.db
+GROQ_API_KEY=gsk_...
+SMTP_USER=alerts@yourdomain.com
+SMTP_PASSWORD=<app password>
+
+# frontend (build-time)
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com`}</Code>
+            <H3>Generate a secure JWT secret</H3>
+            <Code block>{`python3 -c "import secrets; print(secrets.token_hex(32))"`}</Code>
+            <H3>Health check</H3>
+            <Code block>{`curl https://api.yourdomain.com/api/v1/health
+# → {"status":"ok"}`}</Code>
+          </Section>
+
+          {/* Footer */}
+          <div style={{ borderTop: '1px solid #1e293b', paddingTop: 32, marginTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <span style={{ fontSize: 13, color: '#475569' }}>Not financial advice. For educational purposes only.</span>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <Link href='/' style={{ fontSize: 13, color: '#64748b', textDecoration: 'none' }}>Home</Link>
+              <Link href='/register' style={{ fontSize: 13, color: '#22c55e', textDecoration: 'none', fontWeight: 600 }}>Get Started →</Link>
+            </div>
+          </div>
+
+        </main>
       </div>
     </div>
   )
