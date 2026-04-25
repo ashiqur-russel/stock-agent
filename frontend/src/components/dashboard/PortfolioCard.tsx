@@ -1,11 +1,12 @@
 'use client'
 
+import { memo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import type { Holding } from '@/hooks/usePortfolio'
-import SignalBadge from './SignalBadge'
+import { useLiveQuote } from '@/hooks/usePriceStream'
+import { LivePrice, LiveDayChange } from '@/components/ui/LivePrice'
 import CandlestickChart from '@/components/charts/CandlestickChart'
-import { useState } from 'react'
 
 interface Props {
   holding: Holding
@@ -26,14 +27,14 @@ function PnlText({ eur, usd, pct }: { eur: number; usd: number; pct: number }) {
   )
 }
 
-export default function PortfolioCard({ holding }: Props) {
+function PortfolioCardImpl({ holding }: Props) {
   const { t, formatPrice, currency, currencySymbol } = useApp()
   const router = useRouter()
   const [showChart, setShowChart] = useState(false)
 
-  const marketValue = num(currency === 'USD' ? holding.market_value_usd : holding.market_value)
-  const dayChangePct = num(holding.day_change_pct)
-  const dayColor = dayChangePct >= 0 ? '#22c55e' : '#ef4444'
+  const shares = num(holding.shares_held)
+  const marketValueEur = num(holding.market_value)
+  const marketValueUsd = num(holding.market_value_usd)
 
   return (
     <div style={{
@@ -49,15 +50,24 @@ export default function PortfolioCard({ holding }: Props) {
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{holding.ticker}</div>
           <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-            {num(holding.shares_held).toFixed(4)} {t('pc_shares')}
+            {shares.toFixed(4)} {t('pc_shares')}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#f1f5f9' }}>
-            {currencySymbol}{marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {/* Market value uses the latest live price × shares so it ticks with
+              the price stream rather than only updating on the slow 30s portfolio
+              refresh. */}
+          <div style={{ fontSize: 18, fontWeight: 600 }}>
+            <LiveMarketValue
+              ticker={holding.ticker}
+              shares={shares}
+              fallbackEur={marketValueEur}
+              fallbackUsd={marketValueUsd}
+            />
           </div>
-          <div style={{ fontSize: 13, color: dayColor }}>
-            {dayChangePct >= 0 ? '+' : ''}{dayChangePct.toFixed(2)}% today
+          <div style={{ fontSize: 13, marginTop: 2 }}>
+            <LiveDayChange ticker={holding.ticker} initialPct={num(holding.day_change_pct)} />
+            <span style={{ color: '#64748b', marginLeft: 4 }}>today</span>
           </div>
         </div>
       </div>
@@ -69,7 +79,13 @@ export default function PortfolioCard({ holding }: Props) {
         </div>
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_current')}</div>
-          <div style={{ fontSize: 14, color: '#f1f5f9', fontWeight: 500, marginTop: 2 }}>{formatPrice(holding.current_price, holding.current_price_usd)}</div>
+          <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>
+            <LivePrice
+              ticker={holding.ticker}
+              initialPriceEur={holding.current_price}
+              initialPriceUsd={holding.current_price_usd}
+            />
+          </div>
         </div>
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_unrealized')}</div>
@@ -114,3 +130,51 @@ export default function PortfolioCard({ holding }: Props) {
     </div>
   )
 }
+
+// Memoize so the 30s silent portfolio refresh doesn't re-render every card. As
+// long as the persisted holding fields didn't actually change (e.g. shares,
+// realized PnL), only the LivePrice / LiveDayChange children re-render.
+function shallowHoldingEqual(a: Holding, b: Holding): boolean {
+  return (
+    a.ticker === b.ticker &&
+    a.shares_held === b.shares_held &&
+    a.avg_cost === b.avg_cost &&
+    a.realized_pnl === b.realized_pnl &&
+    a.realized_pnl_usd === b.realized_pnl_usd
+  )
+}
+
+const PortfolioCard = memo(PortfolioCardImpl, (prev, next) => shallowHoldingEqual(prev.holding, next.holding))
+export default PortfolioCard
+
+// ---------------------------------------------------------------------------
+// LiveMarketValue
+//
+// Renders shares × live price for the active currency. Subscribes to the live
+// quote stream so it ticks with the rest of the LivePrice elements without
+// requiring a portfolio reload.
+// ---------------------------------------------------------------------------
+
+interface LiveMarketValueProps {
+  ticker: string
+  shares: number
+  fallbackEur: number
+  fallbackUsd: number
+}
+
+const LiveMarketValue = memo(function LiveMarketValue({ ticker, shares, fallbackEur, fallbackUsd }: LiveMarketValueProps) {
+  const { currency, currencySymbol } = useApp()
+  const quote = useLiveQuote(ticker)
+  const livePrice = quote
+    ? currency === 'USD' ? quote.current_price_usd : quote.current_price
+    : null
+  const fallback = currency === 'USD' ? fallbackUsd : fallbackEur
+  const value = livePrice !== null && Number.isFinite(livePrice)
+    ? livePrice * shares
+    : fallback
+  return (
+    <span style={{ color: '#f1f5f9' }}>
+      {currencySymbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+    </span>
+  )
+})

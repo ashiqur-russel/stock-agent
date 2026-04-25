@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
@@ -10,6 +11,13 @@ from services.market_data import fetch_quote
 from services.technical import run_swing_analysis
 
 router = APIRouter()
+
+# Streaming intervals for the lightweight /ws/prices endpoint. yfinance is
+# rate-limited and not a true tick feed, so we keep a small but visible cadence
+# during market hours and back off significantly when markets are closed.
+PRICES_TICK_INTERVAL_OPEN = 5      # seconds between price polls during US market hours
+PRICES_TICK_INTERVAL_CLOSED = 30   # seconds between polls outside market hours
+PRICES_MAX_TICKERS = 50            # safety cap per connection
 
 PRICE_MOVE_THRESHOLD = 2.0  # % intraday move to trigger alert
 SIGNAL_CHECK_INTERVAL = 600  # recompute full analysis every 10 min
@@ -167,3 +175,116 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
         pass
     except Exception as e:
         print(f"[ws] connection error: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Live prices stream
+#
+# A lightweight WebSocket that broadcasts live(-ish) prices for whatever set
+# of tickers the client subscribes to. The client can update its subscription
+# at any time by sending {"action": "subscribe", "tickers": ["AAPL", "BTC-USD"]}.
+# This is the producer behind the Webull/TradingView-style "live ticking" UI on
+# the dashboard and paper-trading pages.
+# ---------------------------------------------------------------------------
+
+
+async def _broadcast_prices(websocket: WebSocket, tickers: list[str], market_open: bool) -> None:
+    if not tickers:
+        return
+    quotes = await asyncio.gather(
+        *[asyncio.to_thread(fetch_quote, t) for t in tickers],
+        return_exceptions=True,
+    )
+    payload = []
+    for ticker, quote in zip(tickers, quotes):
+        if isinstance(quote, Exception):
+            continue
+        payload.append({
+            "ticker": ticker,
+            "current_price": quote.get("current_price", 0),
+            "current_price_usd": quote.get("current_price_usd", 0),
+            "day_change_pct": quote.get("day_change_pct", 0),
+            "eur_rate": quote.get("eur_rate", 0.91),
+        })
+    await websocket.send_json({
+        "type": "prices",
+        "market_open": market_open,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "quotes": payload,
+    })
+
+
+@router.websocket("/api/v1/ws/prices")
+async def ws_prices(websocket: WebSocket, token: str = Query(...)):
+    try:
+        decode_jwt(token)
+    except HTTPException:
+        await websocket.close(code=4001)
+        return
+
+    await websocket.accept()
+
+    subscribed: set[str] = set()
+    pending_change = asyncio.Event()
+
+    async def reader() -> None:
+        """Listens for subscribe / unsubscribe messages from the client."""
+        while True:
+            msg = await websocket.receive_text()
+            try:
+                data = json.loads(msg)
+            except json.JSONDecodeError:
+                continue
+            action = data.get("action")
+            tickers = data.get("tickers") or []
+            if not isinstance(tickers, list):
+                continue
+            normalized = [str(t).strip().upper() for t in tickers if str(t).strip()]
+            if action == "subscribe":
+                for t in normalized:
+                    if len(subscribed) >= PRICES_MAX_TICKERS:
+                        break
+                    subscribed.add(t)
+                pending_change.set()
+            elif action == "unsubscribe":
+                for t in normalized:
+                    subscribed.discard(t)
+                pending_change.set()
+            elif action == "set":
+                subscribed.clear()
+                for t in normalized[:PRICES_MAX_TICKERS]:
+                    subscribed.add(t)
+                pending_change.set()
+
+    reader_task = asyncio.create_task(reader())
+
+    await websocket.send_json({
+        "type": "connected",
+        "market_open": is_market_open(),
+        "tick_interval": PRICES_TICK_INTERVAL_OPEN,
+    })
+
+    try:
+        while True:
+            market_open = is_market_open()
+            tickers = sorted(subscribed)
+            if tickers:
+                try:
+                    await _broadcast_prices(websocket, tickers, market_open)
+                except Exception as e:
+                    print(f"[ws/prices] broadcast error: {e}")
+
+            interval = PRICES_TICK_INTERVAL_OPEN if market_open else PRICES_TICK_INTERVAL_CLOSED
+            # Wake early if the client changed its subscription so the new
+            # tickers are reflected in the next push without waiting a full tick.
+            try:
+                await asyncio.wait_for(pending_change.wait(), timeout=interval)
+            except asyncio.TimeoutError:
+                pass
+            pending_change.clear()
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"[ws/prices] connection error: {e}")
+    finally:
+        reader_task.cancel()

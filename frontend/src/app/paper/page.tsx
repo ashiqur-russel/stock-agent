@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import AuthGuard from '@/components/layout/AuthGuard'
 import { useApp } from '@/contexts/AppContext'
 import { AmountLocale } from '@/components/ui/Amount'
 import MarketStatus from '@/components/ui/MarketStatus'
 import TradeModal from '@/components/paper/TradeModal'
-import { paper as paperApi, market as marketApi } from '@/lib/api'
+import { LivePrice, LiveDayChange } from '@/components/ui/LivePrice'
+import { paper as paperApi } from '@/lib/api'
 
 interface Holding {
   ticker: string
@@ -29,23 +30,22 @@ interface Account {
   holdings: Holding[]
 }
 
-interface Quote {
-  current_price: number
-  current_price_usd: number
-  day_change_pct: number
-  eur_rate: number
-}
+const CRYPTO_TICKERS = new Set([
+  'BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC',
+  'LTC', 'LINK', 'UNI', 'ATOM', 'XLM', 'TRX', 'ETC', 'FIL', 'HBAR', 'ICP',
+  'APT', 'ARB', 'OP', 'NEAR', 'ALGO', 'VET', 'SAND', 'MANA', 'AXS', 'SHIB', 'PEPE',
+])
 
-interface WatchItem {
-  ticker: string
-  quote: Quote | null
-  loading: boolean
+function normalizeTicker(input: string): string {
+  const upper = input.trim().toUpperCase()
+  if (CRYPTO_TICKERS.has(upper) && !upper.includes('-')) return `${upper}-USD`
+  return upper
 }
 
 function PaperContent() {
   const { t, currency, currencySymbol } = useApp()
   const [account, setAccount] = useState<Account | null>(null)
-  const [watchlist, setWatchlist] = useState<WatchItem[]>([])
+  const [watchlist, setWatchlist] = useState<string[]>([])
   const [newTicker, setNewTicker] = useState('')
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<{ ticker: string; mode: 'BUY' | 'SELL' } | null>(null)
@@ -54,14 +54,6 @@ function PaperContent() {
     try {
       const data = await paperApi.getAccount() as Account
       setAccount(data)
-      // sync holdings into watchlist
-      setWatchlist((prev) => {
-        const existing = new Set(prev.map((w) => w.ticker))
-        const newItems: WatchItem[] = data.holdings
-          .filter((h) => !existing.has(h.ticker))
-          .map((h) => ({ ticker: h.ticker, quote: null, loading: false }))
-        return [...prev, ...newItems]
-      })
     } catch {
       // ignore
     } finally {
@@ -69,46 +61,42 @@ function PaperContent() {
     }
   }, [])
 
-  const fetchQuote = useCallback(async (ticker: string) => {
-    setWatchlist((prev) => prev.map((w) => w.ticker === ticker ? { ...w, loading: true } : w))
+  const loadWatchlist = useCallback(async () => {
     try {
-      const q = await marketApi.quote(ticker) as Quote
-      setWatchlist((prev) => prev.map((w) => w.ticker === ticker ? { ...w, quote: q, loading: false } : w))
+      const data = await paperApi.watchlist.list()
+      setWatchlist(data.tickers)
     } catch {
-      setWatchlist((prev) => prev.map((w) => w.ticker === ticker ? { ...w, loading: false } : w))
+      // ignore – first load can fail before auth completes
     }
   }, [])
 
   useEffect(() => {
     loadAccount()
-  }, [loadAccount])
+    loadWatchlist()
+  }, [loadAccount, loadWatchlist])
 
-  // Refresh all quotes every 30s
-  useEffect(() => {
-    if (watchlist.length === 0) return
-    watchlist.forEach((w) => fetchQuote(w.ticker))
-    const interval = setInterval(() => watchlist.forEach((w) => fetchQuote(w.ticker)), 30_000)
-    return () => clearInterval(interval)
-  }, [watchlist.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const normalizeTicker = (input: string): string => {
-    const CRYPTO = new Set(['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LTC', 'LINK', 'UNI', 'ATOM', 'XLM', 'TRX', 'ETC', 'FIL', 'HBAR', 'ICP', 'APT', 'ARB', 'OP', 'NEAR', 'ALGO', 'VET', 'SAND', 'MANA', 'AXS', 'SHIB', 'PEPE'])
-    if (CRYPTO.has(input) && !input.includes('-')) return `${input}-USD`
-    return input
-  }
-
-  const addToWatchlist = () => {
-    const raw = newTicker.trim().toUpperCase()
+  const addToWatchlist = async () => {
+    const raw = newTicker.trim()
     if (!raw) { setNewTicker(''); return }
     const ticker = normalizeTicker(raw)
-    if (watchlist.some((w) => w.ticker === ticker)) { setNewTicker(''); return }
-    setWatchlist((prev) => [...prev, { ticker, quote: null, loading: true }])
+    if (watchlist.includes(ticker)) { setNewTicker(''); return }
+    setWatchlist((prev) => [...prev, ticker]) // optimistic
     setNewTicker('')
-    fetchQuote(ticker)
+    try {
+      await paperApi.watchlist.add(ticker)
+    } catch {
+      setWatchlist((prev) => prev.filter((t) => t !== ticker))
+    }
   }
 
-  const removeFromWatchlist = (ticker: string) => {
-    setWatchlist((prev) => prev.filter((w) => w.ticker !== ticker))
+  const removeFromWatchlist = async (ticker: string) => {
+    setWatchlist((prev) => prev.filter((t) => t !== ticker)) // optimistic
+    try {
+      await paperApi.watchlist.remove(ticker)
+    } catch {
+      // re-add on failure so the user sees their list again
+      setWatchlist((prev) => (prev.includes(ticker) ? prev : [...prev, ticker]))
+    }
   }
 
   const resetAccount = async () => {
@@ -179,7 +167,11 @@ function PaperContent() {
                         <AmountLocale eur={h.avg_cost} usd={h.avg_cost / 0.91} decimals={2} />
                       </td>
                       <td style={{ padding: '10px', color: '#f1f5f9' }}>
-                        <AmountLocale eur={h.current_price} usd={h.current_price_usd} decimals={2} />
+                        <LivePrice
+                          ticker={h.ticker}
+                          initialPriceEur={h.current_price}
+                          initialPriceUsd={h.current_price_usd}
+                        />
                       </td>
                       <td style={{ padding: '10px', color: '#f1f5f9', fontWeight: 600 }}>
                         <AmountLocale eur={h.value} usd={h.value_usd} decimals={2} />
@@ -226,48 +218,19 @@ function PaperContent() {
         {watchlist.length === 0 && <p style={{ color: '#64748b', fontSize: 14 }}>{t('pt_no_watch')}</p>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
-          {watchlist.map((w) => {
-            const holding = getHolding(w.ticker)
-            const price = w.quote ? (currency === 'USD' ? w.quote.current_price_usd : w.quote.current_price) : null
-            const dayChange = w.quote?.day_change_pct ?? 0
-            return (
-              <div key={w.ticker} style={{ background: '#020617', border: '1px solid #1e293b', borderRadius: 10, padding: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>{w.ticker}</span>
-                  <button onClick={() => removeFromWatchlist(w.ticker)} style={{ background: 'none', border: 'none', color: '#334155', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
-                </div>
-                {w.loading ? (
-                  <div style={{ color: '#64748b', fontSize: 13 }}>Loading…</div>
-                ) : price !== null ? (
-                  <>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', marginBottom: 2 }}>
-                      {currencySymbol}{price.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: 12, color: dayChange >= 0 ? '#22c55e' : '#ef4444', marginBottom: 10 }}>
-                      {dayChange >= 0 ? '+' : ''}{dayChange.toFixed(2)}%
-                    </div>
-                    {holding && (
-                      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-                        Held: {holding.shares.toFixed(4)} shares
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setModal({ ticker: w.ticker, mode: 'BUY' })} style={{ flex: 1, padding: '6px', background: '#052e16', border: '1px solid #166534', borderRadius: 6, color: '#22c55e', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                        {t('pt_buy')}
-                      </button>
-                      {holding && (
-                        <button onClick={() => setModal({ ticker: w.ticker, mode: 'SELL' })} style={{ flex: 1, padding: '6px', background: '#2d0a0a', border: '1px solid #7f1d1d', borderRadius: 6, color: '#ef4444', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                          {t('pt_sell')}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ color: '#64748b', fontSize: 13 }}>Not found</div>
-                )}
-              </div>
-            )
-          })}
+          {watchlist.map((ticker) => (
+            <WatchCard
+              key={ticker}
+              ticker={ticker}
+              heldShares={getHolding(ticker)?.shares}
+              onRemove={removeFromWatchlist}
+              onTrade={setModal}
+              labels={{
+                buy: t('pt_buy'),
+                sell: t('pt_sell'),
+              }}
+            />
+          ))}
         </div>
       </div>
 
@@ -284,6 +247,68 @@ function PaperContent() {
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------
+// WatchCard
+//
+// Memoized card so changes to `account` (every trade / refresh) don't cascade
+// into all watchlist cards. Only its own price ticks via LivePrice/LiveDayChange
+// re-render — the surrounding card markup stays stable, so there's no flicker.
+// ---------------------------------------------------------------------------
+
+interface WatchCardProps {
+  ticker: string
+  heldShares: number | undefined
+  onRemove: (ticker: string) => void
+  onTrade: (m: { ticker: string; mode: 'BUY' | 'SELL' }) => void
+  labels: { buy: string; sell: string }
+}
+
+const WatchCard = memo(function WatchCard({ ticker, heldShares, onRemove, onTrade, labels }: WatchCardProps) {
+  const hasHolding = typeof heldShares === 'number' && heldShares > 0
+  return (
+    <div style={{ background: '#020617', border: '1px solid #1e293b', borderRadius: 10, padding: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>{ticker}</span>
+        <button
+          onClick={() => onRemove(ticker)}
+          style={{ background: 'none', border: 'none', color: '#334155', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+          aria-label={`Remove ${ticker}`}
+        >
+          ×
+        </button>
+      </div>
+
+      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 2 }}>
+        <LivePrice ticker={ticker} />
+      </div>
+      <div style={{ fontSize: 12, marginBottom: 10 }}>
+        <LiveDayChange ticker={ticker} />
+      </div>
+      {hasHolding && (
+        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+          Held: {heldShares!.toFixed(4)} shares
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          onClick={() => onTrade({ ticker, mode: 'BUY' })}
+          style={{ flex: 1, padding: '6px', background: '#052e16', border: '1px solid #166534', borderRadius: 6, color: '#22c55e', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+        >
+          {labels.buy}
+        </button>
+        {hasHolding && (
+          <button
+            onClick={() => onTrade({ ticker, mode: 'SELL' })}
+            style={{ flex: 1, padding: '6px', background: '#2d0a0a', border: '1px solid #7f1d1d', borderRadius: 6, color: '#ef4444', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+          >
+            {labels.sell}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+})
 
 export default function PaperPage() {
   return <AuthGuard><PaperContent /></AuthGuard>

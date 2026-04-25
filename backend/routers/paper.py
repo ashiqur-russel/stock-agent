@@ -147,3 +147,54 @@ def reset_account(user=Depends(get_current_user)):
         )
         conn.commit()
     return {"ok": True, "balance_eur": STARTING_BALANCE}
+
+
+# ---------------------------------------------------------------------------
+# Watchlist persistence
+# ---------------------------------------------------------------------------
+
+class WatchlistBody(BaseModel):
+    ticker: str
+
+
+def _normalize_ticker(raw: str) -> str:
+    return raw.strip().upper()
+
+
+@router.get("/watchlist")
+def list_watchlist(user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT ticker FROM paper_watchlist WHERE user_id=? ORDER BY created_at ASC",
+            (user_id,),
+        ).fetchall()
+    return {"tickers": [r["ticker"] for r in rows]}
+
+
+@router.post("/watchlist")
+def add_to_watchlist(body: WatchlistBody, user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    ticker = _normalize_ticker(body.ticker)
+    if not ticker:
+        raise HTTPException(400, "ticker is required")
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO paper_watchlist (user_id, ticker) VALUES (?,?)",
+            (user_id, ticker),
+        )
+        conn.commit()
+    return {"ok": True, "ticker": ticker}
+
+
+@router.delete("/watchlist/{ticker}")
+def remove_from_watchlist(ticker: str, user=Depends(get_current_user)):
+    user_id = user["user_id"]
+    ticker = _normalize_ticker(ticker)
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM paper_watchlist WHERE user_id=? AND ticker=?",
+            (user_id, ticker),
+        )
+        conn.commit()
+    return {"ok": True, "ticker": ticker}

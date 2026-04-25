@@ -80,6 +80,19 @@ export const paper = {
   trade: (ticker: string, type: 'BUY' | 'SELL', shares: number) =>
     apiFetch('/api/v1/paper/trade', { method: 'POST', body: JSON.stringify({ ticker, type, shares }) }),
   reset: () => apiFetch('/api/v1/paper/reset', { method: 'POST' }),
+  watchlist: {
+    list: () => apiFetch<{ tickers: string[] }>('/api/v1/paper/watchlist'),
+    add: (ticker: string) =>
+      apiFetch<{ ok: boolean; ticker: string }>('/api/v1/paper/watchlist', {
+        method: 'POST',
+        body: JSON.stringify({ ticker }),
+      }),
+    remove: (ticker: string) =>
+      apiFetch<{ ok: boolean; ticker: string }>(
+        `/api/v1/paper/watchlist/${encodeURIComponent(ticker)}`,
+        { method: 'DELETE' },
+      ),
+  },
 }
 
 export const alerts = {
