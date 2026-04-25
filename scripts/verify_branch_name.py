@@ -77,6 +77,93 @@ def _topic_prefix_and_rest(name: str) -> tuple[str, str] | None:
     return None
 
 
+def _ticket_num_from_topic(name: str) -> int | None:
+    """If name is a topic branch with SA-<n>, return n; else None."""
+    for p in _PREFIXES:
+        if not (name.startswith(p) and len(name) > len(p)):
+            continue
+        m = re.match(r"^SA-(\d+)", name[len(p) :])
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def _git_remotes() -> set[str]:
+    r = subprocess.run(
+        ["git", "remote"],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        return {"origin"}
+    return {x.strip() for x in (r.stdout or "").splitlines() if x.strip()}
+
+
+def _logical_branch_names() -> set[str]:
+    """
+    All local and remote tracking branch short names, normalized by stripping the
+    first path segment when it is a remote name (origin/fix/… -> fix/…).
+    """
+    r = subprocess.run(
+        [
+            "git",
+            "for-each-ref",
+            "--format=%(refname:short)",
+            "refs/heads/",
+            "refs/remotes/",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        return set()
+    rem = _git_remotes()
+    out: set[str] = set()
+    for line in (r.stdout or "").splitlines():
+        s = line.strip()
+        if not s or s in ("HEAD",) or s.endswith("/HEAD"):
+            continue
+        parts = s.split("/")
+        if len(parts) >= 2 and parts[0] in rem:
+            s = "/".join(parts[1:])
+        if s in ("HEAD",) or s.endswith("/HEAD"):
+            continue
+        out.add(s)
+    return out
+
+
+def _check_sa_ticket_unique(current: str) -> None:
+    """
+    Require that SA-<n> is not used by another (different) branch in this clone.
+    This clone only: fetch / prune remotes to see the latest. GitHub is authoritative.
+    """
+    n = _ticket_num_from_topic(current)
+    if n is None:
+        return
+    names = _logical_branch_names()
+    others: list[str] = []
+    for b in names:
+        if b == current:
+            continue
+        bn = _ticket_num_from_topic(b)
+        if bn is not None and bn == n:
+            others.append(b)
+    if not others:
+        return
+    olist = "\n  ".join(sorted(set(others)))
+    print(
+        f"The ticket id SA-{n} is already used on another branch in this repository.\n"
+        f"  Your branch: {current!r}\n"
+        f"  Also using SA-{n}:\n  {olist}\n"
+        "  Use a new ticket id that does not match any of the above, e.g. create on GitHub\n"
+        f"  and name the branch: feature/SA-<new>-short-desc (or fix/…, hotfix/…). Or delete the\n"
+        f"  other ref(s) after merging (git branch -d, git push origin --delete …), then prune\n"
+        f"  (git fetch --prune). Rare bypass: SKIP=branch-name git commit\n",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+
 def main() -> None:
     try:
         branch = _current_branch()
@@ -92,8 +179,6 @@ def main() -> None:
             file=sys.stderr,
         )
         return
-    if is_allowed(branch):
-        return
     if branch in ("main", "master"):
         print(
             "Do not make commits while checked out on the default branch (main or master).\n"
@@ -107,6 +192,9 @@ def main() -> None:
             file=sys.stderr,
         )
         raise SystemExit(1)
+    if is_allowed(branch):
+        _check_sa_ticket_unique(branch)
+        return
     bad_topic = _topic_prefix_and_rest(branch)
     if bad_topic is not None and not _SA_PREFIX.match(bad_topic[1]):
         p, rest = bad_topic

@@ -7,7 +7,9 @@
 #
 # Branch names (on commit): develop/gh-pages, or
 #   feature/SA-<n>-slug, fix/SA-<n>-…, hotfix/SA-<n>, chore/SA-<n>, etc.
-# (The ticket is SA- plus digits right after the prefix. Commits on main/master: rejected.)
+# Same SA-<n> must not be used on two different branches in this clone (use a new
+# id or delete the other ref after merge; hook only sees local + fetched remotes).
+# (Commits on main/master: rejected.)
 # pre-push: blocks `git push` to remote main/master; also runs [SA-n] on pushes.
 #
 # If you can still push to main: (1) run `pre-commit install` in this clone after
