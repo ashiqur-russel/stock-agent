@@ -5,14 +5,12 @@
 # Subject line rule: the first line must be  [SA-<number>] <type>: <summary>
 # (Merge / Revert / fixup! / squash!  are exempt).
 #
-# Branch names (enforced on commit): main/master/develop, or
-#   feature/*, fix/*, hotfix/*, chore/*, docs/*, release/*
-# pre-push: blocks `git push` that updates the remote’s main or master; also runs
-# [SA-n] on the commits being pushed. (Commits while checked out to main are still
-# allowed — the block is on push. To forbid commits on main too, add
-#   no-commit-to-branch
-# from the pre-commit-hooks repo, knowing it will block local `git merge` into main
-# unless you use SKIP=… or --no-verify on that merge.)
+# Branch names (on commit): develop/gh-pages, or
+#   feature/SA-<n>-slug, fix/SA-<n>-…, hotfix/SA-<n>, chore/SA-<n>, etc.
+# Same SA-<n> must not be used on two different branches in this clone (use a new
+# id or delete the other ref after merge; hook only sees local + fetched remotes).
+# (Commits on main/master: rejected.)
+# pre-push: blocks `git push` to remote main/master; also runs [SA-n] on pushes.
 #
 # If you can still push to main: (1) run `pre-commit install` in this clone after
 # pull, (2) do not use `git push --no-verify` or an IDE that skips Git hooks, (3)
@@ -49,7 +47,7 @@ repos:
   - repo: local
     hooks:
       - id: branch-name
-        name: branch name (feature/*, fix/*, hotfix/*, …)
+        name: "branch: feature/SA-…, fix/SA-… (no main; ticket after prefix)"
         entry: python3 scripts/verify_branch_name.py
         language: system
         pass_filenames: false
