@@ -20,6 +20,7 @@ const NAV = [
       { id: 'installation', label: 'Installation' },
       { id: 'env-vars', label: 'Environment Variables' },
       { id: 'running', label: 'Running Locally' },
+      { id: 'open-source', label: 'Open source' },
       { id: 'dev-db', label: 'Database Management (dev)' },
       { id: 'realtime-data', label: 'Real-Time Data & Polling' },
     ],
@@ -272,7 +273,7 @@ export default function DocsPage() {
           <Section id='stack' title='Tech Stack'>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {[
-                { side: 'Backend', items: ['Python 3.12 + FastAPI', 'SQLite via stdlib sqlite3', 'Groq SDK (Llama 4 Scout)', 'yfinance + pandas-ta', 'python-jose (JWT) + passlib (bcrypt)', 'APScheduler (alert scans)', 'Nodemailer / SMTP'] },
+                { side: 'Backend', items: ['Python 3.12 + FastAPI', 'SQLite (stdlib) or PostgreSQL (psycopg2)', 'Groq SDK (Llama 4 Scout)', 'yfinance + pandas-ta', 'python-jose (JWT) + bcrypt', 'APScheduler (alert scans)', 'smtplib (SMTP)'] },
                 { side: 'Frontend', items: ['Next.js 14 App Router + TypeScript', 'Tailwind CSS v3', 'lightweight-charts v5 (TradingView)', 'react-markdown', 'SSE for AI streaming', 'WebSocket for live alerts', 'AppContext (lang + currency)'] },
               ].map(({ side, items }) => (
                 <div key={side} style={{ background: '#0d1a33', border: '1px solid #1e3050', borderRadius: 8, padding: 18 }}>
@@ -313,7 +314,7 @@ export default function DocsPage() {
           {/* ── Installation ── */}
           <Section id='installation' title='Installation'>
             <H3>1. Clone the repository</H3>
-            <Code block>{`git clone https://github.com/your-org/stock-agent.git
+            <Code block>{`git clone https://github.com/<your-fork-or-org>/stock-agent.git
 cd stock-agent`}</Code>
 
             <H3>2. Set up the backend</H3>
@@ -340,15 +341,12 @@ npm install`}</Code>
 APP_HOST=0.0.0.0
 APP_PORT=8000
 
-# Database (pick one)
+# Database — SQLite by default; or Postgres (Supabase *pooler* URI if direct db:5432 fails with IPv6)
 DATABASE_PATH=./portfolio.db
-# Optional — production (Supabase, Neon, etc.):
-# DATABASE_URL=postgresql://user:pass@host:5432/postgres?sslmode=require
+# DATABASE_URL=postgresql://...pooler...:6543/postgres?sslmode=require
 
-# Auth
+# Auth (JWT lifetime: 30 days in code — see auth/service.py)
 JWT_SECRET=your-random-secret-here-min-32-chars
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=43200   # 30 days
 
 # Groq (AI)
 GROQ_API_KEY=gsk_...
@@ -356,14 +354,15 @@ GROQ_API_KEY=gsk_...
 # CORS
 CORS_ORIGINS=http://localhost:3000
 
-# Public frontend URL (verification email links; production)
-# FRONTEND_URL=https://your-app.vercel.app
+# Public frontend URL (no trailing slash) — verification & password-reset links
+FRONTEND_URL=http://localhost:3000
 
-# Email / SMTP (optional — leave blank to skip email verification)
+# Email / SMTP (optional — if blank, verification/reset URLs print in the backend terminal)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=you@gmail.com
 SMTP_PASSWORD=xxxx xxxx xxxx xxxx   # 16-char Gmail App Password
+# SMTP_FROM_NAME=Stock Agent
 
 # Alert scanner interval
 ALERT_INTERVAL_MINUTES=30`}</Code>
@@ -392,6 +391,18 @@ npm run dev`}</Code>
             <H3>Verify</H3>
             <Code block>{`curl http://localhost:8000/api/v1/health
 # → {"status":"ok"}`}</Code>
+
+            <H3>Python dependencies</H3>
+            <P>After pulling changes, run <Code>pip install -r requirements.txt</Code> again (e.g. <Code>psycopg2-binary</Code> is required for imports even if you only use SQLite).</P>
+          </Section>
+
+          {/* ── Open source ── */}
+          <Section id='open-source' title='Open source'>
+            <P>
+              Full contributor workflow — <Code>pre-commit</Code>, branch names (<Code>feature/SA-42-…</Code>), commit subjects (<Code>[SA-42] type: summary</Code>), tests, and troubleshooting — is in the repo root file{' '}
+              <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong>. The root <strong style={{ color: '#f1f5f9' }}>README.md</strong> covers deploy pitfalls and Supabase connectivity.
+            </P>
+            <Note>This page focuses on running the app and API reference; <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong> is the checklist for submitting pull requests.</Note>
           </Section>
 
           {/* ── Database management (dev) ── */}
@@ -545,13 +556,14 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
             <Code block>{`backend/
 ├── main.py                    # FastAPI app factory, CORS, routers, scheduler
 ├── config.py                  # .env loader — all settings
-├── database.py                # get_connection(), init_db()
-├── schema.sql                 # CREATE TABLE statements
+├── database.py                # SQLite + Postgres (psycopg2), get_connection(), init_db()
+├── schema.sql                 # SQLite DDL
+├── schema.postgres.sql        # PostgreSQL DDL
 ├── requirements.txt
 ├── auth/
 │   ├── models.py              # Pydantic: RegisterRequest, LoginRequest, TokenResponse
 │   ├── service.py             # hash_password, verify_password, create_jwt, decode_jwt
-│   └── router.py              # POST /auth/register  POST /auth/login
+│   └── router.py              # register, login, verify, resend, forgot/reset password
 ├── middleware/
 │   └── auth.py                # get_current_user() — JWT dependency
 ├── routers/
@@ -579,6 +591,8 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   ├── login/page.tsx
 │   ├── register/page.tsx
 │   ├── verify/page.tsx        # Email verification (Suspense-wrapped)
+│   ├── forgot-password/page.tsx
+│   ├── reset-password/page.tsx
 │   ├── dashboard/page.tsx     # Portfolio overview
 │   ├── transactions/page.tsx  # Add/delete transactions
 │   ├── paper/page.tsx         # Paper trading + watchlist
@@ -623,13 +637,20 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
             <P>Go to <Code>/register</Code> and fill in your name, email and password.</P>
 
             <H3>With SMTP configured</H3>
-            <P>After submitting, you receive a verification email. Click the link to activate your account, then log in normally. The verification link expires after <strong style={{ color: '#f1f5f9' }}>24 hours</strong>. Use the Resend button if it expires.</P>
+            <P>After submitting, you receive a verification email. Click the link to open <Code>/verify</Code> and receive a JWT, then use the app. The verification link expires after <strong style={{ color: '#f1f5f9' }}>24 hours</strong>. Use the Resend control if it expires.</P>
 
             <H3>Without SMTP (local dev)</H3>
-            <P>If <Code>SMTP_USER</Code> and <Code>SMTP_PASSWORD</Code> are empty, the account is auto-verified and you get a JWT immediately.</P>
+            <P>
+              The API still creates an <strong style={{ color: '#f1f5f9' }}>unverified</strong> account and returns a &quot;check your email&quot; style response — it does <strong style={{ color: '#f1f5f9' }}>not</strong> return a JWT until you complete verification. Copy the URL printed in the <strong style={{ color: '#f1f5f9' }}>backend terminal</strong> (uvicorn) and open it in the browser, or paste the token into <Code>/verify?token=…</Code>.
+            </P>
+
+            <H3>Forgot password</H3>
+            <P>
+              Use <Code>/forgot-password</Code> to request a link. With SMTP off, the reset URL is printed in the backend log. After a successful <Code>POST /auth/reset-password</Code>, your password is updated and your email is treated as <strong style={{ color: '#f1f5f9' }}>verified</strong> (inbox access was proven), so you can sign in without a separate verification step.
+            </P>
 
             <H3>JWT storage</H3>
-            <P>The access token is stored in <Code>localStorage</Code> under the key <Code>stock_agent_token</Code> and sent as a <Code>Authorization: Bearer &lt;token&gt;</Code> header on every API request. Tokens are valid for <strong style={{ color: '#f1f5f9' }}>30 days</strong>.</P>
+            <P>The access token is stored in <Code>localStorage</Code> under the key <Code>stock_agent_token</Code> and sent as an <Code>Authorization: Bearer &lt;token&gt;</Code> header on every API request. Tokens are valid for <strong style={{ color: '#f1f5f9' }}>30 days</strong> (see <Code>ACCESS_TOKEN_EXPIRE_DAYS</Code> in <Code>backend/auth/service.py</Code>).</P>
           </Section>
 
           {/* ── Guide: Portfolio ── */}
@@ -708,32 +729,35 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
           <Section id='api-auth' title='API — Authentication'>
             <P>All endpoints except the auth routes require a JWT in the <Code>Authorization: Bearer &lt;token&gt;</Code> header.</P>
 
-            <Endpoint method='POST' path='/auth/register' desc='Register a new user. Returns JWT immediately (local dev) or sends a verification email (SMTP configured).' />
+            <Endpoint method='POST' path='/auth/register' desc='Register a new user. Always returns a pending message; use GET /auth/verify with the token (from email or backend log if SMTP is off).' />
             <H3>Request body</H3>
             <Code block>{`{
   "email": "user@example.com",
   "name": "Jane Doe",
   "password": "mypassword"
 }`}</Code>
-            <H3>Response — auto-verified (no SMTP)</H3>
-            <Code block>{`{
-  "access_token": "eyJ...",
-  "user_id": 1,
-  "name": "Jane Doe",
-  "email": "user@example.com"
-}`}</Code>
-            <H3>Response — SMTP configured</H3>
+            <H3>Response</H3>
             <Code block>{`{
   "email": "user@example.com",
   "message": "Check your email to verify your account"
 }`}</Code>
+            <Note>SMTP only controls whether an email is <em>sent</em>. Without SMTP, the same response shape applies; copy the verify URL from the uvicorn console.</Note>
 
-            <Endpoint method='GET' path='/auth/verify?token=<token>' desc='Verifies the email token from the verification link. Returns a JWT on success.' />
+            <Endpoint method='GET' path='/auth/verify?token=<token>' desc='Consumes the email verification token. Returns a JWT on success.' />
 
-            <Endpoint method='POST' path='/auth/resend-verification' desc='Resends the verification email for the given address.' />
+            <Endpoint method='POST' path='/auth/resend-verification' desc='Creates a new verification token and sends email (or logs the link if SMTP is off).' />
             <Code block>{`{ "email": "user@example.com" }`}</Code>
 
-            <Endpoint method='POST' path='/auth/login' desc='Log in with email and password. Returns a JWT token.' />
+            <Endpoint method='POST' path='/auth/forgot-password' desc='If the email exists, creates a password-reset token (404 if unknown email). Sends email or prints reset URL when SMTP is off.' />
+            <Code block>{`{ "email": "user@example.com" }`}</Code>
+
+            <Endpoint method='POST' path='/auth/reset-password' desc='Sets a new password from a valid reset token; marks the account verified. Token expires in 2 hours.' />
+            <Code block>{`{
+  "token": "<token-from-email-or-log>",
+  "password": "newpassword8chars+"
+}`}</Code>
+
+            <Endpoint method='POST' path='/auth/login' desc='Log in with email and password. Returns a JWT. Responds 403 if the password is correct but the email is not verified yet.' />
             <Code block>{`// Request
 { "email": "user@example.com", "password": "mypassword" }
 
@@ -796,6 +820,20 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
 
 // Response
 { "id": 42, "ticker": "AAPL", ... }`}</Code>
+
+            <Endpoint method='PUT' path='/api/v1/portfolio/transaction/{id}' auth desc='Updates an existing transaction (same body shape as POST). Returns 404 if the id does not belong to the user.' />
+            <Code block>{`// Request — same fields as POST /transaction
+{
+  "ticker": "AAPL",
+  "type": "BUY",
+  "shares": 10,
+  "price": 186.00,
+  "executed_at": "2025-04-20",
+  "notes": "corrected fill"
+}
+
+// Response
+{ "updated": true }`}</Code>
 
             <Endpoint method='DELETE' path='/api/v1/portfolio/transaction/{id}' auth desc='Deletes a transaction by ID. Only the owning user can delete.' />
             <Code block>{`{ "deleted": true }`}</Code>
