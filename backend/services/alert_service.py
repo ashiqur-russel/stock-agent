@@ -188,6 +188,25 @@ def check_all_portfolios():
                 if notify_email:
                     send_alert_email(notify_email, ticker, new_signal, message, price_eur)
 
+                # Browser push notification
+                try:
+                    from services.push_service import send_push_to_user
+
+                    emoji = SIGNAL_EMOJI.get(new_signal, "")
+                    label = SIGNAL_LABELS.get(new_signal, new_signal)
+                    push_body = (
+                        f"RSI {analysis.get('rsi_14', '—')} · {analysis.get('macd_signal', '')} · "
+                        f"Support {support_eur}"
+                    )
+                    send_push_to_user(
+                        user_id,
+                        title=f"{emoji} {ticker} — {label}",
+                        body=push_body,
+                        url="/user/alerts",
+                    )
+                except Exception as pe:
+                    print(f"[push] alert push error: {pe}")
+
                 print(f"[alert] {ticker}: {old_signal} → {new_signal} (user {user_id})")
 
             except Exception as e:

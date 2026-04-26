@@ -39,3 +39,11 @@ def smtp_from_header() -> str:
 
 # How often the background scanner runs (minutes)
 ALERT_INTERVAL_MINUTES: int = int(os.getenv("ALERT_INTERVAL_MINUTES", "30"))
+
+# Web Push / VAPID — generate once with backend/tools/generate_vapid_keys.py
+# Leave blank to disable browser push (email + WS toasts still work)
+VAPID_PRIVATE_KEY: str = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_PUBLIC_KEY: str = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_SUBJECT: str = os.getenv(
+    "VAPID_SUBJECT", f"mailto:{SMTP_USER}" if SMTP_USER else "mailto:admin@example.com"
+)
