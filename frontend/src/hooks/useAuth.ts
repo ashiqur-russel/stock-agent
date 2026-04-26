@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/api'
 import { dispatchAuthSessionChanged } from '@/lib/authEvents'
@@ -31,6 +31,7 @@ export function useAuth() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const inFlight = useRef(false)
 
   const saveSession = (token: string, user: StoredUser) => {
     localStorage.setItem('stock_agent_token', token)
@@ -39,6 +40,8 @@ export function useAuth() {
   }
 
   const login = async (email: string, password: string) => {
+    if (inFlight.current) return
+    inFlight.current = true
     setLoading(true)
     setError(null)
     try {
@@ -48,6 +51,7 @@ export function useAuth() {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Login failed')
     } finally {
+      inFlight.current = false
       setLoading(false)
     }
   }
@@ -57,6 +61,8 @@ export function useAuth() {
     name: string,
     password: string
   ): Promise<{ pending?: boolean; token?: string; user?: StoredUser }> => {
+    if (inFlight.current) return {}
+    inFlight.current = true
     setLoading(true)
     setError(null)
     try {
@@ -75,6 +81,7 @@ export function useAuth() {
       setError(e instanceof Error ? e.message : 'Registration failed')
       return {}
     } finally {
+      inFlight.current = false
       setLoading(false)
     }
   }

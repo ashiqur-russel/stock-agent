@@ -2,6 +2,10 @@
 
 **Stock Agent** is a full-stack app for tracking a stock portfolio, paper trading, price alerts, and an AI swing-trading assistant. The stack is a **FastAPI** backend and a **Next.js** frontend in this monorepo.
 
+## Contributing
+
+For **open source developers** — local setup, env vars, database modes, Git hooks, branch/commit conventions, and PR workflow — see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
 ## Documentation
 
 The complete setup guide, environment variables, database notes (SQLite locally or **PostgreSQL** / Supabase in production), API overview, and deployment tips live in the **in-app documentation**:
@@ -29,6 +33,11 @@ For health checks, Docker, CORS, and production configuration, use **`/docs`** a
 ## Troubleshooting: `Network is unreachable` to Supabase (e.g. on Render)
 
 If startup fails while connecting to `db.*.supabase.co` with **IPv6** and `Network is unreachable`, your host often cannot reach that path. In **Supabase → Project Settings → Database**, copy the **Session** or **Transaction pooler** URI (not only *Direct*), set it as **`DATABASE_URL`**, redeploy, and ensure `sslmode=require` is present if the dashboard includes it. The app logs a longer hint when this error is detected.
+
+### Why did my data disappear after a deploy?
+
+- **SQLite on a PaaS without a persistent disk** (typical **free** tiers): each deploy can start a **fresh filesystem**, so `portfolio.db` is recreated empty. Use **PostgreSQL** (e.g. Supabase) with `DATABASE_URL` for durable production data.
+- **Supabase / Postgres**: `init_db()` only runs `CREATE TABLE IF NOT EXISTS` — it does **not** truncate tables. If `public` looks empty, you are usually pointing at a **new** project, a **new** branch DB, or the API had been using SQLite before and users lived only on the old file.
 
 ---
 

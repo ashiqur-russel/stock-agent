@@ -17,8 +17,10 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [resent, setResent] = useState(false)
+  const [resendBusy, setResendBusy] = useState(false)
 
   const handleSubmit = async () => {
+    if (loading) return
     const result = await register(email, name, password)
     if (result.pending) {
       setPending(true)
@@ -28,11 +30,15 @@ export default function RegisterPage() {
   }
 
   const handleResend = async () => {
+    if (resent || resendBusy || !email.trim()) return
+    setResendBusy(true)
     try {
       await authApi.resendVerification(email)
       setResent(true)
     } catch {
       // ignore
+    } finally {
+      setResendBusy(false)
     }
   }
 
@@ -44,10 +50,12 @@ export default function RegisterPage() {
           <h2 style={{ color: '#f1f5f9', marginBottom: 10 }}>{t('auth_check_email')}</h2>
           <p style={{ color: '#94a3b8', marginBottom: 24, lineHeight: 1.6 }}>{t('auth_verify_note')}</p>
           <button
+            type='button'
             onClick={handleResend}
-            style={{ background: 'none', border: '1px solid #334155', borderRadius: 8, color: resent ? '#22c55e' : '#94a3b8', padding: '10px 20px', cursor: 'pointer', fontSize: 14 }}
+            disabled={resent || resendBusy}
+            style={{ background: 'none', border: '1px solid #334155', borderRadius: 8, color: resent ? '#22c55e' : '#94a3b8', padding: '10px 20px', cursor: resent || resendBusy ? 'default' : 'pointer', fontSize: 14, opacity: resent || resendBusy ? 0.85 : 1 }}
           >
-            {resent ? t('auth_sent_again') : t('auth_resend_link')}
+            {resent ? t('auth_sent_again') : resendBusy ? t('common_loading') : t('auth_resend_link')}
           </button>
           <div style={{ marginTop: 20 }}>
             <Link href='/login' style={{ color: '#64748b', fontSize: 13, textDecoration: 'none' }}>{t('auth_go_login')}</Link>
@@ -98,9 +106,10 @@ export default function RegisterPage() {
           )}
 
           <button
+            type='button'
             onClick={handleSubmit}
             disabled={loading}
-            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? '…' : t('auth_register_btn')}
           </button>

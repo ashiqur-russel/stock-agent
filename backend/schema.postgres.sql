@@ -19,6 +19,15 @@ CREATE TABLE IF NOT EXISTS email_verifications (
     created_at TEXT NOT NULL DEFAULT (now()::text)
 );
 
+CREATE TABLE IF NOT EXISTS password_resets (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    token      TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    used       INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (now()::text)
+);
+
 CREATE TABLE IF NOT EXISTS transactions (
     id          BIGSERIAL PRIMARY KEY,
     user_id     BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,

@@ -1,5 +1,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
+function detailToMessage(detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((e: { msg?: string }) => (typeof e === 'object' && e && 'msg' in e ? String(e.msg) : JSON.stringify(e)))
+      .join('; ')
+  }
+  return 'Request failed'
+}
+
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('stock_agent_token')
@@ -19,7 +29,8 @@ export async function apiFetch<T = unknown>(
   const res = await fetch(`${API_URL}${path}`, { ...options, headers })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body?.detail ?? `HTTP ${res.status}`)
+    const d = (body as { detail?: unknown })?.detail
+    throw new Error(d !== undefined ? detailToMessage(d) : `HTTP ${res.status}`)
   }
   return res.json() as Promise<T>
 }
@@ -46,6 +57,18 @@ export const auth = {
     apiFetch('/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify({ email }),
+    }),
+
+  forgotPassword: (email: string) =>
+    apiFetch<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, password: string) =>
+    apiFetch<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
     }),
 }
 

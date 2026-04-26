@@ -16,12 +16,18 @@ export default function LoginPage() {
 
   const needsVerification = error?.toLowerCase().includes('verify')
 
+  const [resendBusy, setResendBusy] = useState(false)
+
   const handleResend = async () => {
+    if (resendBusy || resent || !email.trim()) return
+    setResendBusy(true)
     try {
       await authApi.resendVerification(email)
       setResent(true)
     } catch {
       // ignore
+    } finally {
+      setResendBusy(false)
     }
   }
 
@@ -57,10 +63,12 @@ export default function LoginPage() {
               {needsVerification && (
                 <div style={{ marginTop: 8 }}>
                   <button
+                    type='button'
                     onClick={handleResend}
-                    style={{ background: 'none', border: 'none', color: resent ? '#22c55e' : '#f59e0b', cursor: 'pointer', fontSize: 13, padding: 0, textDecoration: 'underline' }}
+                    disabled={resent || resendBusy}
+                    style={{ background: 'none', border: 'none', color: resent ? '#22c55e' : '#f59e0b', cursor: resent || resendBusy ? 'default' : 'pointer', fontSize: 13, padding: 0, textDecoration: 'underline', opacity: resent || resendBusy ? 0.85 : 1 }}
                   >
-                    {resent ? t('auth_resent') : t('auth_resend_link')}
+                    {resent ? t('auth_resent') : resendBusy ? t('common_loading') : t('auth_resend_link')}
                   </button>
                 </div>
               )}
@@ -68,12 +76,17 @@ export default function LoginPage() {
           )}
 
           <button
+            type='button'
             onClick={() => login(email, password)}
             disabled={loading}
-            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? '…' : t('auth_login_btn')}
           </button>
+
+          <p style={{ textAlign: 'center', fontSize: 14, margin: 0 }}>
+            <Link href='/forgot-password' style={{ color: '#94a3b8', textDecoration: 'none' }}>{t('auth_forgot_password')}</Link>
+          </p>
 
           <p style={{ textAlign: 'center', fontSize: 14, color: '#64748b', margin: 0 }}>
             {t('auth_no_account')}{' '}
