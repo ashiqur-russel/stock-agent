@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
+import { getToken, getStoredUser } from '@/hooks/useAuth'
+import { AUTH_SESSION_EVENT } from '@/lib/authEvents'
 
 // ── sidebar structure ───────────────────────────────────────────────────────
 const NAV = [
@@ -158,6 +160,24 @@ function Warn({ children }: { children: React.ReactNode }) {
 export default function DocsPage() {
   const { t } = useApp()
   const [active, setActive] = useState('overview')
+  const [hasSession, setHasSession] = useState(false)
+  const [sessionLabel, setSessionLabel] = useState<string | null>(null)
+
+  const refreshSession = useCallback(() => {
+    setHasSession(Boolean(getToken()))
+    const u = getStoredUser()
+    setSessionLabel(u?.name ?? u?.email ?? null)
+  }, [])
+
+  useLayoutEffect(() => {
+    refreshSession()
+  }, [refreshSession])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.addEventListener(AUTH_SESSION_EVENT, refreshSession)
+    return () => window.removeEventListener(AUTH_SESSION_EVENT, refreshSession)
+  }, [refreshSession])
 
   useEffect(() => {
     const ids = NAV.flatMap((g) => g.items.map((i) => i.id))
@@ -197,11 +217,29 @@ export default function DocsPage() {
           <span style={{ color: '#1e293b' }}>|</span>
           <span style={{ fontSize: 14, color: '#64748b' }}>Documentation</span>
         </div>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-          <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
-          <Link href='/register' style={{ padding: '7px 16px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-            {t('land_get_started')}
-          </Link>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {hasSession ? (
+            <>
+              {sessionLabel ? (
+                <span style={{ fontSize: 13, color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {sessionLabel}
+                </span>
+              ) : null}
+              <Link
+                href='/user/dashboard'
+                style={{ padding: '7px 16px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+              >
+                {t('docs_nav_back')}
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
+              <Link href='/register' style={{ padding: '7px 16px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                {t('land_get_started')}
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
