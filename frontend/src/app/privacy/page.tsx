@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { openCookieSettings } from '@/components/CookieBanner'
+import { usePublicAuth } from '@/hooks/usePublicAuth'
 
 function LegalLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -53,6 +54,7 @@ function GreenBox({ children }: { children: React.ReactNode }) {
 
 export default function PrivacyPage() {
   const { t } = useApp()
+  const { user, logout, mounted } = usePublicAuth()
 
   return (
     <div className='min-h-screen bg-background text-foreground' style={{ fontFamily: 'var(--font-geist-sans)' }}>
@@ -67,7 +69,19 @@ export default function PrivacyPage() {
         </Link>
         <div className='flex gap-5 items-center'>
           <Link href='/docs' className='text-[13px] text-text-dim no-underline hover:text-text-muted'>Docs</Link>
-          <Link href='/login' className='text-[13px] text-text-muted no-underline hover:text-foreground'>Sign In</Link>
+          {mounted && user ? (
+            <>
+              <Link href='/user/dashboard' className='text-[13px] text-brand no-underline font-semibold'>Dashboard →</Link>
+              <button
+                onClick={logout}
+                className='text-[13px] text-text-muted bg-transparent border border-surface-input rounded-lg px-3 py-1 cursor-pointer hover:border-brand hover:text-brand transition-colors'
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link href='/login' className='text-[13px] text-text-muted no-underline hover:text-foreground'>Sign In</Link>
+          )}
         </div>
       </nav>
 
