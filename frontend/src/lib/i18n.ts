@@ -234,7 +234,7 @@ export const translations = {
     land_disclaimer: 'Not financial advice. For educational purposes only.',
     land_ticker_source: 'Yahoo Finance quotes · not tick-by-tick; prices may be delayed a few minutes.',
     land_docs: 'Docs',
-    docs_nav_back: 'Back to app',
+    docs_nav_back: 'Back to Dashboard',
 
     // Common
     common_loading: 'Loading…',
@@ -481,7 +481,7 @@ export const translations = {
     land_disclaimer: 'Keine Finanzberatung. Nur zu Bildungszwecken.',
     land_ticker_source: 'Kurse via Yahoo Finance · kein Echtzeit-Tick; ggf. einige Minuten verzögert.',
     land_docs: 'Docs',
-    docs_nav_back: 'Zur App',
+    docs_nav_back: 'Zum Dashboard',
 
     // Common
     common_loading: 'Lädt…',
