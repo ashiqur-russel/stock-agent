@@ -93,3 +93,14 @@ CREATE TABLE IF NOT EXISTS paper_watchlist (
 );
 
 CREATE INDEX IF NOT EXISTS idx_paper_watchlist_user ON paper_watchlist (user_id);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    endpoint   TEXT NOT NULL UNIQUE,
+    p256dh     TEXT NOT NULL,
+    auth       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (now()::text)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions (user_id);
