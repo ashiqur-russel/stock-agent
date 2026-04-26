@@ -1,10 +1,12 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import { useChat } from '@/hooks/useChat'
 import { usePortfolio } from '@/hooks/usePortfolio'
+import { settings } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import { chatMarkdownComponents } from '@/components/chat/ChatMarkdown'
 
@@ -14,7 +16,15 @@ function ChatContent() {
   const { holdings } = usePortfolio()
   const searchParams = useSearchParams()
   const [input, setInput] = useState('')
+  const [aiChatOk, setAiChatOk] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    settings
+      .getPreferences()
+      .then((p) => setAiChatOk(p.ai_chat_enabled !== false))
+      .catch(() => setAiChatOk(true))
+  }, [])
 
   useEffect(() => {
     const ticker = searchParams.get('ticker')
@@ -28,7 +38,7 @@ function ChatContent() {
   }, [messages])
 
   const handleSend = () => {
-    if (!input.trim() || streaming) return
+    if (!input.trim() || streaming || !aiChatOk) return
     send(input.trim())
     setInput('')
   }
@@ -49,7 +59,7 @@ function ChatContent() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 20,
+          marginBottom: 12,
           flexShrink: 0,
         }}
       >
@@ -70,6 +80,26 @@ function ChatContent() {
           {t('chat_clear')}
         </button>
       </div>
+      {!aiChatOk && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            background: '#1c1100',
+            border: '1px solid #78350f',
+            borderRadius: 10,
+            color: '#fbbf24',
+            fontSize: 13,
+            lineHeight: 1.5,
+            flexShrink: 0,
+          }}
+        >
+          {t('chat_ai_disabled')}{' '}
+          <Link href='/user/settings' className='text-brand no-underline hover:underline font-semibold'>
+            {t('nav_settings')}
+          </Link>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0, alignItems: 'stretch' }}>
         {/* Quick actions rail */}
@@ -310,7 +340,8 @@ function ChatContent() {
                 }
               }}
               placeholder={t('chat_placeholder')}
-              disabled={streaming}
+              disabled={streaming || !aiChatOk}
+              title={!aiChatOk ? t('chat_send_disabled_ai') : undefined}
               style={{
                 flex: 1,
                 minWidth: 0,
@@ -326,15 +357,16 @@ function ChatContent() {
             <button
               type="button"
               onClick={handleSend}
-              disabled={streaming || !input.trim()}
+              disabled={streaming || !input.trim() || !aiChatOk}
+              title={!aiChatOk ? t('chat_send_disabled_ai') : undefined}
               style={{
                 padding: '14px 22px',
-                background: streaming || !input.trim() ? '#14532d' : '#22c55e',
+                background: streaming || !input.trim() || !aiChatOk ? '#14532d' : '#22c55e',
                 border: 'none',
                 borderRadius: 12,
                 color: '#fff',
                 fontWeight: 600,
-                cursor: streaming || !input.trim() ? 'not-allowed' : 'pointer',
+                cursor: streaming || !input.trim() || !aiChatOk ? 'not-allowed' : 'pointer',
                 fontSize: 15,
                 flexShrink: 0,
               }}
