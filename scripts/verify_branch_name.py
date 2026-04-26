@@ -8,6 +8,7 @@ Skipped when in detached HEAD (rebase, etc.) so we do not block those flows.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -102,35 +103,36 @@ def _git_remotes() -> set[str]:
     return {x.strip() for x in (r.stdout or "").splitlines() if x.strip()}
 
 
-def _logical_branch_names() -> set[str]:
+def _logical_branch_names(include_remotes: bool = False) -> set[str]:
     """
-    All local and remote tracking branch short names, normalized by stripping the
-    first path segment when it is a remote name (origin/fix/… -> fix/…).
+    Local branch short names (refs/heads/).
+
+    When *include_remotes* is True, remote-tracking refs (refs/remotes/) are
+    also included, normalised by stripping the leading remote name so that
+    "origin/fix/SA-1-foo" becomes "fix/SA-1-foo".
     """
+    refs = ["refs/heads/"]
+    if include_remotes:
+        refs.append("refs/remotes/")
     r = subprocess.run(
-        [
-            "git",
-            "for-each-ref",
-            "--format=%(refname:short)",
-            "refs/heads/",
-            "refs/remotes/",
-        ],
+        ["git", "for-each-ref", "--format=%(refname:short)"] + refs,
         capture_output=True,
         text=True,
     )
     if r.returncode != 0:
         return set()
-    rem = _git_remotes()
+    rem = _git_remotes() if include_remotes else set()
     out: set[str] = set()
     for line in (r.stdout or "").splitlines():
         s = line.strip()
         if not s or s in ("HEAD",) or s.endswith("/HEAD"):
             continue
-        parts = s.split("/")
-        if len(parts) >= 2 and parts[0] in rem:
-            s = "/".join(parts[1:])
-        if s in ("HEAD",) or s.endswith("/HEAD"):
-            continue
+        if include_remotes:
+            parts = s.split("/")
+            if len(parts) >= 2 and parts[0] in rem:
+                s = "/".join(parts[1:])
+            if s in ("HEAD",) or s.endswith("/HEAD"):
+                continue
         out.add(s)
     return out
 
@@ -138,12 +140,16 @@ def _logical_branch_names() -> set[str]:
 def _check_sa_ticket_unique(current: str) -> None:
     """
     Require that SA-<n> is not used by another (different) branch in this clone.
-    This clone only: fetch / prune remotes to see the latest. GitHub is authoritative.
+
+    By default only local branches (refs/heads/) are scanned for speed.
+    Set the environment variable BRANCH_CHECK_REMOTES=1 to also scan all
+    remote-tracking refs (refs/remotes/) — useful in CI or after a fetch.
     """
     n = _ticket_num_from_topic(current)
     if n is None:
         return
-    names = _logical_branch_names()
+    include_remotes = os.environ.get("BRANCH_CHECK_REMOTES", "").strip() == "1"
+    names = _logical_branch_names(include_remotes=include_remotes)
     others: list[str] = []
     for b in names:
         if b == current:
