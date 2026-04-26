@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 
 const CONSENT_KEY = 'cookie_consent_v1'
 
 type Consent = { essential: true; preferences: boolean }
+type ExpandRow = 'server' | 'third' | 'rights' | null
 
 function parseConsent(raw: string | null): Consent | null {
   if (!raw) return null
@@ -22,11 +24,36 @@ export function openCookieSettings() {
   window.dispatchEvent(new CustomEvent('cookie:open-settings'))
 }
 
+function ExpandableRow({ open, onToggle, title, children }: {
+  open: boolean
+  onToggle: () => void
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className='border-b border-surface-input'>
+      <button
+        onClick={onToggle}
+        className='w-full flex items-center gap-3 py-3.5 bg-transparent border-none cursor-pointer text-foreground text-left'
+      >
+        <span className='text-text-dim text-base w-3.5 shrink-0'>{open ? '−' : '+'}</span>
+        <span className='text-sm font-semibold'>{title}</span>
+      </button>
+      {open && (
+        <div className='pb-3.5 pl-6 text-xs text-text-dim leading-relaxed'>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CookieBanner() {
   const { t } = useApp()
   const [consent, setConsent] = useState<Consent | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [prefEnabled, setPrefEnabled] = useState(true)
+  const [expanded, setExpanded] = useState<ExpandRow>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -43,6 +70,8 @@ export default function CookieBanner() {
     window.addEventListener('cookie:open-settings', handler)
     return () => window.removeEventListener('cookie:open-settings', handler)
   }, [])
+
+  const toggle = (row: ExpandRow) => setExpanded(prev => prev === row ? null : row)
 
   const allowAll = () => {
     saveConsent(true)
@@ -68,162 +97,127 @@ export default function CookieBanner() {
 
   return (
     <>
-      {/* Floating cookie button — visible once consent is recorded */}
+      {/* Floating cookie button */}
       {consent && !showModal && (
         <button
           onClick={() => setShowModal(true)}
           title={t('cookie_open_settings')}
-          style={{
-            position: 'fixed', bottom: 20, right: 20, zIndex: 998,
-            width: 44, height: 44, borderRadius: '50%',
-            background: '#0f172a', border: '1px solid #1e293b',
-            fontSize: 20, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-            transition: 'border-color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = '#22c55e')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e293b')}
+          className='fixed bottom-5 right-5 z-[998] w-11 h-11 rounded-full bg-surface border border-surface-input text-xl cursor-pointer flex items-center justify-center shadow-lg transition-colors hover:border-brand'
         >
           🍪
         </button>
       )}
 
-      {/* Modal */}
+      {/* Modal overlay */}
       {showModal && (
         <div
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-            zIndex: 1000, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', padding: 16,
-          }}
+          className='fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4'
           onClick={e => { if (e.target === e.currentTarget && consent) setShowModal(false) }}
         >
-          <div style={{
-            background: '#0f172a', border: '1px solid #1e293b',
-            borderRadius: 16, padding: '28px 28px 22px',
-            maxWidth: 520, width: '100%', maxHeight: '88vh',
-            overflowY: 'auto', color: '#f1f5f9',
-          }}>
+          <div className='bg-surface border border-surface-input rounded-2xl px-7 pt-7 pb-6 max-w-[520px] w-full max-h-[88vh] overflow-y-auto text-foreground'>
 
             {/* Header */}
-            <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 700 }}>
-              {t('cookie_about_privacy')}
-            </h2>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: '#94a3b8', lineHeight: 1.65 }}>
-              {t('cookie_privacy_desc')}
-            </p>
+            <h2 className='text-xl font-bold mb-3'>{t('cookie_about_privacy')}</h2>
+            <p className='text-sm text-text-muted leading-relaxed mb-5'>{t('cookie_privacy_desc')}</p>
 
             {/* Allow all */}
             <button
               onClick={allowAll}
-              style={{
-                padding: '10px 24px', background: '#22c55e',
-                border: 'none', borderRadius: 20,
-                color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14,
-                marginBottom: 24,
-              }}
+              className='px-6 py-2.5 bg-brand rounded-full text-white font-bold text-sm cursor-pointer border-none mb-6'
             >
               {t('cookie_allow_all')}
             </button>
 
             {/* Category section */}
-            <div style={{ borderTop: '1px solid #1e293b', paddingTop: 20, marginBottom: 4 }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700 }}>
-                {t('cookie_manage_prefs')}
-              </h3>
+            <div className='border-t border-surface-input pt-5 mb-1'>
+              <h3 className='text-[15px] font-bold mb-1'>{t('cookie_manage_prefs')}</h3>
 
-              {/* Strictly Necessary row */}
-              <div style={{
-                display: 'flex', alignItems: 'flex-start',
-                justifyContent: 'space-between', gap: 16,
-                padding: '14px 0', borderBottom: '1px solid #1e293b',
-              }}>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <span style={{ color: '#475569', fontSize: 16, lineHeight: 1.4 }}>+</span>
+              {/* Strictly Necessary */}
+              <div className='flex items-start justify-between gap-4 py-3.5 border-b border-surface-input'>
+                <div className='flex gap-3'>
+                  <span className='text-text-dim text-base leading-snug w-3.5 shrink-0'>+</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{t('cookie_necessary_title')}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
-                      {t('cookie_necessary_desc')}
-                    </div>
+                    <div className='text-sm font-semibold'>{t('cookie_necessary_title')}</div>
+                    <div className='text-xs text-text-dim mt-1 leading-relaxed'>{t('cookie_necessary_desc')}</div>
                   </div>
                 </div>
-                <span style={{
-                  fontSize: 12, color: '#22c55e', fontWeight: 600,
-                  whiteSpace: 'nowrap', paddingTop: 2,
-                }}>
+                <span className='text-xs text-brand font-semibold whitespace-nowrap pt-0.5'>
                   {t('cookie_always_active')}
                 </span>
               </div>
 
-              {/* Preferences row */}
-              <div style={{
-                display: 'flex', alignItems: 'flex-start',
-                justifyContent: 'space-between', gap: 16,
-                padding: '14px 0', borderBottom: '1px solid #1e293b',
-              }}>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <span style={{ color: '#475569', fontSize: 16, lineHeight: 1.4 }}>+</span>
+              {/* Preferences with toggle */}
+              <div className='flex items-start justify-between gap-4 py-3.5 border-b border-surface-input'>
+                <div className='flex gap-3'>
+                  <span className='text-text-dim text-base leading-snug w-3.5 shrink-0'>+</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{t('cookie_prefs_title')}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
-                      {t('cookie_prefs_desc')}
-                    </div>
+                    <div className='text-sm font-semibold'>{t('cookie_prefs_title')}</div>
+                    <div className='text-xs text-text-dim mt-1 leading-relaxed'>{t('cookie_prefs_desc')}</div>
                   </div>
                 </div>
-                {/* Toggle */}
                 <button
-                  role="switch"
+                  role='switch'
                   aria-checked={prefEnabled}
                   onClick={() => setPrefEnabled(v => !v)}
-                  style={{
-                    flexShrink: 0, width: 46, height: 26, borderRadius: 13,
-                    background: prefEnabled ? '#22c55e' : '#334155',
-                    border: 'none', cursor: 'pointer',
-                    position: 'relative', transition: 'background 0.2s',
-                    marginTop: 2,
-                  }}
+                  className='shrink-0 w-[46px] h-[26px] rounded-full border-none cursor-pointer relative mt-0.5 transition-colors duration-200'
+                  style={{ background: prefEnabled ? '#22c55e' : '#334155' }}
                 >
-                  <span style={{
-                    position: 'absolute', top: 3,
-                    left: prefEnabled ? 23 : 3,
-                    width: 20, height: 20, borderRadius: '50%',
-                    background: '#fff', transition: 'left 0.2s',
-                    display: 'block',
-                  }} />
+                  <span
+                    className='absolute top-[3px] w-5 h-5 rounded-full bg-white transition-all duration-200 block'
+                    style={{ left: prefEnabled ? 23 : 3 }}
+                  />
                 </button>
               </div>
+
+              {/* Account & Server Data */}
+              <ExpandableRow open={expanded === 'server'} onToggle={() => toggle('server')} title={t('cookie_server_title')}>
+                {t('cookie_server_desc')}
+              </ExpandableRow>
+
+              {/* Third-Party Services */}
+              <ExpandableRow open={expanded === 'third'} onToggle={() => toggle('third')} title={t('cookie_third_title')}>
+                <p className='mb-2'>{t('cookie_third_groq')}</p>
+                <p className='mb-2'>{t('cookie_third_yf')}</p>
+                <a href='https://groq.com/privacy-policy/' target='_blank' rel='noopener noreferrer' className='text-brand no-underline hover:underline'>
+                  Groq Privacy Policy ↗
+                </a>
+              </ExpandableRow>
+
+              {/* Your Rights */}
+              <ExpandableRow open={expanded === 'rights'} onToggle={() => toggle('rights')} title={t('cookie_rights_full_title')}>
+                <p className='mb-2'>{t('cookie_rights_full_desc')}</p>
+                <div className='flex gap-4 flex-wrap'>
+                  <a href='https://gdpr-info.eu/art-15-gdpr/' target='_blank' rel='noopener noreferrer' className='text-brand no-underline hover:underline'>Art. 15 (Access) ↗</a>
+                  <a href='https://gdpr-info.eu/art-17-gdpr/' target='_blank' rel='noopener noreferrer' className='text-brand no-underline hover:underline'>Art. 17 (Erasure) ↗</a>
+                  <Link href='/privacy' className='text-brand no-underline hover:underline'>{t('cookie_privacy_link')} →</Link>
+                </div>
+              </ExpandableRow>
             </div>
 
             {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
+            <div className='flex gap-2.5 mt-5 flex-wrap'>
               <button
                 onClick={rejectAll}
-                style={{
-                  flex: 1, padding: '10px 16px',
-                  background: '#1e293b', border: '1px solid #334155',
-                  borderRadius: 20, color: '#f1f5f9',
-                  fontWeight: 600, cursor: 'pointer', fontSize: 14,
-                }}
+                className='flex-1 py-2.5 px-4 bg-surface-input border border-border-strong rounded-full text-foreground font-semibold cursor-pointer text-sm'
               >
                 {t('cookie_reject_all')}
               </button>
               <button
                 onClick={submitChoices}
-                style={{
-                  flex: 1, padding: '10px 16px',
-                  background: 'transparent', border: '1px solid #22c55e',
-                  borderRadius: 20, color: '#22c55e',
-                  fontWeight: 600, cursor: 'pointer', fontSize: 14,
-                }}
+                className='flex-1 py-2.5 px-4 bg-transparent border border-brand rounded-full text-brand font-semibold cursor-pointer text-sm'
               >
                 {t('cookie_submit')}
               </button>
             </div>
 
             {/* Legal note */}
-            <p style={{ marginTop: 16, fontSize: 11, color: '#475569', lineHeight: 1.6 }}>
-              {t('cookie_legal_note')}
+            <p className='mt-3.5 text-[11px] text-text-dim leading-relaxed'>
+              <a href='https://gdpr-info.eu/art-6-gdpr/' target='_blank' rel='noopener noreferrer' className='text-text-dim hover:text-brand no-underline'>Art. 6(1)(b) GDPR ↗</a>
+              {' '}— We never access your data without a written request.{' '}
+              <Link href='/privacy' className='text-brand no-underline hover:underline'>{t('cookie_privacy_link')}</Link>
+            </p>
+            <p className='mt-1.5 text-[11px] text-text-dim leading-relaxed'>
+              {t('cookie_edu_disclaimer')}
             </p>
           </div>
         </div>
