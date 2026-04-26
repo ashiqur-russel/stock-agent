@@ -596,10 +596,11 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   ├── forgot-password/page.tsx
 │   ├── reset-password/page.tsx
 │   ├── dashboard/page.tsx     # Portfolio overview
+│   ├── dashboard/alerts/page.tsx  # Price alerts (URL: /dashboard/alerts)
 │   ├── transactions/page.tsx  # Add/delete transactions
 │   ├── paper/page.tsx         # Paper trading + watchlist
 │   ├── chat/page.tsx          # AI chat (SSE streaming)
-│   ├── alerts/page.tsx        # Price alerts + notification settings
+│   ├── alerts/page.tsx        # Redirect → /dashboard/alerts
 │   └── docs/page.tsx          # This page
 ├── components/
 │   ├── layout/

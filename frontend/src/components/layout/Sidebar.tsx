@@ -13,7 +13,7 @@ const links = [
   { href: '/transactions', labelKey: 'nav_transactions' as const, icon: '📋' },
   { href: '/paper', labelKey: 'nav_paper' as const, icon: '📝' },
   { href: '/chat', labelKey: 'nav_chat' as const, icon: '🤖' },
-  { href: '/alerts', labelKey: 'nav_alerts' as const, icon: '🔔' },
+  { href: '/dashboard/alerts', labelKey: 'nav_alerts' as const, icon: '🔔' },
   { href: '/docs', labelKey: 'nav_docs' as const, icon: '📚' },
 ]
 
@@ -56,8 +56,11 @@ export default function Sidebar() {
 
       <div style={{ flex: 1, padding: '12px 0' }}>
         {links.map(({ href, labelKey, icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href + '/')
-          const isAlerts = href === '/alerts'
+          const isActive =
+            href === '/dashboard'
+              ? pathname === '/dashboard'
+              : pathname === href || pathname.startsWith(`${href}/`)
+          const isAlerts = href === '/dashboard/alerts'
           return (
             <Link
               key={href}
