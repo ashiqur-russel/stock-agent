@@ -1,3 +1,5 @@
+import os
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,6 +41,12 @@ _scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 def startup():
+    if os.getenv("RENDER") and "localhost" in config.FRONTEND_URL:
+        print(
+            "[config] WARNING: FRONTEND_URL is still localhost. "
+            "In Render → Environment, set FRONTEND_URL to your Vercel site (e.g. https://....vercel.app) "
+            "and redeploy, or verification emails will keep using localhost."
+        )
     init_db()
     from services.alert_service import check_all_portfolios
 
