@@ -64,8 +64,20 @@ CREATE TABLE IF NOT EXISTS user_settings (
     user_id         BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
     notify_email    TEXT,
     email_alerts    INTEGER NOT NULL DEFAULT 1,
-    market_region   TEXT NOT NULL DEFAULT 'DE' CHECK (market_region IN ('DE', 'US'))
+    market_region   TEXT NOT NULL DEFAULT 'DE' CHECK (market_region IN ('DE', 'US')),
+    ai_chat_enabled INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS ai_chat_usage (
+    id                BIGSERIAL PRIMARY KEY,
+    user_id           BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    created_at        TEXT NOT NULL DEFAULT (now()::text),
+    prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    groq_calls        INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_chat_usage_user_created ON ai_chat_usage (user_id, created_at);
 
 CREATE TABLE IF NOT EXISTS paper_accounts (
     user_id     BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,

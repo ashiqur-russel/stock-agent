@@ -6,8 +6,17 @@ export const translations = {
     nav_paper: 'Paper Trading',
     nav_chat: 'AI Chat',
     nav_alerts: 'Alerts',
+    nav_settings: 'Settings',
     nav_docs: 'Docs',
     nav_logout: 'Logout',
+
+    settings_title: 'Settings',
+    settings_subtitle: 'Email notifications, AI chat (Groq), and related account options.',
+    settings_alerts_footer:
+      'Open Alerts for signal history, unread badges, and browser push when swing signals change.',
+    alerts_prefs_banner: 'Email alerts and the AI advisor are configured in',
+
+    chat_send_disabled_ai: 'Turn on AI chat in Settings to send messages.',
 
     // Auth
     auth_login: 'Sign In',
@@ -183,6 +192,12 @@ export const translations = {
     alert_active: 'Active',
     alert_delete: 'Delete',
     alert_notif: 'Notification Settings',
+    alert_ai_section: 'AI advisor',
+    alert_ai_enable: 'Enable AI chat (Groq)',
+    alert_ai_help:
+      'When on, you are included in the app’s fair-share Groq limits with other users who also leave this on. When off, AI chat is blocked and your messages are not sent to Groq.',
+    chat_ai_disabled:
+      'AI chat is off. Turn on the AI advisor in Settings, then try again.',
 
     // Chat
     chat_title: 'AI Trading Advisor',
@@ -318,7 +333,16 @@ export const translations = {
     nav_paper: 'Papierhandel',
     nav_chat: 'KI-Chat',
     nav_alerts: 'Benachrichtigungen',
+    nav_settings: 'Einstellungen',
     nav_docs: 'Docs',
+
+    settings_title: 'Einstellungen',
+    settings_subtitle: 'E-Mail-Benachrichtigungen, KI-Chat (Groq) und weitere Kontoeinstellungen.',
+    settings_alerts_footer:
+      'Unter Benachrichtigungen finden Sie den Signal-Verlauf, ungelesene Zähler und Browser-Push bei Signalwechseln.',
+    alerts_prefs_banner: 'E-Mail-Alarme und der KI-Berater werden konfiguriert unter',
+
+    chat_send_disabled_ai: 'Aktivieren Sie den KI-Chat unter Einstellungen, um Nachrichten zu senden.',
     nav_logout: 'Abmelden',
 
     // Auth
@@ -494,6 +518,12 @@ export const translations = {
     alert_active: 'Aktiv',
     alert_delete: 'Löschen',
     alert_notif: 'Benachrichtigungseinstellungen',
+    alert_ai_section: 'KI-Berater',
+    alert_ai_enable: 'KI-Chat aktivieren (Groq)',
+    alert_ai_help:
+      'Wenn aktiv, fließen Sie in die fair-geteilten Groq-Limits der App mit anderen Nutzern ein, die dies ebenfalls aktiv lassen. Wenn aus, wird der KI-Chat blockiert und nichts an Groq gesendet.',
+    chat_ai_disabled:
+      'KI-Chat ist aus. Aktivieren Sie den KI-Berater unter Einstellungen und versuchen Sie es erneut.',
 
     // Chat
     chat_title: 'KI-Handelsberater',

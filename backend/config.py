@@ -6,6 +6,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+
+# Groq Cloud org-level limits (Free tier defaults for meta-llama/llama-4-scout-17b-16e-instruct).
+# Override if your Groq plan differs. Fair-share splits these across users with AI chat enabled.
+GROQ_ORG_RPM: int = int(os.getenv("GROQ_ORG_RPM", "30"))
+GROQ_ORG_RPD: int = int(os.getenv("GROQ_ORG_RPD", "1000"))
+GROQ_ORG_TPM: int = int(os.getenv("GROQ_ORG_TPM", "30000"))
+GROQ_ORG_TPD: int = int(os.getenv("GROQ_ORG_TPD", "500000"))
+
+# Set GROQ_QUOTA_ENABLED=0 to disable per-user fair share (still retries on 429).
+GROQ_QUOTA_ENABLED: bool = os.getenv("GROQ_QUOTA_ENABLED", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
 JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
 DATABASE_PATH: str = os.getenv("DATABASE_PATH", "./portfolio.db")
 

@@ -42,7 +42,19 @@ export function useChat(currency: 'EUR' | 'USD' = 'EUR') {
         }),
       })
 
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`
+        try {
+          const j = (await res.json()) as { detail?: string | Array<{ msg?: string }> }
+          if (typeof j.detail === 'string') msg = j.detail
+          else if (Array.isArray(j.detail))
+            msg = j.detail.map((e) => e.msg ?? JSON.stringify(e)).join('; ')
+        } catch {
+          /* use msg */
+        }
+        throw new Error(msg)
+      }
+      if (!res.body) throw new Error('No response body')
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -80,6 +92,12 @@ export function useChat(currency: 'EUR' | 'USD' = 'EUR') {
                 }
                 return updated
               })
+            } else if (event.type === 'error') {
+              const m =
+                typeof event.message === 'string'
+                  ? event.message
+                  : 'Chat error'
+              setError(m)
             }
           } catch {
             // skip malformed SSE lines

@@ -126,9 +126,38 @@ def _run_postgres_ddl() -> None:
         conn.close()
 
 
+def _migrate_postgres_ai_quota() -> None:
+    """Idempotent columns/tables for existing PostgreSQL databases."""
+    conn = _connect_postgres()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS ai_chat_enabled INTEGER NOT NULL DEFAULT 1"
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ai_chat_usage (
+                id                BIGSERIAL PRIMARY KEY,
+                user_id           BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                created_at        TEXT NOT NULL DEFAULT (now()::text),
+                prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+                completion_tokens INTEGER NOT NULL DEFAULT 0,
+                groq_calls        INTEGER NOT NULL DEFAULT 1
+            )
+            """
+        )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ai_chat_usage_user_created ON ai_chat_usage (user_id, created_at)"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def init_db() -> None:
     if is_postgres():
         _run_postgres_ddl()
+        _migrate_postgres_ai_quota()
         return
     schema = (Path(__file__).parent / "schema.sql").read_text()
     c = _connect_sqlite()
@@ -137,6 +166,7 @@ def init_db() -> None:
         for migration in [
             "ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0",
             "ALTER TABLE user_settings ADD COLUMN market_region TEXT NOT NULL DEFAULT 'DE'",
+            "ALTER TABLE user_settings ADD COLUMN ai_chat_enabled INTEGER NOT NULL DEFAULT 1",
         ]:
             try:
                 c.execute(migration)

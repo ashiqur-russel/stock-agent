@@ -638,7 +638,8 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   ├── reset-password/page.tsx
 │   ├── user/dashboard/page.tsx    # /user/dashboard — portfolio overview
 │   ├── user/transactions/page.tsx # /user/transactions — trade log
-│   ├── user/alerts/page.tsx       # /user/alerts — swing signal alerts
+│   ├── user/alerts/page.tsx       # /user/alerts — swing signal alerts, push, history
+│   ├── user/settings/page.tsx     # /user/settings — email + AI advisor (Groq) preferences
 │   ├── user/paper/page.tsx        # /user/paper — paper trading
 │   ├── user/agent/page.tsx        # /user/agent — AI chat (SSE streaming)
 │   ├── (app)/…                    # Legacy paths — all redirect to /user/*

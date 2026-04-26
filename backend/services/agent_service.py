@@ -1,13 +1,60 @@
 import json
+import time
+from typing import Any
 
 from groq import Groq
 
 import config
 from services import market_data, portfolio_service, technical
+from services.ai_quota import groq_call_allowed, record_groq_usage
 from tools.definitions import TOOL_DEFINITIONS
 
 _client = Groq(api_key=config.GROQ_API_KEY)
 MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+
+
+def _is_groq_429(exc: BaseException) -> bool:
+    sc = getattr(exc, "status_code", None)
+    if sc == 429:
+        return True
+    resp = getattr(exc, "response", None)
+    return getattr(resp, "status_code", None) == 429
+
+
+def _retry_after_seconds(exc: BaseException) -> float | None:
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return None
+    h = resp.headers.get("retry-after")
+    if not h:
+        return None
+    try:
+        return float(h)
+    except ValueError:
+        return None
+
+
+def _groq_chat_completion(**kwargs: Any):
+    last: BaseException | None = None
+    for attempt in range(4):
+        try:
+            return _client.chat.completions.create(**kwargs)
+        except Exception as e:
+            last = e
+            if not _is_groq_429(e) or attempt == 3:
+                raise
+            wait = _retry_after_seconds(e)
+            if wait is None:
+                wait = min(12.0, 1.0 * (2**attempt))
+            time.sleep(wait)
+    if last is not None:
+        raise last
+    raise RuntimeError("Groq request failed after retries")
+
+
+def _sse_error(code: str, message: str) -> str:
+    return f"data: {json.dumps({'type': 'error', 'code': code, 'message': message})}\n\n"
+
 
 _SYSTEM_PROMPT_TEMPLATE = """You are a personal swing-trading advisor for a retail investor.
 
@@ -221,13 +268,35 @@ async def stream_agent_response(messages: list[dict], user_id: int, currency: st
     conversation = [{"role": "system", "content": system_prompt}] + list(messages)
 
     while True:
-        response = _client.chat.completions.create(
-            model=MODEL,
-            messages=conversation,
-            tools=TOOL_DEFINITIONS,
-            tool_choice="auto",
-            max_tokens=4096,
-        )
+        ok, quota_msg = groq_call_allowed(user_id)
+        if not ok:
+            yield _sse_error("quota_local", quota_msg or "AI quota exceeded.")
+            return
+        try:
+            response = _groq_chat_completion(
+                model=MODEL,
+                messages=conversation,
+                tools=TOOL_DEFINITIONS,
+                tool_choice="auto",
+                max_tokens=4096,
+            )
+        except Exception as e:
+            if _is_groq_429(e):
+                yield _sse_error(
+                    "groq_rate_limit",
+                    "Groq rate limit reached after retries. Please wait a minute and try again.",
+                )
+            else:
+                yield _sse_error(
+                    "groq_error",
+                    "The AI service returned an error. Please try again.",
+                )
+            return
+
+        usage = getattr(response, "usage", None)
+        pt = int(getattr(usage, "prompt_tokens", None) or 0) if usage else 0
+        ct = int(getattr(usage, "completion_tokens", None) or 0) if usage else 0
+        record_groq_usage(user_id, prompt_tokens=pt, completion_tokens=ct, groq_calls=1)
 
         msg = response.choices[0].message
         tool_calls = msg.tool_calls or []
