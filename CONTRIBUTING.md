@@ -182,9 +182,54 @@ If the project adds pytest to a dev requirements file later, prefer that over ad
 ## Pull requests
 
 1. Open or pick an issue; use **`SA-<issue number>`** in the branch name when it fits.
-2. One logical change per PR when possible; describe **what** and **why**.
-3. Run **pre-commit** and **frontend lint** before pushing.
+2. One logical change per PR when possible.
+3. Run **pre-commit** and **frontend lint** before pushing; run **pytest** when you change backend behavior.
 4. Note any **env** or **schema** changes and update **`.env.example`** or docs when you add variables.
+
+### PR title (match your branch)
+
+Use the **same ticket id** as in the branch (`SA-<number>`), then a short human-readable title derived from the branch slug.
+
+**Pattern:** `[SA-<n>] <Kind>/<Short description in Title Case>`
+
+- **`<Kind>/`** comes from the branch prefix:
+
+  | Branch starts with | Use in title |
+  |--------------------|--------------|
+  | `fix/SA-…`         | `Fix/`       |
+  | `feature/SA-…`     | `Feature/`   |
+  | `chore/SA-…`      | `Chore/`     |
+  | `docs/SA-…`       | `Docs/`      |
+  | `hotfix/SA-…`     | `Hotfix/`    |
+  | `release/SA-…`    | `Release/`   |
+
+- **Short description:** take the part of the branch name **after** `SA-<n>-`, replace `-` with spaces, and use **Title Case** (keep acronyms such as **API**, **JWT**, **UX** in upper case where appropriate).
+
+**Examples**
+
+| Branch name | Suggested PR title |
+|-------------|-------------------|
+| `fix/SA-7-auth-password-reset-ux` | `[SA-7] Fix/Auth Password Reset UX` |
+| `feature/SA-12-csv-portfolio-export` | `[SA-12] Feature/Csv Portfolio Export` or `[SA-12] Feature/CSV Portfolio Export` |
+| `docs/SA-3-update-contributing` | `[SA-3] Docs/Update Contributing` |
+
+GitHub may auto-fill the PR title from the latest commit; **edit it** to follow the table above so it matches the branch and is easy to scan.
+
+### PR description (what reviewers need)
+
+Open the PR against the default branch (not `main`/`master` via direct push). In the description, include:
+
+1. **Summary** — What you changed and **why** (problem, approach, trade-offs). Link the issue: `Closes #123` or `Refs #123` when relevant.
+2. **Screenshots or screen recording** — For any **UI** change, add before/after images or a short video/GIF. For **API-only** or **docs-only** work, write **N/A** and paste sample request/response or a log snippet if it helps.
+3. **Testing** — State explicitly what you ran and the outcome, for example:
+   - `pre-commit run --all-files` — passed
+   - `cd frontend && npm run lint` — passed (or N/A if no frontend changes)
+   - `cd backend && pytest tests/ -q` — passed (or **not run** with a short reason, e.g. docs-only)
+   - Manual checks: e.g. “Registered user, reset password, confirmed login”
+
+Be honest if something was not run; reviewers can then decide what to verify locally.
+
+Opening a PR on GitHub will show a **template** (see [`.github/pull_request_template.md`](.github/pull_request_template.md)) with the same sections—fill it in rather than leaving it blank.
 
 ## Where to read more
 
