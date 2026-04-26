@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 36" fill="none">
+  <!-- Icon mark (36x36) -->
+  <rect width="36" height="36" rx="8" fill="#0f172a"/>
+
+  <!-- Baseline -->
+  <line x1="4" y1="30" x2="32" y2="30" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Rising chart bars -->
+  <rect x="4"  y="22" width="4.5" height="8" rx="1" fill="#166534" opacity="0.6"/>
+  <rect x="11" y="17" width="4.5" height="13" rx="1" fill="#16a34a" opacity="0.7"/>
+  <rect x="18" y="11" width="4.5" height="19" rx="1" fill="#22c55e" opacity="0.85"/>
+  <rect x="25" y="5"  width="4.5" height="25" rx="1" fill="#22c55e"/>
+
+  <!-- Trend line -->
+  <polyline
+    points="6.25,23 13.25,18 20.25,12 27.25,6"
+    stroke="#4ade80"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+    opacity="0.7"
+  />
+
+  <!-- Signal dot -->
+  <circle cx="27.25" cy="6" r="2.5" fill="#4ade80"/>
+  <circle cx="27.25" cy="6" r="5"   fill="none" stroke="#4ade80" stroke-width="1" opacity="0.25"/>
+
+  <!-- Wordmark -->
+  <text
+    x="44" y="24"
+    font-family="ui-monospace, 'Geist Mono', monospace"
+    font-size="15"
+    font-weight="700"
+    letter-spacing="-0.3"
+    fill="#f1f5f9"
+  >Stock</text>
+  <text
+    x="100" y="24"
+    font-family="ui-monospace, 'Geist Mono', monospace"
+    font-size="15"
+    font-weight="700"
+    letter-spacing="-0.3"
+    fill="#22c55e"
+  >Agent</text>
+</svg>
