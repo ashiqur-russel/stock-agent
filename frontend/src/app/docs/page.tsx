@@ -402,7 +402,9 @@ npm run dev`}</Code>
               Full contributor workflow — <Code>pre-commit</Code>, branch names (<Code>feature/SA-42-…</Code>), commit subjects (<Code>[SA-42] type: summary</Code>), tests, and troubleshooting — is in the repo root file{' '}
               <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong>. The root <strong style={{ color: '#f1f5f9' }}>README.md</strong> covers deploy pitfalls and Supabase connectivity.
             </P>
-            <Note>This page focuses on running the app and API reference; <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong> is the checklist for submitting pull requests.</Note>
+            <Note>
+              Pull requests: use titles like <Code>[SA-7] Fix/Auth Password Reset UX</Code> (see <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong>), include screenshots for UI changes, and document what you tested. GitHub loads the template from <Code>.github/pull_request_template.md</Code>.
+            </Note>
           </Section>
 
           {/* ── Database management (dev) ── */}
