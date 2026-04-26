@@ -78,13 +78,16 @@ def _topic_prefix_and_rest(name: str) -> tuple[str, str] | None:
 
 
 def _ticket_num_from_topic(name: str) -> int | None:
-    """If name is a topic branch with SA-<n>, return n; else None."""
-    for p in _PREFIXES:
-        if not (name.startswith(p) and len(name) > len(p)):
-            continue
-        m = re.match(r"^SA-(\d+)", name[len(p) :])
-        if m:
-            return int(m.group(1))
+    """If name is a valid topic branch with SA-<n>, return n; else None."""
+    topic = _topic_prefix_and_rest(name)
+    if topic is None:
+        return None
+    _, rest = topic
+    if not _SA_PREFIX.match(rest):
+        return None
+    m = re.match(r"^SA-(\d+)", rest)
+    if m:
+        return int(m.group(1))
     return None
 
 
