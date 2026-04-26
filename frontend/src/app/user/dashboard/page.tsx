@@ -29,14 +29,47 @@ function DashboardContent() {
           <span style={{ fontSize: 12, color: '#22c55e', background: '#0d2d0d', border: '1px solid #166534', borderRadius: 10, padding: '2px 10px' }}>
             {t('db_live')}
           </span>
-          <button onClick={refresh} style={{ padding: '6px 14px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            {refreshing && (
-              <span style={{
-                display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-                border: '2px solid #334155', borderTopColor: '#22c55e',
-                animation: 'spin 0.7s linear infinite',
-              }} />
-            )}
+          <button
+            type="button"
+            onClick={refresh}
+            style={{
+              padding: '6px 14px',
+              background: '#1e293b',
+              border: '1px solid #334155',
+              borderRadius: 8,
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 10,
+                height: 10,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {refreshing ? (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    border: '2px solid #334155',
+                    borderTopColor: '#22c55e',
+                    animation: 'spin 0.7s linear infinite',
+                  }}
+                />
+              ) : null}
+            </span>
             {t('db_refresh')}
           </button>
         </div>
