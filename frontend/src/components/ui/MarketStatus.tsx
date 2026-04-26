@@ -52,7 +52,15 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
             display: 'inline-block',
           }}
         />
-        <span style={{ fontSize: 12, color: open ? '#22c55e' : '#ef4444' }}>
+        <span
+          style={{
+            fontSize: 12,
+            color: open ? '#22c55e' : '#ef4444',
+            display: 'inline-block',
+            minWidth: '20ch',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {open ? t('pt_market_open') : t('pt_market_closed')}
         </span>
       </span>
@@ -72,7 +80,14 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
           }}
         />
         <span
-          style={{ fontSize: 14, color: open ? '#22c55e' : '#ef4444', fontWeight: 600 }}
+          style={{
+            fontSize: 14,
+            color: open ? '#22c55e' : '#ef4444',
+            fontWeight: 600,
+            display: 'inline-block',
+            minWidth: '20ch',
+            whiteSpace: 'nowrap',
+          }}
         >
           {open ? t('pt_market_open') : t('pt_market_closed')}
         </span>
@@ -91,7 +106,10 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
           <span style={{ fontSize: 13, color: '#94a3b8' }}>Crypto 24/7</span>
         </div>
       )}
-      <span style={{ fontSize: 12, color: '#64748b' }} title={t('pt_hours_label')}>
+      <span
+        style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}
+        title={t('pt_hours_label')}
+      >
         {hoursText}
       </span>
     </div>
