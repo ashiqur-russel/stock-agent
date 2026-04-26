@@ -26,6 +26,10 @@ The complete setup guide, environment variables, database notes (SQLite locally 
 
 For health checks, Docker, CORS, and production configuration, use **`/docs`** as the single source of truth.
 
+## Troubleshooting: `Network is unreachable` to Supabase (e.g. on Render)
+
+If startup fails while connecting to `db.*.supabase.co` with **IPv6** and `Network is unreachable`, your host often cannot reach that path. In **Supabase → Project Settings → Database**, copy the **Session** or **Transaction pooler** URI (not only *Direct*), set it as **`DATABASE_URL`**, redeploy, and ensure `sslmode=require` is present if the dashboard includes it. The app logs a longer hint when this error is detected.
+
 ---
 
 *Not financial advice. For educational purposes only.*

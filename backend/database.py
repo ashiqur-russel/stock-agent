@@ -10,6 +10,25 @@ import config
 
 USE_POSTGRES = os.getenv("DATABASE_URL", "").strip().lower().startswith("postgres")
 
+_PG_IPV6_HINT = (
+    "PostgreSQL connection failed. If you use Supabase on Render (or a host without IPv6 to the DB), "
+    "do not use only the *Direct* `db.*.supabase.co:5432` URI — it can resolve to IPv6 and fail with "
+    "'Network is unreachable'. In Supabase → Project Settings → Database, copy the **Session** or "
+    "**Transaction** pooler connection string (pooler host; Transaction mode often uses port 6543) "
+    "and set it as DATABASE_URL, including `?sslmode=require` if the dashboard provides it."
+)
+
+
+def _connect_postgres():
+    dsn = os.environ["DATABASE_URL"].strip()
+    try:
+        return psycopg2.connect(dsn)
+    except psycopg2.OperationalError as e:
+        msg = (str(e) or "").lower()
+        if "network is unreachable" in msg or "no route to host" in msg:
+            raise psycopg2.OperationalError(f"{e}\n{_PG_IPV6_HINT}") from e
+        raise
+
 
 def is_postgres() -> bool:
     return USE_POSTGRES
@@ -29,7 +48,7 @@ def _connect_sqlite():
 
 def get_connection() -> "DbConnection":
     if is_postgres():
-        raw = psycopg2.connect(os.environ["DATABASE_URL"].strip())
+        raw = _connect_postgres()
         return DbConnection(raw, is_pg=True)
     return DbConnection(_connect_sqlite(), is_pg=False)
 
@@ -84,7 +103,7 @@ class DbConnection:
 def _run_postgres_ddl() -> None:
     path = Path(__file__).with_name("schema.postgres.sql")
     ddl = path.read_text()
-    conn = psycopg2.connect(os.environ["DATABASE_URL"].strip())
+    conn = _connect_postgres()
     try:
         cur = conn.cursor()
         for part in re.split(r";\s*", ddl):
