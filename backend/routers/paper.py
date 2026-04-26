@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from database import get_connection
+from database import get_connection, is_postgres
 from middleware.auth import get_current_user
 from services.market_data import fetch_quote, get_usd_to_eur_rate
 
@@ -240,10 +240,17 @@ def add_to_watchlist(body: WatchlistBody, user=Depends(get_current_user)):
     if not ticker:
         raise HTTPException(400, "ticker is required")
     with get_connection() as conn:
-        conn.execute(
-            "INSERT OR IGNORE INTO paper_watchlist (user_id, ticker) VALUES (?,?)",
-            (user_id, ticker),
-        )
+        if is_postgres():
+            conn.execute(
+                "INSERT INTO paper_watchlist (user_id, ticker) VALUES (?,?)"
+                " ON CONFLICT (user_id, ticker) DO NOTHING",
+                (user_id, ticker),
+            )
+        else:
+            conn.execute(
+                "INSERT OR IGNORE INTO paper_watchlist (user_id, ticker) VALUES (?,?)",
+                (user_id, ticker),
+            )
         conn.commit()
     return {"ok": True, "ticker": ticker}
 
