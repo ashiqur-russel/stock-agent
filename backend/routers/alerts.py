@@ -12,26 +12,45 @@ def get_preferences(user=Depends(get_current_user)):
     user_id = user["user_id"]
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT market_region FROM user_settings WHERE user_id=?",
+            "SELECT market_region, COALESCE(ai_chat_enabled, 1) AS ai_chat_enabled FROM user_settings WHERE user_id=?",
             (user_id,),
         ).fetchone()
     if row and row["market_region"] in ("DE", "US"):
-        return {"market_region": row["market_region"]}
-    return {"market_region": "DE"}
+        return {
+            "market_region": row["market_region"],
+            "ai_chat_enabled": bool(row["ai_chat_enabled"]),
+        }
+    return {"market_region": "DE", "ai_chat_enabled": True}
 
 
 @router.put("/settings/preferences")
 def put_preferences(body: dict, user=Depends(get_current_user)):
-    mr = body.get("market_region", "DE")
-    if mr not in ("DE", "US"):
-        raise HTTPException(status_code=400, detail="market_region must be DE or US")
     user_id = user["user_id"]
     with get_connection() as conn:
+        row = conn.execute(
+            "SELECT market_region, COALESCE(ai_chat_enabled, 1) AS ai_chat_enabled FROM user_settings WHERE user_id=?",
+            (user_id,),
+        ).fetchone()
+        cur_mr = row["market_region"] if row and row["market_region"] in ("DE", "US") else "DE"
+        cur_ai = int(row["ai_chat_enabled"]) if row else 1
+
+        new_mr = body.get("market_region", cur_mr)
+        if new_mr not in ("DE", "US"):
+            raise HTTPException(status_code=400, detail="market_region must be DE or US")
+
+        if "ai_chat_enabled" in body:
+            v = body["ai_chat_enabled"]
+            new_ai = 1 if (v is True or v == 1 or v == "1") else 0
+        else:
+            new_ai = cur_ai
+
         conn.execute(
-            """INSERT INTO user_settings (user_id, market_region)
-               VALUES (?, ?)
-               ON CONFLICT(user_id) DO UPDATE SET market_region=excluded.market_region""",
-            (user_id, mr),
+            """INSERT INTO user_settings (user_id, market_region, ai_chat_enabled)
+               VALUES (?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                 market_region=excluded.market_region,
+                 ai_chat_enabled=excluded.ai_chat_enabled""",
+            (user_id, new_mr, new_ai),
         )
         conn.commit()
     return {"ok": True}
