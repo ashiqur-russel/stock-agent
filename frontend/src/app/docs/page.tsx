@@ -1193,6 +1193,7 @@ NEXT_PUBLIC_API_URL=https://api.yourdomain.com`}</Code>
             <span style={{ fontSize: 13, color: '#475569' }}>Not financial advice. For educational purposes only.</span>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
               <Link href='/' style={{ fontSize: 13, color: '#64748b', textDecoration: 'none' }}>Home</Link>
+              <Link href='/privacy' style={{ fontSize: 13, color: '#64748b', textDecoration: 'none' }}>Privacy</Link>
               <button onClick={openCookieSettings} style={{ fontSize: 13, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>🍪 Cookies</button>
               <Link href='/register' style={{ fontSize: 13, color: '#22c55e', textDecoration: 'none', fontWeight: 600 }}>Get Started →</Link>
             </div>

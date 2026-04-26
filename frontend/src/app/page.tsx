@@ -535,7 +535,7 @@ export default function Home() {
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.04)', padding: '22px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: '#040a18' }}>
         <span style={{ fontSize: 12, color: '#1e3050' }}>{t('land_disclaimer')}</span>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          {[{ href: '/docs', label: t('land_docs') }, { href: '/login', label: t('land_signin') }, { href: '/register', label: t('land_register') }].map((l) => (
+          {[{ href: '/docs', label: t('land_docs') }, { href: '/privacy', label: t('cookie_privacy_link') }, { href: '/login', label: t('land_signin') }, { href: '/register', label: t('land_register') }].map((l) => (
             <Link key={l.href} href={l.href} style={{ fontSize: 13, color: '#334155', textDecoration: 'none' }}>{l.label}</Link>
           ))}
           <button onClick={openCookieSettings} style={{ fontSize: 13, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
