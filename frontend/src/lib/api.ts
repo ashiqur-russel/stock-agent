@@ -211,6 +211,38 @@ export const settings = {
     }),
 }
 
+export type GroqQuotaShares = {
+  rpm: number
+  tpm: number
+  period_calls_cap: number
+  period_tokens_cap: number
+  rpd_daily_share: number
+  tpd_daily_share: number
+}
+
+export type GroqQuotaSnapshot = {
+  quota_enabled: boolean
+  ai_chat_enabled: boolean
+  bucket: string
+  users_sharing_pool: number
+  can_use: boolean
+  shares: GroqQuotaShares | null
+  used: {
+    minute: { groq_calls: number; tokens: number }
+    period: { groq_calls: number; tokens: number }
+  } | null
+  block_reason: string | null
+  next_capacity_utc: string | null
+  seconds_until_capacity: number | null
+  period_label: string | null
+  utc_day_resets_at: string | null
+  info: string | null
+}
+
+export const chat = {
+  getQuota: () => apiFetch<GroqQuotaSnapshot>('/api/v1/chat/quota'),
+}
+
 export async function postContact(body: { name: string; email: string; message: string }): Promise<{ message: string }> {
   const res = await fetch(`${API_URL}/contact`, {
     method: 'POST',

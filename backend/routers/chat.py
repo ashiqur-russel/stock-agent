@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from middleware.auth import get_current_user
 from services.agent_service import stream_agent_response
-from services.ai_quota import user_ai_chat_allowed
+from services.ai_quota import get_groq_quota_snapshot, user_ai_chat_allowed
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
@@ -13,6 +13,12 @@ class ChatRequest(BaseModel):
     messages: list[dict]
     """Must match the in-app currency toggle: EUR (€) or USD ($)."""
     currency: str = "EUR"
+
+
+@router.get("/quota")
+def chat_quota(user=Depends(get_current_user)):
+    """Fair-share Groq usage and limits for the current user (when quota is enabled)."""
+    return get_groq_quota_snapshot(user["user_id"])
 
 
 @router.post("")

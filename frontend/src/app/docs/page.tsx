@@ -391,6 +391,14 @@ JWT_SECRET=your-random-secret-here-min-32-chars
 
 # Groq (AI)
 GROQ_API_KEY=gsk_...
+# Optional: fair-share pool for users with AI chat on (defaults ≈ Groq free tier; match your console limits)
+# GROQ_QUOTA_ENABLED=1
+# GROQ_ORG_RPM=30
+# GROQ_ORG_RPD=1000
+# GROQ_ORG_TPM=30000
+# GROQ_ORG_TPD=500000
+# GROQ_QUOTA_BUCKET=day
+# (day = UTC calendar day; or 1h / 2h rolling windows)
 
 # CORS
 CORS_ORIGINS=http://localhost:3000
@@ -622,6 +630,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
     ├── technical.py           # compute_indicators(), run_swing_analysis()
     ├── portfolio_service.py   # get_portfolio_for_user(), add/delete transaction
     ├── agent_service.py       # system prompt, tool dispatcher, stream_agent_response()
+    ├── ai_quota.py            # Groq fair-share caps, usage aggregates, quota snapshot
     └── alert_service.py       # check_all_portfolios() — runs every 30 min`}</Code>
           </Section>
 
@@ -639,7 +648,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   ├── user/dashboard/page.tsx    # /user/dashboard — portfolio overview
 │   ├── user/transactions/page.tsx # /user/transactions — trade log
 │   ├── user/alerts/page.tsx       # /user/alerts — swing signal alerts, push, history
-│   ├── user/settings/page.tsx     # /user/settings — email + AI advisor (Groq) preferences
+│   ├── user/settings/page.tsx     # /user/settings — email, AI advisor toggle, Groq usage & fair-share
 │   ├── user/paper/page.tsx        # /user/paper — paper trading
 │   ├── user/agent/page.tsx        # /user/agent — AI chat (SSE streaming)
 │   ├── (app)/…                    # Legacy paths — all redirect to /user/*
@@ -757,6 +766,10 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
             </div>
             <H3>Streaming</H3>
             <P>Responses stream via <strong style={{ color: '#f1f5f9' }}>Server-Sent Events (SSE)</strong>. Text tokens appear in real time. Tool calls are shown as pill badges. The stream auto-scrolls to the latest message.</P>
+            <H3>Usage &amp; limits</H3>
+            <P>
+              With <Code>GROQ_QUOTA_ENABLED=1</Code> (default), the server splits your Groq org caps fairly among accounts that have AI chat enabled. Open <strong style={{ color: '#f1f5f9' }}>Settings</strong> (<Code>/user/settings</Code>) to see your share of requests and tokens (per minute and per period), whether you can send a message now, and an estimate of when capacity returns. The same data is available at <Code>GET /api/v1/chat/quota</Code> (JWT).
+            </P>
             <H3>Quick actions</H3>
             <P>When you have holdings, the sidebar shows one button per ticker (e.g. &quot;📈 AAPL&quot;). Clicking pre-fills the input with <em>&quot;Analyze AAPL for a swing trade&quot;</em>.</P>
           </Section>
@@ -1075,6 +1088,7 @@ VAPID_SUBJECT=mailto:your@email.com
 
           {/* ── API: Chat ── */}
           <Section id='api-chat' title='API — AI Chat (SSE)'>
+            <Endpoint method='GET' path='/api/v1/chat/quota' auth desc='Fair-share Groq snapshot for the current user: pool size, minute/period usage vs caps, can_use, block_reason, and next capacity timing when limited.' />
             <Endpoint method='POST' path='/api/v1/chat' auth desc='Starts the agentic loop and streams the response as Server-Sent Events.' />
             <H3>Request</H3>
             <Code block>{`{
@@ -1170,6 +1184,13 @@ DATABASE_PATH=/app/data/portfolio.db
 # PostgreSQL (recommended for serverless / multi-instance), e.g. Supabase:
 # DATABASE_URL=postgresql://postgres:xxx@...pooler...:5432/postgres?sslmode=require
 GROQ_API_KEY=gsk_...
+# Optional — tune fair-share to your Groq plan (see Environment Variables)
+# GROQ_ORG_RPM=30
+# GROQ_ORG_RPD=1000
+# GROQ_ORG_TPM=30000
+# GROQ_ORG_TPD=500000
+# GROQ_QUOTA_BUCKET=day
+# GROQ_QUOTA_ENABLED=1
 SMTP_USER=alerts@yourdomain.com
 SMTP_PASSWORD=<app password>
 
