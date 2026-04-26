@@ -142,6 +142,7 @@ export default function SettingsPage() {
                   justifyContent: 'space-between',
                   gap: 16,
                   flexWrap: 'wrap',
+                  paddingBottom: 4,
                 }}
               >
                 <span style={{ fontSize: 14, color: '#f1f5f9', flex: '1 1 200px' }}>
@@ -154,13 +155,27 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', marginTop: 24 }}>
+            <div
+              style={{
+                marginTop: 8,
+                paddingTop: 22,
+                borderTop: '1px solid #1e293b',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 12,
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+              }}
+            >
+              {savedAt && Date.now() - savedAt < 4000 && (
+                <span style={{ color: '#22c55e', fontSize: 13, marginRight: 'auto' }}>✓</span>
+              )}
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
                 style={{
-                  padding: '10px 20px',
+                  padding: '10px 22px',
                   background: '#22c55e',
                   border: 'none',
                   borderRadius: 8,
@@ -173,9 +188,6 @@ export default function SettingsPage() {
               >
                 {saving ? '…' : t('alert_save')}
               </button>
-              {savedAt && Date.now() - savedAt < 4000 && (
-                <span style={{ color: '#22c55e', fontSize: 12 }}>✓</span>
-              )}
             </div>
           </>
         )}
