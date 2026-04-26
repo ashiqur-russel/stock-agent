@@ -24,7 +24,13 @@ export default function CookieBanner() {
   }, [])
 
   const accept = () => {
-    localStorage.setItem(CONSENT_KEY, '1')
+    localStorage.setItem(CONSENT_KEY, 'accepted')
+    setShow(false)
+    setModal(false)
+  }
+
+  const decline = () => {
+    localStorage.setItem(CONSENT_KEY, 'declined')
     setShow(false)
     setModal(false)
   }
@@ -77,10 +83,10 @@ export default function CookieBanner() {
 
             <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setModal(false)}
-                style={{ padding: '8px 16px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 14 }}
+                onClick={decline}
+                style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 14 }}
               >
-                {t('cookie_close')}
+                {t('cookie_decline')}
               </button>
               <button
                 onClick={accept}
@@ -109,6 +115,12 @@ export default function CookieBanner() {
             style={{ padding: '7px 14px', background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}
           >
             {t('cookie_settings')}
+          </button>
+          <button
+            onClick={decline}
+            style={{ padding: '7px 14px', background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}
+          >
+            {t('cookie_decline')}
           </button>
           <button
             onClick={accept}
