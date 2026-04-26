@@ -55,3 +55,14 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.shimmer-btn {
+  background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80, #22c55e, #16a34a);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}

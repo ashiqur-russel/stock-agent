@@ -9,6 +9,7 @@ from auth.router import router as auth_router
 from database import init_db
 from routers.alerts import router as alerts_router
 from routers.chat import router as chat_router
+from routers.contact import router as contact_router
 from routers.indicators import router as indicators_router
 from routers.market import router as market_router
 from routers.paper import router as paper_router
@@ -36,6 +37,7 @@ app.include_router(chat_router)
 app.include_router(alerts_router)
 app.include_router(push_router)
 app.include_router(paper_router)
+app.include_router(contact_router)
 app.include_router(ws_router)
 
 _scheduler = AsyncIOScheduler()

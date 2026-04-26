@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { openCookieSettings } from '@/components/CookieBanner'
+import ContactSection from '@/components/ContactSection'
 import { useApp } from '@/contexts/AppContext'
 import { fetchPublicLandingQuotes } from '@/lib/api'
 import Toggle from '@/components/ui/Toggle'
+import GitHubIcon from '@/components/ui/GitHubIcon'
 import GlowCard from '@/components/ui/GlowCard'
 import BackgroundBeams from '@/components/ui/BackgroundBeams'
 import { SpotlightCard } from '@/components/ui/Spotlight'
@@ -167,15 +169,6 @@ export default function Home() {
         }
         .live-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
-        @keyframes shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        .shimmer-btn {
-          background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80, #22c55e, #16a34a);
-          background-size: 200% auto;
-          animation: shimmer 3s linear infinite;
-        }
       `}</style>
 
       {/* ── Navbar ── */}
@@ -194,6 +187,10 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Toggle options={['EN', 'DE']} value={lang.toUpperCase()} onChange={handleLangChange} activeColor='#3b82f6' />
+          <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8', fontSize: 13, textDecoration: 'none', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 11px', background: 'rgba(255,255,255,0.03)' }}>
+            <GitHubIcon size={14} />
+            ★ Star
+          </a>
           <Link href='/docs'     style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>{t('land_docs')}</Link>
           <Link href='/login'    style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
           <Link href='/register' className='shimmer-btn' style={{ padding: '8px 20px', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
@@ -519,6 +516,9 @@ export default function Home() {
         </motion.div>
       </section>
 
+      {/* ── Contact ── */}
+      <ContactSection />
+
       {/* ── CTA ── */}
       <section style={{ padding: '90px 32px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(34,197,94,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -532,16 +532,27 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.04)', padding: '22px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: '#040a18' }}>
-        <span style={{ fontSize: 12, color: '#1e3050' }}>{t('land_disclaimer')}</span>
-        <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          {[{ href: '/docs', label: t('land_docs') }, { href: '/privacy', label: t('cookie_privacy_link') }, { href: '/login', label: t('land_signin') }, { href: '/register', label: t('land_register') }].map((l) => (
-            <Link key={l.href} href={l.href} style={{ fontSize: 13, color: '#334155', textDecoration: 'none' }}>{l.label}</Link>
+      <footer className='border-t border-white/[0.04] bg-[#040a18] px-8 py-5 flex justify-between items-center flex-wrap gap-4'>
+        <span className='text-xs text-text-dim'>{t('land_disclaimer')}</span>
+        <nav className='flex items-center gap-6 flex-wrap'>
+          {[
+            { href: '/docs',      label: t('land_docs') },
+            { href: '/#contact',  label: t('contact_title') },
+            { href: '/privacy',   label: t('cookie_privacy_link') },
+            { href: '/login',     label: t('land_signin') },
+            { href: '/register',  label: t('land_register') },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className='text-xs text-text-dim hover:text-text-muted transition-colors no-underline'>
+              {l.label}
+            </Link>
           ))}
-          <button onClick={openCookieSettings} style={{ fontSize: 13, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <button
+            onClick={openCookieSettings}
+            className='text-xs text-text-dim hover:text-text-muted transition-colors bg-transparent border-none cursor-pointer p-0'
+          >
             🍪 {t('cookie_open_settings')}
           </button>
-        </div>
+        </nav>
       </footer>
     </div>
   )
