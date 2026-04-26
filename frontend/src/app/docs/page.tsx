@@ -1054,6 +1054,14 @@ SMTP_PASSWORD=<app password>
 
 # frontend (build-time)
 NEXT_PUBLIC_API_URL=https://api.yourdomain.com`}</Code>
+            <Warn>
+              <strong style={{ color: '#f1f5f9' }}>Render + Supabase:</strong> if the API crashes at startup with
+              <Code>Network is unreachable</Code> to <Code>db.*.supabase.co</Code>, the <strong>Direct</strong> connection
+              (port 5432) may be using <strong>IPv6</strong>, which some hosts cannot reach. In Supabase →{' '}
+              <strong>Project Settings → Database</strong>, use the <strong>Session</strong> or <strong>Transaction
+              pooler</strong> connection string (pooler host; often port 6543 for transaction mode) as{' '}
+              <Code>DATABASE_URL</Code>, not only the direct URI, then redeploy.
+            </Warn>
             <H3>Generate a secure JWT secret</H3>
             <Code block>{`python3 -c "import secrets; print(secrets.token_hex(32))"`}</Code>
             <H3>Health check</H3>
