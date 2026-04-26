@@ -14,6 +14,7 @@ const links = [
   { href: '/user/paper', labelKey: 'nav_paper' as const, icon: '📝' },
   { href: '/user/agent', labelKey: 'nav_chat' as const, icon: '🤖' },
   { href: '/user/alerts', labelKey: 'nav_alerts' as const, icon: '🔔' },
+  { href: '/user/settings', labelKey: 'nav_settings' as const, icon: '⚙️' },
   { href: '/docs', labelKey: 'nav_docs' as const, icon: '📚' },
 ]
 
