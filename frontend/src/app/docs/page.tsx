@@ -595,13 +595,12 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   ├── verify/page.tsx        # Email verification (Suspense-wrapped)
 │   ├── forgot-password/page.tsx
 │   ├── reset-password/page.tsx
-│   ├── dashboard/page.tsx     # Portfolio overview
-│   ├── dashboard/alerts/page.tsx      # /dashboard/alerts
-│   ├── dashboard/transactions/page.tsx  # /dashboard/transactions
-│   ├── transactions/page.tsx  # Redirect → /dashboard/transactions
-│   ├── paper/page.tsx         # Paper trading + watchlist
-│   ├── chat/page.tsx          # AI chat (SSE streaming)
-│   ├── alerts/page.tsx        # Redirect → /dashboard/alerts
+│   ├── user/dashboard/page.tsx    # /user/dashboard — portfolio overview
+│   ├── user/transactions/page.tsx # /user/transactions — trade log
+│   ├── user/alerts/page.tsx       # /user/alerts — swing signal alerts
+│   ├── user/paper/page.tsx        # /user/paper — paper trading
+│   ├── user/agent/page.tsx        # /user/agent — AI chat (SSE streaming)
+│   ├── (app)/…                    # Legacy paths — all redirect to /user/*
 │   └── docs/page.tsx          # This page
 ├── components/
 │   ├── layout/
@@ -659,7 +658,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 
           {/* ── Guide: Portfolio ── */}
           <Section id='guide-portfolio' title='Portfolio & Transactions'>
-            <P>Navigate to <strong style={{ color: '#f1f5f9' }}>Transactions</strong> (<Code>/dashboard/transactions</Code>; <Code>/transactions</Code> redirects) to log trades. Every entry requires a ticker, type (BUY or SELL), number of shares, price per share, and the date the trade was executed.</P>
+            <P>Navigate to <strong style={{ color: '#f1f5f9' }}>Transactions</strong> (<Code>/user/transactions</Code>) to log trades. Every entry requires a ticker, type (BUY or SELL), number of shares, price per share, and the date the trade was executed. Old paths like <Code>/transactions</Code> and <Code>/dashboard/transactions</Code> now redirect here automatically.</P>
 
             <H3>How portfolio is calculated</H3>
             <P>There is no stored portfolio table. Holdings are always computed live from the transaction ledger:</P>

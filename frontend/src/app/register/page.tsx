@@ -25,7 +25,7 @@ export default function RegisterPage() {
     if (result.pending) {
       setPending(true)
     } else if (result.token) {
-      router.push('/dashboard')
+      router.push('/user/dashboard')
     }
   }
 

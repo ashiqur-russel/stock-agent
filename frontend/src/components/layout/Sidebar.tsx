@@ -9,11 +9,11 @@ import { useState, useEffect } from 'react'
 import { alerts as alertsApi } from '@/lib/api'
 
 const links = [
-  { href: '/dashboard', labelKey: 'nav_dashboard' as const, icon: '📊' },
-  { href: '/dashboard/transactions', labelKey: 'nav_transactions' as const, icon: '📋' },
-  { href: '/paper', labelKey: 'nav_paper' as const, icon: '📝' },
-  { href: '/chat', labelKey: 'nav_chat' as const, icon: '🤖' },
-  { href: '/dashboard/alerts', labelKey: 'nav_alerts' as const, icon: '🔔' },
+  { href: '/user/dashboard', labelKey: 'nav_dashboard' as const, icon: '📊' },
+  { href: '/user/transactions', labelKey: 'nav_transactions' as const, icon: '📋' },
+  { href: '/user/paper', labelKey: 'nav_paper' as const, icon: '📝' },
+  { href: '/user/agent', labelKey: 'nav_chat' as const, icon: '🤖' },
+  { href: '/user/alerts', labelKey: 'nav_alerts' as const, icon: '🔔' },
   { href: '/docs', labelKey: 'nav_docs' as const, icon: '📚' },
 ]
 
@@ -57,10 +57,10 @@ export default function Sidebar() {
       <div style={{ flex: 1, padding: '12px 0' }}>
         {links.map(({ href, labelKey, icon }) => {
           const isActive =
-            href === '/dashboard'
-              ? pathname === '/dashboard'
+            href === '/user/dashboard'
+              ? pathname === '/user/dashboard'
               : pathname === href || pathname.startsWith(`${href}/`)
-          const isAlerts = href === '/dashboard/alerts'
+          const isAlerts = href === '/user/alerts'
           return (
             <Link
               key={href}

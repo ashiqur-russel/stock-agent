@@ -31,7 +31,7 @@ function VerifyContent() {
     // verify on this page, don't re-call the API — just go to the dashboard.
     if (typeof window !== 'undefined' && localStorage.getItem('stock_agent_token')) {
       setStatus('success')
-      setTimeout(() => router.push('/dashboard'), 800)
+      setTimeout(() => router.push('/user/dashboard'), 800)
       return
     }
 
@@ -44,7 +44,7 @@ function VerifyContent() {
           dispatchAuthSessionChanged()
         }
         setStatus('success')
-        setTimeout(() => router.push('/dashboard'), 1500)
+        setTimeout(() => router.push('/user/dashboard'), 1500)
       })
       .catch(() => setStatus('error'))
   }, [token, router])
