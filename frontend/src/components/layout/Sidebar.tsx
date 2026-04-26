@@ -51,7 +51,7 @@ export default function Sidebar() {
       left: 0,
     }}>
       <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #1e293b' }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>📈 StockAgent</span>
+        <img src='/logo.svg' alt='StockAgent' style={{ height: 32, display: 'block' }} />
       </div>
 
       <div style={{ flex: 1, padding: '12px 0' }}>
