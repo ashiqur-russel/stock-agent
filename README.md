@@ -2,6 +2,10 @@
 
 **Stock Agent** is a full-stack app for tracking a stock portfolio, paper trading, price alerts, and an AI swing-trading assistant. The stack is a **FastAPI** backend and a **Next.js** frontend in this monorepo.
 
+## Contributing
+
+For **open source developers** — local setup, env vars, database modes, Git hooks, branch/commit conventions, and PR workflow — see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
 ## Documentation
 
 The complete setup guide, environment variables, database notes (SQLite locally or **PostgreSQL** / Supabase in production), API overview, and deployment tips live in the **in-app documentation**:

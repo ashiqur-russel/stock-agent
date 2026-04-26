@@ -305,6 +305,9 @@ export default function DocsPage() {
             </div>
             <P>You also need a <strong style={{ color: '#f1f5f9' }}>Groq API key</strong> (free at <code style={{ color: '#67e8f9' }}>console.groq.com</code>) to power the AI chat.</P>
             <P>Optional: a Gmail App Password for email verification and price alert emails.</P>
+            <Note>
+              Open source contributors: see <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong> in the repository root for <Code>pre-commit</Code> setup, branch names (e.g. <Code>feature/SA-42-description</Code>), commit subjects (<Code>[SA-42] fix: short summary</Code>), and pull request expectations.
+            </Note>
           </Section>
 
           {/* ── Installation ── */}
