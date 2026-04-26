@@ -13,7 +13,6 @@ import config
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 VERIFY_TOKEN_EXPIRE_HOURS = 24
-FRONTEND_URL = "http://localhost:3000"
 
 
 def hash_password(password: str) -> str:
@@ -49,11 +48,11 @@ def generate_verification_token() -> str:
 def send_verification_email(to_email: str, name: str, token: str):
     if not config.SMTP_USER or not config.SMTP_PASSWORD:
         print(
-            f"[auth] SMTP not configured — verification link: {FRONTEND_URL}/verify?token={token}"
+            f"[auth] SMTP not configured — verification link: {config.FRONTEND_URL}/verify?token={token}"
         )
         return
 
-    verify_url = f"{FRONTEND_URL}/verify?token={token}"
+    verify_url = f"{config.FRONTEND_URL}/verify?token={token}"
     subject = "◈ Stock Agent — Verify your email"
     html = f"""
     <div style="font-family: monospace; background: #111; color: #eee; padding: 32px; border-radius: 8px; max-width: 520px;">
@@ -74,7 +73,7 @@ def send_verification_email(to_email: str, name: str, token: str):
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = config.SMTP_USER
+    msg["From"] = config.smtp_from_header()
     msg["To"] = to_email
     msg.attach(MIMEText(html, "html"))
 

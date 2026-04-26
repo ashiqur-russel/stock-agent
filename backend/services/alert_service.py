@@ -103,7 +103,7 @@ def send_alert_email(
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = config.SMTP_USER
+    msg["From"] = config.smtp_from_header()
     msg["To"] = to_email
     msg.attach(MIMEText(html, "html"))
 

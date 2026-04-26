@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, status
 
+import config
 from auth import service
 from auth.models import (
     LoginRequest,
@@ -45,7 +46,7 @@ def register(body: RegisterRequest):
     if SMTP_CONFIGURED:
         service.send_verification_email(body.email, body.name, token)
     else:
-        verify_url = f"{service.FRONTEND_URL}/verify?token={token}"
+        verify_url = f"{config.FRONTEND_URL}/verify?token={token}"
         print(f"[auth] SMTP not configured — visit this link to verify: {verify_url}")
 
     return VerificationPending(email=body.email, message="Check your email to verify your account")
