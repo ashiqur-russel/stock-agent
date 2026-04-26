@@ -27,14 +27,6 @@ function VerifyContent() {
       return
     }
 
-    // If we already have a token in localStorage from a prior successful
-    // verify on this page, don't re-call the API — just go to the dashboard.
-    if (typeof window !== 'undefined' && localStorage.getItem('stock_agent_token')) {
-      setStatus('success')
-      setTimeout(() => router.push('/user/dashboard'), 800)
-      return
-    }
-
     authApi.verify(token)
       .then((res) => {
         const r = res as { access_token?: string; user_id?: number; name?: string; email?: string }
