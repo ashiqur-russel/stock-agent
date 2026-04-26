@@ -49,6 +49,7 @@ const NAV = [
     group: 'API Reference',
     items: [
       { id: 'api-auth', label: 'Authentication' },
+      { id: 'api-contact', label: 'Contact' },
       { id: 'api-portfolio', label: 'Portfolio' },
       { id: 'api-market', label: 'Market Data' },
       { id: 'api-indicators', label: 'Indicators' },
@@ -624,6 +625,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   ├── paper.py               # GET account, POST trade, POST reset
 │   ├── alerts.py              # CRUD alerts + notification settings
 │   ├── chat.py                # POST /api/v1/chat → SSE stream
+│   ├── contact.py             # POST /contact — sends message via SMTP (no auth)
 │   └── ws.py                  # WebSockets: /api/v1/ws/alerts, /api/v1/ws/prices
 └── services/
     ├── market_data.py         # fetch_quote(), fetch_ohlcv(), fetch_news() via yfinance
@@ -638,21 +640,22 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
           <Section id='structure-frontend' title='Frontend Layout'>
             <Code block>{`frontend/src/
 ├── app/
-│   ├── layout.tsx             # Root layout — Providers + CookieBanner
-│   ├── page.tsx               # Landing page
+│   ├── layout.tsx             # Root layout — Providers + CookieBanner + AuthDashboardBridge
+│   ├── page.tsx               # Landing page (auth-aware navbar, contact section)
 │   ├── login/page.tsx
 │   ├── register/page.tsx
 │   ├── verify/page.tsx        # Email verification (Suspense-wrapped)
 │   ├── forgot-password/page.tsx
 │   ├── reset-password/page.tsx
+│   ├── privacy/page.tsx       # GDPR privacy policy
+│   ├── docs/page.tsx          # This page
 │   ├── user/dashboard/page.tsx    # /user/dashboard — portfolio overview
 │   ├── user/transactions/page.tsx # /user/transactions — trade log
 │   ├── user/alerts/page.tsx       # /user/alerts — swing signal alerts, push, history
 │   ├── user/settings/page.tsx     # /user/settings — email, AI advisor toggle, Groq usage & fair-share
 │   ├── user/paper/page.tsx        # /user/paper — paper trading
 │   ├── user/agent/page.tsx        # /user/agent — AI chat (SSE streaming)
-│   ├── (app)/…                    # Legacy paths — all redirect to /user/*
-│   └── docs/page.tsx          # This page
+│   └── (app)/…                    # Legacy paths — all redirect to /user/*
 ├── components/
 │   ├── layout/
 │   │   ├── Sidebar.tsx        # Nav + language + currency toggles
@@ -662,7 +665,9 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   │   ├── Amount.tsx         # EUR↔USD money display
 │   │   ├── Toggle.tsx         # Two-option toggle button
 │   │   ├── FormInput.tsx      # Labelled input
-│   │   └── MarketStatus.tsx   # Open/closed by DE (Berlin) or US (NYSE) user toggle
+│   │   ├── MarketStatus.tsx   # Open/closed by DE (Berlin) or US (NYSE) user toggle
+│   │   ├── Button.tsx         # Reusable button (primary / secondary / ghost variants)
+│   │   └── GitHubIcon.tsx     # GitHub SVG icon component
 │   ├── dashboard/
 │   │   ├── PortfolioCard.tsx  # Per-ticker card with P&L + chart
 │   │   └── SignalBadge.tsx    # BUY/SELL/HOLD badge
@@ -670,18 +675,22 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   │   └── CandlestickChart.tsx  # lightweight-charts v5
 │   ├── paper/
 │   │   └── TradeModal.tsx     # Buy/Sell modal with live price
-│   ├── CookieBanner.tsx       # GDPR cookie consent
+│   ├── AuthDashboardBridge.tsx  # Redirect-only: /login + /register → /user/dashboard when logged in
+│   ├── ContactSection.tsx     # Self-contained contact form (landing page)
+│   ├── CookieBanner.tsx       # GDPR cookie consent — floating button + settings modal
 │   └── Providers.tsx          # AppContext provider wrapper
 ├── contexts/
 │   └── AppContext.tsx         # lang, currency, formatPrice, t()
 ├── hooks/
-│   ├── useAuth.ts             # login, register, logout
+│   ├── useAuth.ts             # login, register, logout, getToken, getStoredUser
+│   ├── usePublicAuth.ts       # Auth state for public pages (landing, docs, privacy)
 │   ├── usePortfolio.ts        # fetch + 30s auto-refresh
 │   ├── useChat.ts             # SSE streaming hook
 │   └── useAlertWS.ts          # WebSocket reconnect hook
 ├── lib/
-│   ├── api.ts                 # apiFetch + all route namespaces
-│   └── i18n.ts                # EN/DE translation dictionary
+│   ├── api.ts                 # apiFetch + all route namespaces (incl. postContact)
+│   ├── authEvents.ts          # AUTH_SESSION_EVENT bus + dispatchAuthSessionChanged()
+│   └── i18n.ts                # EN/DE translation dictionary (EN + DE)
 └── types/
     └── css.d.ts`}</Code>
           </Section>
@@ -826,6 +835,21 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
   "name": "Jane Doe",
   "email": "user@example.com"
 }`}</Code>
+          </Section>
+
+          {/* ── API: Contact ── */}
+          <Section id='api-contact' title='API — Contact'>
+            <P>Public endpoint — no authentication required. Accepts a message from the landing page contact form and delivers it via SMTP to the configured server address.</P>
+            <Endpoint method='POST' path='/contact' desc='Send a contact message. Rate-limited by SMTP availability. Returns 200 on success or 500 if mail delivery fails.' />
+            <H3>Request body</H3>
+            <Code block>{`{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "message": "Hello, I have a question about..."
+}`}</Code>
+            <H3>Response</H3>
+            <Code block>{`{ "message": "Message sent successfully" }`}</Code>
+            <Note>The backend sends the message to <Code>SMTP_USER</Code> with Reply-To set to the sender&apos;s email. No message content is stored in the database.</Note>
           </Section>
 
           {/* ── API: Portfolio ── */}
