@@ -46,7 +46,7 @@ def main():
     print("# ── paste these into backend/.env ──────────────────────────────")
     print(f"VAPID_PRIVATE_KEY={pem_inline}")
     print(f"VAPID_PUBLIC_KEY={pub_b64}")
-    print("VAPID_SUBJECT=mailto:your@email.com   # replace with your real email")
+    print("VAPID_SUBJECT=mailto:ashiqur.tuc@gmail.de")
     print()
     print("# pywebpush decodes the inline base64 key back to PEM internally.")
     print("# Never share VAPID_PRIVATE_KEY — treat it like a password.")

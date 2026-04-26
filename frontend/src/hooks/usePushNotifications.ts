@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { push as pushApi } from '@/lib/api'
 
-function urlBase64ToUint8Array(base64: string): Uint8Array {
+function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
   const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
   const raw = window.atob(b64)
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
+  const array = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) {
+    array[i] = raw.charCodeAt(i)
+  }
+  return array
 }
 
 export type PushPermission = 'default' | 'granted' | 'denied' | 'unsupported'
