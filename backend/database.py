@@ -100,15 +100,25 @@ class DbConnection:
         self._raw.close()
 
 
+def _sql_without_line_comments(text: str) -> str:
+    """Drop full-line -- comments so ';' inside comments cannot break statement splitting."""
+    out: list[str] = []
+    for line in text.splitlines():
+        if line.lstrip().startswith("--"):
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def _run_postgres_ddl() -> None:
     path = Path(__file__).with_name("schema.postgres.sql")
-    ddl = path.read_text()
+    ddl = _sql_without_line_comments(path.read_text())
     conn = _connect_postgres()
     try:
         cur = conn.cursor()
         for part in re.split(r";\s*", ddl):
             s = part.strip()
-            if not s or s.startswith("--"):
+            if not s:
                 continue
             cur.execute(s)
         conn.commit()

@@ -1,4 +1,4 @@
--- Stock Agent — PostgreSQL / Supabase (create tables; run from app or SQL Editor)
+-- Stock Agent — PostgreSQL / Supabase (create tables, run from app or SQL Editor)
 -- Keep TEXT for timestamps so the API matches SQLite string behavior.
 
 CREATE TABLE IF NOT EXISTS users (
