@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { getToken, getStoredUser } from '@/hooks/useAuth'
-import { AUTH_SESSION_EVENT } from '@/lib/authEvents'
+import { AUTH_SESSION_EVENT, dispatchAuthSessionChanged } from '@/lib/authEvents'
 import { openCookieSettings } from '@/components/CookieBanner'
 
 // ── sidebar structure ───────────────────────────────────────────────────────
@@ -222,25 +222,26 @@ export default function DocsPage() {
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {hasSession ? (
             <>
-              {sessionLabel ? (
-                <span style={{ fontSize: 13, color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {sessionLabel}
-                </span>
-              ) : null}
               <Link
                 href='/user/dashboard'
-                style={{ padding: '7px 16px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+                style={{ color: '#22c55e', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}
               >
-                {t('docs_nav_back')}
+                Dashboard →
               </Link>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('stock_agent_token')
+                  localStorage.removeItem('stock_agent_user')
+                  dispatchAuthSessionChanged()
+                  window.location.href = '/'
+                }}
+                style={{ background: 'transparent', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 14px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}
+              >
+                Logout
+              </button>
             </>
           ) : (
-            <>
-              <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
-              <Link href='/register' style={{ padding: '7px 16px', background: '#22c55e', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                {t('land_get_started')}
-              </Link>
-            </>
+            <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
           )}
         </div>
       </nav>

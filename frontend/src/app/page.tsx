@@ -7,6 +7,7 @@ import { openCookieSettings } from '@/components/CookieBanner'
 import ContactSection from '@/components/ContactSection'
 import { useApp } from '@/contexts/AppContext'
 import { fetchPublicLandingQuotes } from '@/lib/api'
+import { usePublicAuth } from '@/hooks/usePublicAuth'
 import Toggle from '@/components/ui/Toggle'
 import GitHubIcon from '@/components/ui/GitHubIcon'
 import GlowCard from '@/components/ui/GlowCard'
@@ -69,6 +70,7 @@ const fadeUp = {
 
 export default function Home() {
   const { t, lang, setLang, currency, setCurrency, currencySymbol } = useApp()
+  const { user: authUser, logout: publicLogout, mounted: authMounted } = usePublicAuth()
   const [tickerRows, setTickerRows] = useState<LandingRow[] | null>(null)
 
   const loadQuotes = useCallback(() => {
@@ -187,15 +189,31 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Toggle options={['EN', 'DE']} value={lang.toUpperCase()} onChange={handleLangChange} activeColor='#3b82f6' />
-          <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8', fontSize: 13, textDecoration: 'none', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 11px', background: 'rgba(255,255,255,0.03)' }}>
-            <GitHubIcon size={14} />
-            ★ Star
-          </a>
-          <Link href='/docs'     style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>{t('land_docs')}</Link>
-          <Link href='/login'    style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
-          <Link href='/register' className='shimmer-btn' style={{ padding: '8px 20px', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
-            {t('land_get_started')}
-          </Link>
+          {authMounted && authUser ? (
+            <>
+              <Link href='/user/dashboard' style={{ color: '#22c55e', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>
+                Dashboard →
+              </Link>
+              <button
+                onClick={publicLogout}
+                style={{ background: 'transparent', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 14px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8', fontSize: 13, textDecoration: 'none', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 11px', background: 'rgba(255,255,255,0.03)' }}>
+                <GitHubIcon size={14} />
+                ★ Star
+              </a>
+              <Link href='/docs' style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>{t('land_docs')}</Link>
+              <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
+              <Link href='/register' className='shimmer-btn' style={{ padding: '8px 20px', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
+                {t('land_get_started')}
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
