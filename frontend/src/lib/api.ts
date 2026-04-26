@@ -141,6 +141,18 @@ export const market = {
 
 export const indicators = {
   get: (ticker: string) => apiFetch(`/api/v1/indicators/${ticker}`),
+  swing: (ticker: string) => apiFetch(`/api/v1/indicators/${ticker}/swing`),
+}
+
+export const push = {
+  getVapidKey: () =>
+    apiFetch<{ public_key: string }>('/api/v1/push/vapid-public-key'),
+  getStatus: () =>
+    apiFetch<{ server_enabled: boolean; subscribed: boolean }>('/api/v1/push/status'),
+  subscribe: (body: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    apiFetch('/api/v1/push/subscribe', { method: 'POST', body: JSON.stringify(body) }),
+  unsubscribe: (body: { endpoint: string }) =>
+    apiFetch('/api/v1/push/unsubscribe', { method: 'DELETE', body: JSON.stringify(body) }),
 }
 
 export const paper = {

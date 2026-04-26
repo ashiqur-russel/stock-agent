@@ -141,14 +141,14 @@ def _check_sa_ticket_unique(current: str) -> None:
     """
     Require that SA-<n> is not used by another (different) branch in this clone.
 
-    By default only local branches (refs/heads/) are scanned for speed.
-    Set the environment variable BRANCH_CHECK_REMOTES=1 to also scan all
-    remote-tracking refs (refs/remotes/) — useful in CI or after a fetch.
+    Remote-tracking refs (refs/remotes/) are included by default so that a
+    ticket number that exists only on the remote is still caught.
+    Set BRANCH_CHECK_REMOTES=0 to skip remote refs (e.g. in offline environments).
     """
     n = _ticket_num_from_topic(current)
     if n is None:
         return
-    include_remotes = os.environ.get("BRANCH_CHECK_REMOTES", "").strip().lower() in ("1", "true", "yes")
+    include_remotes = os.environ.get("BRANCH_CHECK_REMOTES", "1").strip().lower() not in ("0", "false", "no")
     names = _logical_branch_names(include_remotes=include_remotes)
     others: list[str] = []
     for b in names:

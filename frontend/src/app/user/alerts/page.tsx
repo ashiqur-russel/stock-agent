@@ -7,6 +7,7 @@ import { getStoredUser } from '@/hooks/useAuth'
 import SignalBadge from '@/components/ui/SignalBadge'
 import FormInput from '@/components/ui/FormInput'
 import type { SwingSignal } from '@/hooks/usePortfolio'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 interface Alert {
   id: number
@@ -52,12 +53,9 @@ function relativeTime(iso: string): string {
 
 export default function AlertsPage() {
   const { t, formatPrice } = useApp()
+  const push = usePushNotifications()
 
   const [alertList, setAlertList] = useState<Alert[]>([])
-  const [settings, setSettings] = useState<NotifSettings>({
-    notify_email: null,
-    email_alerts: true,
-  })
   const [recipient, setRecipient] = useState('')
   const [emailEnabled, setEmailEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -72,7 +70,6 @@ export default function AlertsPage() {
         alertsApi.getNotifSettings() as Promise<NotifSettings>,
       ])
       setAlertList(a)
-      setSettings(s)
       setRecipient(s.notify_email ?? getStoredUser()?.email ?? '')
       setEmailEnabled(s.email_alerts)
     } catch {
@@ -113,7 +110,6 @@ export default function AlertsPage() {
         email_alerts: emailEnabled,
       }
       await alertsApi.saveNotifSettings(body)
-      setSettings(body)
       setSavedAt(Date.now())
     } finally {
       setSaving(false)
@@ -226,6 +222,81 @@ export default function AlertsPage() {
             <span style={{ color: '#22c55e', fontSize: 12 }}>✓</span>
           )}
         </div>
+      </div>
+
+      {/* Browser push notifications */}
+      <div
+        style={{
+          background: '#0f172a',
+          border: '1px solid #1e293b',
+          borderRadius: 12,
+          padding: 24,
+          marginBottom: 28,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#94a3b8' }}>
+              🔔 Push Notifications
+            </h2>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>
+              Get instant browser alerts when RSI/MACD signals change on your holdings
+            </p>
+          </div>
+          {push.subscribed && (
+            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#052e16', color: '#22c55e', border: '1px solid #166534', fontWeight: 600 }}>
+              ACTIVE
+            </span>
+          )}
+        </div>
+
+        {!push.supported && (
+          <p style={{ fontSize: 13, color: '#64748b' }}>
+            Push notifications are not supported in this browser.
+          </p>
+        )}
+
+        {push.supported && !push.serverEnabled && (
+          <div style={{ fontSize: 13, color: '#f59e0b', background: '#1c1100', border: '1px solid #78350f', borderRadius: 8, padding: '10px 14px' }}>
+            Push not configured on the server. Run <code style={{ fontSize: 12 }}>python tools/generate_vapid_keys.py</code> and add VAPID keys to <code style={{ fontSize: 12 }}>.env</code>.
+          </div>
+        )}
+
+        {push.supported && push.serverEnabled && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            {push.permission === 'denied' ? (
+              <p style={{ fontSize: 13, color: '#ef4444', margin: 0 }}>
+                Notifications are blocked in your browser settings. Allow them for this site and reload.
+              </p>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, color: '#94a3b8', margin: 0, flex: 1 }}>
+                  {push.subscribed
+                    ? 'Your browser will receive a push notification whenever a swing signal changes — even if the app is closed.'
+                    : 'Enable push to get instant signal alerts (strong buy, strong sell) delivered directly to your browser.'}
+                </p>
+                <button
+                  onClick={push.subscribed ? push.unsubscribe : push.subscribe}
+                  disabled={push.loading}
+                  style={{
+                    padding: '9px 20px',
+                    background: push.subscribed ? '#1e293b' : '#22c55e',
+                    border: push.subscribed ? '1px solid #334155' : 'none',
+                    borderRadius: 8,
+                    color: push.subscribed ? '#94a3b8' : '#fff',
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: push.loading ? 'wait' : 'pointer',
+                    opacity: push.loading ? 0.6 : 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {push.loading ? '…' : push.subscribed ? 'Disable push' : 'Enable push'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Alert history */}
