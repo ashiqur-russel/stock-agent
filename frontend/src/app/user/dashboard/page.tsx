@@ -10,7 +10,7 @@ const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v)
 
 function DashboardContent() {
   const { t, currency, currencySymbol } = useApp()
-  const { holdings, loading, error, refresh } = usePortfolio()
+  const { holdings, loading, refreshing, error, refresh } = usePortfolio()
 
   const totalValueEur = holdings.reduce((s, h) => s + num(h.market_value), 0)
   const totalUnrealizedEur = holdings.reduce((s, h) => s + num(h.unrealized_pnl), 0)
@@ -29,7 +29,14 @@ function DashboardContent() {
           <span style={{ fontSize: 12, color: '#22c55e', background: '#0d2d0d', border: '1px solid #166534', borderRadius: 10, padding: '2px 10px' }}>
             {t('db_live')}
           </span>
-          <button onClick={refresh} style={{ padding: '6px 14px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>
+          <button onClick={refresh} style={{ padding: '6px 14px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {refreshing && (
+              <span style={{
+                display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                border: '2px solid #334155', borderTopColor: '#22c55e',
+                animation: 'spin 0.7s linear infinite',
+              }} />
+            )}
             {t('db_refresh')}
           </button>
         </div>
@@ -53,7 +60,16 @@ function DashboardContent() {
         </div>
       )}
 
-      {loading && <p style={{ color: '#64748b' }}>{t('db_loading')}</p>}
+      {loading && holdings.length === 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b', padding: '24px 0' }}>
+          <span style={{
+            display: 'inline-block', width: 16, height: 16, borderRadius: '50%',
+            border: '2px solid #1e293b', borderTopColor: '#22c55e',
+            animation: 'spin 0.7s linear infinite',
+          }} />
+          {t('db_loading')}
+        </div>
+      )}
       {error && <p style={{ color: '#ef4444' }}>{error}</p>}
 
       {!loading && holdings.length === 0 && (

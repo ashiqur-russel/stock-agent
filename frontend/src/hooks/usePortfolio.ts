@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { portfolio } from '@/lib/api'
 
 export interface Holding {
@@ -30,19 +30,27 @@ export type SwingSignal =
 
 export function usePortfolio() {
   const [holdings, setHoldings] = useState<Holding[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true)   // true only on first load
+  const [refreshing, setRefreshing] = useState(false) // true on background refreshes
   const [error, setError] = useState<string | null>(null)
+  const initialized = useRef(false)
 
   const load = useCallback(async () => {
-    setLoading(true)
+    if (!initialized.current) {
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
     setError(null)
     try {
       const data = await portfolio.get()
       setHoldings(data as Holding[])
+      initialized.current = true
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load portfolio')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [])
 
@@ -52,5 +60,5 @@ export function usePortfolio() {
     return () => clearInterval(interval)
   }, [load])
 
-  return { holdings, loading, error, refresh: load }
+  return { holdings, loading, refreshing, error, refresh: load }
 }
