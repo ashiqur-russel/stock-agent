@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import './globals.css'
 import Providers from '@/components/Providers'
 import CookieBanner from '@/components/CookieBanner'
+import AuthDashboardBridge from '@/components/AuthDashboardBridge'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang='en'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} style={{ margin: 0, background: '#020617', color: '#f1f5f9' }}>
         <Providers>
+          <AuthDashboardBridge />
           {children}
           <CookieBanner />
         </Providers>
