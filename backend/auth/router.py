@@ -211,7 +211,11 @@ def reset_password(body: ResetPasswordRequest):
             raise HTTPException(400, "Reset link has expired — request a new one")
 
         new_hash = service.hash_password(body.password)
-        conn.execute("UPDATE users SET password_hash=? WHERE id=?", (new_hash, row["user_id"]))
+        # Reset link is delivered to email — same proof as verify; allow login without a separate verify step.
+        conn.execute(
+            "UPDATE users SET password_hash=?, is_verified=1 WHERE id=?",
+            (new_hash, row["user_id"]),
+        )
         conn.execute("UPDATE password_resets SET used=1 WHERE id=?", (row["id"],))
         conn.commit()
 
