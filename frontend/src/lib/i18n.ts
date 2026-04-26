@@ -243,7 +243,7 @@ export const translations = {
     privacy_subtitle: 'Datenschutzerklärung',
     privacy_last_updated: 'Last updated: 2025',
     privacy_controller_title: 'Data Controller',
-    privacy_controller_body: 'The data controller responsible for this application is [Your Name], reachable at [your@email.com]. All data deletion and access requests must be submitted in writing to this address.',
+    privacy_controller_body: 'The data controller responsible for this application is Ashiqur Rahman (independent developer). All data deletion and access requests must be submitted in writing via the contact form on the landing page.',
     privacy_collect_title: 'What We Collect & Why',
     privacy_collect_body: 'We collect the minimum data necessary to provide the service. Account data (name, email, password hash) is processed under Art. 6(1)(b) GDPR as necessary for the performance of a contract. Preference data (language, currency, market region) is processed under Art. 6(1)(b) to personalise your experience.',
     privacy_server_title: 'Data Stored on Our Servers',
@@ -256,7 +256,7 @@ export const translations = {
     privacy_retention_title: 'Data Retention',
     privacy_retention_body: 'Your data is retained for as long as your account exists. You may request permanent deletion of all data at any time by contacting us in writing. We will complete the deletion within 30 days.',
     privacy_rights_title: 'Your Rights (GDPR Art. 15–21)',
-    privacy_rights_body: 'You have the right to: access a copy of your data (Art. 15), correct inaccurate data (Art. 16), request deletion ("right to be forgotten", Art. 17), data portability (Art. 20), and object to processing (Art. 21). To exercise any of these rights, contact us in writing at [your@email.com]. We will respond within 30 days.',
+    privacy_rights_body: 'You have the right to: access a copy of your data (Art. 15), correct inaccurate data (Art. 16), request deletion ("right to be forgotten", Art. 17), data portability (Art. 20), and object to processing (Art. 21). To exercise any of these rights, use the contact form on the landing page. We will respond within 30 days.',
     privacy_cookies_title: 'Cookies & Browser Storage',
     privacy_cookies_body: 'This application uses browser localStorage (not HTTP cookies) to store your session token, display preferences, and consent record. No tracking or advertising cookies are used. You can manage your consent at any time via the 🍪 button.',
     privacy_disclaimer_title: '⚠️ Educational Disclaimer — No Financial Liability',
@@ -264,7 +264,7 @@ export const translations = {
     privacy_hosting_title: '🗄️ Data Backup & Hosting Notice',
     privacy_hosting_body: 'StockAgent is hosted on free-tier infrastructure (Render for the backend, Supabase free plan for the database, Vercel for the frontend). Free-tier services may experience downtime, data loss, or service changes without prior notice. We strongly recommend that you regularly export and save a personal copy of your important portfolio data. The developer accepts no liability for data loss caused by hosting service disruptions, outages, or plan changes.',
     privacy_sponsor_title: '💚 Sponsorship & Funding',
-    privacy_sponsor_body: 'StockAgent is an open-source project developed and maintained independently. Hosting and API costs are funded personally by the developer. If you find the project useful and would like to support its continued development, sponsorship and funding contributions are warmly welcomed. Please reach out at [your@email.com] or visit the GitHub repository for sponsorship options.',
+    privacy_sponsor_body: 'StockAgent is an open-source project developed and maintained independently. Hosting and API costs are funded personally by the developer. If you find the project useful and would like to support its continued development, sponsorship and funding contributions are warmly welcomed. Use the contact form or visit the GitHub repository.',
 
     // Landing Page
     land_badge: 'AI-Powered Portfolio Tracker',
@@ -286,6 +286,17 @@ export const translations = {
     land_ticker_source: 'Yahoo Finance quotes · not tick-by-tick; prices may be delayed a few minutes.',
     land_docs: 'Docs',
     docs_nav_back: 'Back to Dashboard',
+
+    // Contact Form
+    contact_title: 'Get in Touch',
+    contact_subtitle: 'Have a question, sponsorship inquiry, or feedback? Send us a message.',
+    contact_name: 'Your Name',
+    contact_email: 'Your Email',
+    contact_message: 'Message',
+    contact_submit: 'Send Message',
+    contact_success: 'Message sent! We\'ll get back to you within 30 days.',
+    contact_error: 'Failed to send — please try again later.',
+    contact_sending: 'Sending…',
 
     // Common
     common_loading: 'Loading…',
@@ -541,7 +552,7 @@ export const translations = {
     privacy_subtitle: 'Privacy Policy',
     privacy_last_updated: 'Zuletzt aktualisiert: 2025',
     privacy_controller_title: 'Verantwortlicher',
-    privacy_controller_body: 'Verantwortlicher im Sinne der DSGVO ist [Ihr Name], erreichbar unter [ihre@email.com]. Alle Anfragen zur Datenlöschung oder zum Datenzugang sind schriftlich an diese Adresse zu richten.',
+    privacy_controller_body: 'Verantwortlicher im Sinne der DSGVO ist Ashiqur Rahman (unabhängiger Entwickler). Alle Anfragen zur Datenlöschung oder zum Datenzugang sind schriftlich über das Kontaktformular auf der Startseite zu richten.',
     privacy_collect_title: 'Welche Daten wir erheben und warum',
     privacy_collect_body: 'Wir erheben nur die Daten, die für den Betrieb des Dienstes notwendig sind. Kontodaten (Name, E-Mail, Passwort-Hash) werden gemäß Art. 6 Abs. 1 lit. b DSGVO zur Vertragserfüllung verarbeitet. Einstellungsdaten (Sprache, Währung, Marktregion) dienen der Personalisierung.',
     privacy_server_title: 'Auf unseren Servern gespeicherte Daten',
@@ -554,7 +565,7 @@ export const translations = {
     privacy_retention_title: 'Datenspeicherung',
     privacy_retention_body: 'Ihre Daten werden gespeichert, solange Ihr Konto besteht. Sie können jederzeit die vollständige Löschung schriftlich beantragen. Die Löschung erfolgt innerhalb von 30 Tagen.',
     privacy_rights_title: 'Ihre Rechte (DSGVO Art. 15–21)',
-    privacy_rights_body: 'Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Kontaktieren Sie uns schriftlich unter [ihre@email.com]. Wir antworten innerhalb von 30 Tagen.',
+    privacy_rights_body: 'Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Nutzen Sie das Kontaktformular auf der Startseite. Wir antworten innerhalb von 30 Tagen.',
     privacy_cookies_title: 'Cookies & Browser-Speicher',
     privacy_cookies_body: 'Diese Anwendung verwendet Browser-localStorage (keine HTTP-Cookies) für Sitzungstoken, Anzeigeeinstellungen und die Einwilligungsaufzeichnung. Es werden keine Tracking- oder Werbe-Cookies verwendet. Sie können Ihre Einwilligung jederzeit über die 🍪-Schaltfläche verwalten.',
     privacy_disclaimer_title: '⚠️ Haftungsausschluss – Nur zu Bildungszwecken',
@@ -562,7 +573,7 @@ export const translations = {
     privacy_hosting_title: '🗄️ Datensicherung & Hosting-Hinweis',
     privacy_hosting_body: 'StockAgent wird auf kostenloser Infrastruktur gehostet (Render für das Backend, Supabase Free Plan für die Datenbank, Vercel für das Frontend). Kostenlose Dienste können Ausfallzeiten, Datenverluste oder Änderungen ohne vorherige Ankündigung unterliegen. Wir empfehlen dringend, Ihre Portfoliodaten regelmäßig zu exportieren und lokal zu sichern. Der Entwickler übernimmt keine Haftung für Datenverluste durch Störungen der Hosting-Dienste.',
     privacy_sponsor_title: '💚 Sponsoring & Förderung',
-    privacy_sponsor_body: 'StockAgent ist ein Open-Source-Projekt, das unabhängig entwickelt und betrieben wird. Hosting- und API-Kosten werden vom Entwickler privat getragen. Wenn Sie das Projekt nützlich finden und die Weiterentwicklung unterstützen möchten, sind Sponsoring und Förderbeiträge herzlich willkommen. Kontaktieren Sie uns unter [ihre@email.com] oder besuchen Sie das GitHub-Repository für Sponsoring-Möglichkeiten.',
+    privacy_sponsor_body: 'StockAgent ist ein Open-Source-Projekt, das unabhängig entwickelt und betrieben wird. Hosting- und API-Kosten werden vom Entwickler privat getragen. Wenn Sie das Projekt nützlich finden und die Weiterentwicklung unterstützen möchten, sind Sponsoring und Förderbeiträge herzlich willkommen. Nutzen Sie das Kontaktformular oder besuchen Sie das GitHub-Repository.',
 
     // Landing Page
     land_badge: 'KI-gestützter Portfolio-Tracker',
@@ -584,6 +595,17 @@ export const translations = {
     land_ticker_source: 'Kurse via Yahoo Finance · kein Echtzeit-Tick; ggf. einige Minuten verzögert.',
     land_docs: 'Docs',
     docs_nav_back: 'Zum Dashboard',
+
+    // Contact Form
+    contact_title: 'Kontakt',
+    contact_subtitle: 'Fragen, Sponsoring-Anfragen oder Feedback? Schreiben Sie uns.',
+    contact_email: 'Ihre E-Mail-Adresse',
+    contact_name: 'Ihr Name',
+    contact_message: 'Nachricht',
+    contact_submit: 'Nachricht senden',
+    contact_success: 'Nachricht gesendet! Wir antworten innerhalb von 30 Tagen.',
+    contact_error: 'Senden fehlgeschlagen – bitte versuchen Sie es später erneut.',
+    contact_sending: 'Wird gesendet…',
 
     // Common
     common_loading: 'Lädt…',

@@ -206,4 +206,17 @@ export const settings = {
     }),
 }
 
+export async function postContact(body: { name: string; email: string; message: string }): Promise<{ message: string }> {
+  const res = await fetch(`${API_URL}/contact`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail ?? 'Failed to send message')
+  }
+  return res.json()
+}
+
 export { API_URL, getToken }

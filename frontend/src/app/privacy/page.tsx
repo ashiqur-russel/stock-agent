@@ -83,7 +83,10 @@ export default function PrivacyPage() {
 
         {/* 1 — Data Controller */}
         <Section title={t('privacy_controller_title')}>
-          <p>{t('privacy_controller_body')}</p>
+          <p>
+            {t('privacy_controller_body')}{' '}
+            <a href='/#contact' className='text-brand no-underline hover:underline text-xs'>Contact form ↗</a>
+          </p>
         </Section>
 
         {/* 2 — What we collect */}
@@ -126,7 +129,10 @@ export default function PrivacyPage() {
 
         {/* 7 — Rights */}
         <Section title={t('privacy_rights_title')}>
-          <p className='mb-3'>{t('privacy_rights_body')}</p>
+          <p className='mb-3'>
+            {t('privacy_rights_body')}{' '}
+            <a href='/#contact' className='text-brand no-underline hover:underline text-xs'>Contact form ↗</a>
+          </p>
           <div className='flex flex-wrap gap-3 text-xs'>
             <a href='https://gdpr-info.eu/art-15-gdpr/' target='_blank' rel='noopener noreferrer' className='text-brand no-underline hover:underline'>Art. 15 — Right of Access ↗</a>
             <a href='https://gdpr-info.eu/art-16-gdpr/' target='_blank' rel='noopener noreferrer' className='text-brand no-underline hover:underline'>Art. 16 — Rectification ↗</a>
@@ -159,7 +165,12 @@ export default function PrivacyPage() {
 
         {/* 11 — Sponsorship */}
         <Section title={t('privacy_sponsor_title')}>
-          <GreenBox>{t('privacy_sponsor_body')}</GreenBox>
+          <GreenBox>
+            {t('privacy_sponsor_body')}{' '}
+            <a href='/#contact' className='text-brand-light no-underline hover:underline'>Contact form ↗</a>
+            {' · '}
+            <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' className='text-brand-light no-underline hover:underline'>GitHub ↗</a>
+          </GreenBox>
         </Section>
 
         {/* Footer */}
