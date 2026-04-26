@@ -25,11 +25,14 @@ def register(body: RegisterRequest):
             raise HTTPException(400, "Email already registered")
 
         password_hash = service.hash_password(body.password)
-        cursor = conn.execute(
-            "INSERT INTO users (email, name, password_hash, is_verified) VALUES (?,?,?,?)",
+        cur = conn.execute(
+            "INSERT INTO users (email, name, password_hash, is_verified) VALUES (?,?,?,?) RETURNING id",
             (body.email, body.name, password_hash, 0),
         )
-        user_id = cursor.lastrowid
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(500, "Failed to create user")
+        user_id = row["id"]
         conn.commit()
 
     token = service.generate_verification_token()
@@ -63,7 +66,11 @@ def verify_email(token: str):
         if not row:
             raise HTTPException(400, "Invalid or already used verification link")
 
-        expires = datetime.fromisoformat(row["expires_at"])
+        raw_exp = row["expires_at"]
+        if isinstance(raw_exp, datetime):
+            expires = raw_exp
+        else:
+            expires = datetime.fromisoformat(str(raw_exp))
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if datetime.now(timezone.utc) > expires:

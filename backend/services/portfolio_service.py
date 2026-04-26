@@ -44,12 +44,15 @@ def add_transaction(
 ) -> dict:
     ticker = ticker.upper()
     with get_connection() as conn:
-        cursor = conn.execute(
-            "INSERT INTO transactions (user_id, ticker, type, shares, price, executed_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        cur = conn.execute(
+            "INSERT INTO transactions (user_id, ticker, type, shares, price, executed_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
             (user_id, ticker, tx_type, shares, price, executed_at, notes),
         )
+        row = cur.fetchone()
         conn.commit()
-        return {"id": cursor.lastrowid}
+        if not row:
+            raise RuntimeError("insert transaction failed")
+        return {"id": row["id"]}
 
 
 def delete_transaction(tx_id: int, user_id: int) -> bool:

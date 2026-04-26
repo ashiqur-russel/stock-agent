@@ -327,7 +327,7 @@ npm install`}</Code>
             <P>See the <button onClick={() => scrollTo('env-vars')} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', textDecoration: 'underline', fontSize: 14, padding: 0 }}>Environment Variables</button> section below.</P>
 
             <H3>5. Run the database migration</H3>
-            <P>The database is created automatically on first startup — no manual migration needed. The backend calls <Code>init_db()</Code> on startup which creates all tables from <Code>schema.sql</Code>.</P>
+            <P>The database is created automatically on first startup — no manual migration needed. The backend calls <Code>init_db()</Code> on startup: with the default <strong style={{ color: '#f1f5f9' }}>SQLite</strong> setup it runs <Code>schema.sql</Code>; if <Code>DATABASE_URL</Code> is set to a <strong style={{ color: '#f1f5f9' }}>PostgreSQL</strong> URL (e.g. Supabase), it runs <Code>schema.postgres.sql</Code> instead.</P>
           </Section>
 
           {/* ── Env vars ── */}
@@ -337,8 +337,10 @@ npm install`}</Code>
 APP_HOST=0.0.0.0
 APP_PORT=8000
 
-# Database
+# Database (pick one)
 DATABASE_PATH=./portfolio.db
+# Optional — production (Supabase, Neon, etc.):
+# DATABASE_URL=postgresql://user:pass@host:5432/postgres?sslmode=require
 
 # Auth
 JWT_SECRET=your-random-secret-here-min-32-chars
@@ -350,6 +352,9 @@ GROQ_API_KEY=gsk_...
 
 # CORS
 CORS_ORIGINS=http://localhost:3000
+
+# Public frontend URL (verification email links; production)
+# FRONTEND_URL=https://your-app.vercel.app
 
 # Email / SMTP (optional — leave blank to skip email verification)
 SMTP_HOST=smtp.gmail.com
@@ -388,7 +393,11 @@ npm run dev`}</Code>
 
           {/* ── Database management (dev) ── */}
           <Section id='dev-db' title='Database Management (Dev)'>
-            <P>The app uses a single SQLite file at <Code>backend/portfolio.db</Code>. The schema is created automatically on first startup from <Code>backend/schema.sql</Code>, so you can delete the file at any time and it will be re-created — useful when you want a clean slate.</P>
+            <P><strong style={{ color: '#f1f5f9' }}>Default (local):</strong> a single SQLite file at <Code>backend/portfolio.db</Code>. The schema is created on first startup from <Code>backend/schema.sql</Code>, so you can delete the file and it will be re-created for a clean slate.</P>
+            <H3>Production: PostgreSQL (e.g. Supabase)</H3>
+            <P>When you set <Code>DATABASE_URL</Code> to a connection string that starts with <Code>postgres</Code> (common with Supabase, Neon, Railway), the API uses that database. Tables are created automatically from <Code>backend/schema.postgres.sql</Code> on startup. Inspect data in the host&apos;s console (e.g. Supabase <strong>Table Editor</strong> → schema <Code>public</Code>). <strong style={{ color: '#f1f5f9' }}>This does not migrate data</strong> from an existing <Code>portfolio.db</Code>—switching is a new empty database unless you export/import yourself.</P>
+
+            <P><strong style={{ color: '#f1f5f9' }}>SQLite (local) commands below</strong> — skip if you use Postgres only.</P>
 
             <H3>List all users</H3>
             <Code block>{`sqlite3 -header -column backend/portfolio.db \\
@@ -1030,11 +1039,15 @@ CMD ["node", "server.js"]`}</Code>
           {/* ── Deploy: Env ── */}
           <Section id='deploy-env' title='Deployment — Production Env'>
             <Warn>Never commit <Code>.env</Code> files with real secrets to version control.</Warn>
-            <P>For production deployments (OVH, VPS, etc.) set these environment variables on the server:</P>
+            <P>For production deployments (Render, VPS, etc.) set these environment variables on the server — use <strong style={{ color: '#f1f5f9' }}>either</strong> <Code>DATABASE_PATH</Code> (SQLite on a persistent volume) <strong style={{ color: '#f1f5f9' }}>or</strong> <Code>DATABASE_URL</Code> (PostgreSQL, e.g. Supabase), not both as primary stores:</P>
             <Code block>{`# backend
 JWT_SECRET=<cryptographically random 64-char string>
 CORS_ORIGINS=https://yourdomain.com
+FRONTEND_URL=https://yourdomain.com
+# SQLite (single instance + persistent disk), OR:
 DATABASE_PATH=/app/data/portfolio.db
+# PostgreSQL (recommended for serverless / multi-instance), e.g. Supabase:
+# DATABASE_URL=postgresql://postgres:xxx@...pooler...:5432/postgres?sslmode=require
 GROQ_API_KEY=gsk_...
 SMTP_USER=alerts@yourdomain.com
 SMTP_PASSWORD=<app password>
