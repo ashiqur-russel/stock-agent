@@ -1,11 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { alerts as alertsApi } from '@/lib/api'
-import { getStoredUser } from '@/hooks/useAuth'
 import SignalBadge from '@/components/ui/SignalBadge'
-import FormInput from '@/components/ui/FormInput'
 import type { SwingSignal } from '@/hooks/usePortfolio'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 
@@ -18,11 +17,6 @@ interface Alert {
   price_eur: number | null
   is_read: 0 | 1
   created_at: string
-}
-
-interface NotifSettings {
-  notify_email: string | null
-  email_alerts: boolean
 }
 
 const VALID_SIGNALS: ReadonlySet<SwingSignal> = new Set<SwingSignal>([
@@ -56,22 +50,13 @@ export default function AlertsPage() {
   const push = usePushNotifications()
 
   const [alertList, setAlertList] = useState<Alert[]>([])
-  const [recipient, setRecipient] = useState('')
-  const [emailEnabled, setEmailEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [savedAt, setSavedAt] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [a, s] = await Promise.all([
-        alertsApi.list() as Promise<Alert[]>,
-        alertsApi.getNotifSettings() as Promise<NotifSettings>,
-      ])
+      const a = (await alertsApi.list()) as Alert[]
       setAlertList(a)
-      setRecipient(s.notify_email ?? getStoredUser()?.email ?? '')
-      setEmailEnabled(s.email_alerts)
     } catch {
       // ignore — auth wrapper will bounce on 401
     } finally {
@@ -98,21 +83,6 @@ export default function AlertsPage() {
       setAlertList((prev) => prev.map((a) => (a.id === id ? { ...a, is_read: 1 } : a)))
     } catch {
       /* noop */
-    }
-  }
-
-  const handleSaveSettings = async () => {
-    setSaving(true)
-    setSavedAt(null)
-    try {
-      const body = {
-        notify_email: recipient.trim() || null,
-        email_alerts: emailEnabled,
-      }
-      await alertsApi.saveNotifSettings(body)
-      setSavedAt(Date.now())
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -149,79 +119,23 @@ export default function AlertsPage() {
       </div>
       <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 13 }}>{t('alert_subtitle')}</p>
 
-      {/* Notification settings */}
       <div
         style={{
           background: '#0f172a',
           border: '1px solid #1e293b',
           borderRadius: 12,
-          padding: 24,
-          marginBottom: 28,
+          padding: '14px 18px',
+          marginBottom: 24,
+          fontSize: 13,
+          color: '#94a3b8',
+          lineHeight: 1.5,
         }}
       >
-        <h2
-          style={{
-            margin: '0 0 16px',
-            fontSize: 15,
-            fontWeight: 600,
-            color: '#94a3b8',
-          }}
-        >
-          {t('alert_notif')}
-        </h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
-          <div style={{ flex: '1 1 280px', minWidth: 240 }}>
-            <FormInput
-              label={t('alert_recipient')}
-              type="email"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder={getStoredUser()?.email ?? 'you@example.com'}
-            />
-            <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 12 }}>
-              {t('alert_recipient_help')}
-            </p>
-          </div>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              cursor: 'pointer',
-              fontSize: 14,
-              color: '#f1f5f9',
-              padding: '10px 0',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={emailEnabled}
-              onChange={(e) => setEmailEnabled(e.target.checked)}
-              style={{ width: 16, height: 16, accentColor: '#22c55e' }}
-            />
-            {t('alert_email_toggle')}
-          </label>
-          <button
-            onClick={handleSaveSettings}
-            disabled={saving}
-            style={{
-              padding: '10px 20px',
-              background: '#22c55e',
-              border: 'none',
-              borderRadius: 8,
-              color: '#fff',
-              fontWeight: 600,
-              cursor: saving ? 'wait' : 'pointer',
-              fontSize: 14,
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? '…' : t('alert_save')}
-          </button>
-          {savedAt && Date.now() - savedAt < 4000 && (
-            <span style={{ color: '#22c55e', fontSize: 12 }}>✓</span>
-          )}
-        </div>
+        {t('alerts_prefs_banner')}{' '}
+        <Link href='/user/settings' className='text-brand no-underline hover:underline font-semibold'>
+          {t('nav_settings')}
+        </Link>
+        .
       </div>
 
       {/* Browser push notifications */}
