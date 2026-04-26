@@ -16,8 +16,9 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'StockAgent — AI Portfolio Tracker',
+  title: { default: 'StockAgent', template: '%s — StockAgent' },
   description: 'Track your portfolio and get AI-powered swing trading advice.',
+  icons: { icon: '/icon.svg', shortcut: '/icon.svg' },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
