@@ -113,7 +113,7 @@ function PortfolioCardImpl({ holding }: Props) {
 
       <div style={{ display: 'flex', gap: 8 }}>
         <button
-          onClick={() => router.push(`/chat?ticker=${holding.ticker}`)}
+          onClick={() => router.push(`/user/agent?ticker=${holding.ticker}`)}
           style={{
             flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid #334155',
             borderRadius: 8, color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontWeight: 500,
