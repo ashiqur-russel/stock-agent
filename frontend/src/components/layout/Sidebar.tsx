@@ -10,7 +10,7 @@ import { alerts as alertsApi } from '@/lib/api'
 
 const links = [
   { href: '/dashboard', labelKey: 'nav_dashboard' as const, icon: '📊' },
-  { href: '/transactions', labelKey: 'nav_transactions' as const, icon: '📋' },
+  { href: '/dashboard/transactions', labelKey: 'nav_transactions' as const, icon: '📋' },
   { href: '/paper', labelKey: 'nav_paper' as const, icon: '📝' },
   { href: '/chat', labelKey: 'nav_chat' as const, icon: '🤖' },
   { href: '/dashboard/alerts', labelKey: 'nav_alerts' as const, icon: '🔔' },

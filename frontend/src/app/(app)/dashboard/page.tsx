@@ -61,7 +61,7 @@ function DashboardContent() {
           <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
           <div style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8', marginBottom: 8 }}>{t('db_no_positions')}</div>
           <p style={{ marginBottom: 20 }}>{t('db_add_first')}</p>
-          <Link href='/transactions' style={{ padding: '10px 22px', background: '#22c55e', borderRadius: 8, color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href='/dashboard/transactions' style={{ padding: '10px 22px', background: '#22c55e', borderRadius: 8, color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
             {t('db_go_transactions')}
           </Link>
         </div>
