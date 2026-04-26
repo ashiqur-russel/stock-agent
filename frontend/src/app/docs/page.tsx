@@ -53,6 +53,7 @@ const NAV = [
       { id: 'api-indicators', label: 'Indicators' },
       { id: 'api-paper', label: 'Paper Trading' },
       { id: 'api-alerts', label: 'Alerts' },
+      { id: 'api-push', label: 'Browser Push' },
       { id: 'api-chat', label: 'AI Chat (SSE)' },
       { id: 'api-ws', label: 'WebSocket' },
     ],
@@ -1032,6 +1033,41 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
 
             <Endpoint method='PUT' path='/api/v1/settings/preferences' auth desc='Update UI preferences. `market_region` is `DE` (Europe/Berlin hours) or `US` (NYSE hours) for the Market Open/Closed indicator.' />
             <Code block>{`{ "market_region": "US" }`}</Code>
+          </Section>
+
+          {/* ── API: Push ── */}
+          <Section id='api-push' title='API — Browser Push Notifications'>
+            <P>Web Push notifications are sent to the browser whenever a swing signal changes on a held position. They work even when the tab is closed, via a registered service worker (<Code>public/sw.js</Code>). VAPID keys must be configured in <Code>backend/.env</Code> — see <em>Environment Variables</em> above. If VAPID is not configured, email and WebSocket toast alerts still work normally.</P>
+            <Endpoint method='GET' path='/api/v1/push/vapid-public-key' desc='Returns the server VAPID public key needed by the browser to subscribe. No auth required — the key is public.' />
+            <Code block>{`{ "public_key": "BNx8...base64url..." }`}</Code>
+
+            <Endpoint method='POST' path='/api/v1/push/subscribe' auth desc='Saves a browser push subscription for the authenticated user.' />
+            <Code block>{`{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "p256dh": "...",
+    "auth": "..."
+  }
+}`}</Code>
+
+            <Endpoint method='DELETE' path='/api/v1/push/unsubscribe' auth desc='Removes a push subscription by endpoint.' />
+            <Code block>{`{ "endpoint": "https://fcm.googleapis.com/fcm/send/..." }`}</Code>
+
+            <Endpoint method='GET' path='/api/v1/push/status' auth desc='Returns whether the server has VAPID configured and whether the current user has an active subscription.' />
+            <Code block>{`{ "server_enabled": true, "subscribed": false }`}</Code>
+
+            <H3>Setup</H3>
+            <Code block>{`# 1. Generate VAPID keys (run once)
+cd stock-agent/backend
+python tools/generate_vapid_keys.py
+
+# 2. Paste the output into backend/.env
+VAPID_PRIVATE_KEY=<key>
+VAPID_PUBLIC_KEY=<key>
+VAPID_SUBJECT=mailto:your@email.com
+
+# 3. Restart the backend — push notifications are now active`}</Code>
+            <P>The frontend <Code>usePushNotifications</Code> hook handles service worker registration, permission requests, subscription management, and syncing the subscription with the backend automatically.</P>
           </Section>
 
           {/* ── API: Chat ── */}
