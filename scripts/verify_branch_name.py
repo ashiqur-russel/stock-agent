@@ -148,7 +148,7 @@ def _check_sa_ticket_unique(current: str) -> None:
     n = _ticket_num_from_topic(current)
     if n is None:
         return
-    include_remotes = os.environ.get("BRANCH_CHECK_REMOTES", "").strip() == "1"
+    include_remotes = os.environ.get("BRANCH_CHECK_REMOTES", "").strip().lower() in ("1", "true", "yes")
     names = _logical_branch_names(include_remotes=include_remotes)
     others: list[str] = []
     for b in names:
