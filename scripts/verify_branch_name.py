@@ -39,7 +39,7 @@ _AUTO_PREFIX = re.compile(
 )
 
 # After e.g. "feature/", the rest must start with SA-<ticket> (e.g. SA-4, SA-12)
-_SA_PREFIX = re.compile(r"^SA-\d+(-[a-zA-Z0-9._/-]+)*$")
+_SA_PREFIX = re.compile(r"^SA-\d+(-[a-zA-Z0-9._-]+)*$")
 
 
 def _current_branch() -> str:
