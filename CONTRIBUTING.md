@@ -152,6 +152,19 @@ Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `rele
 
 **Open source workflow:** use the **GitHub issue number** as the number in `SA-<n>` when you work from an issue (e.g. issue **#24** → `feature/SA-24-short-description`). If maintainers use another tracker, match the id they specify.
 
+**Choosing `n` when there is no issue yet:** the hook rejects an `SA-<n>` that is **already used** on another branch in this clone (see [`scripts/verify_branch_name.py`](scripts/verify_branch_name.py)). Do **not** skip to arbitrary large ids (e.g. `SA-99`)—stay sequential so the history stays readable.
+
+1. **Preferred:** create/track a GitHub issue and use its number.
+2. **Otherwise** pick the **next** id in order:
+   - **Lowest gap:** smallest positive integer not already on any `feature/SA-*`, `fix/SA-*`, `chore/SA-*`, etc. branch, or
+   - **Max + 1:** take the largest `n` already in use and use **`n + 1`**.
+
+   List numeric ids already taken (then choose a gap or max + 1):
+
+   ```bash
+   git branch -a | grep -oE 'SA-[0-9]+' | sed 's/SA-//' | sort -n | uniq
+   ```
+
 Do not commit directly on `main` / `master`; hooks and project practice expect **pull requests**.
 
 ### Commit messages

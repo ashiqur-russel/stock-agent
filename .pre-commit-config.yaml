@@ -9,6 +9,8 @@
 #   feature/SA-<n>-slug, fix/SA-<n>-…, hotfix/SA-<n>, chore/SA-<n>, etc.
 # Same SA-<n> must not be used on two different branches in this clone (use a new
 # id or delete the other ref after merge; hook only sees local + fetched remotes).
+# Prefer GitHub issue # as n; else use lowest unused SA-n or max(n)+1 — not random
+# high ids (see CONTRIBUTING.md → Branches and commit messages).
 # (Commits on main/master: rejected.)
 # pre-push: blocks `git push` to remote main/master; also runs [SA-n] on pushes.
 #
