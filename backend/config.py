@@ -20,6 +20,22 @@ GROQ_QUOTA_ENABLED: bool = os.getenv("GROQ_QUOTA_ENABLED", "1").strip().lower() 
     "true",
     "yes",
 )
+
+
+def _groq_quota_bucket() -> str:
+    """How to bucket token/request fair-share: calendar UTC day or rolling 1h / 2h window."""
+    v = os.getenv("GROQ_QUOTA_BUCKET", "day").strip().lower()
+    if v in ("1h", "hour", "1hour", "60m"):
+        return "1h"
+    if v in ("2h", "2hour", "120m"):
+        return "2h"
+    return "day"
+
+
+# day | 1h | 2h — Groq RPD/TPD reset daily on their side; we align day bucket to UTC date.
+# Shorter windows use a proportional slice of each user's daily share (e.g. TPD×1/24 per hour).
+GROQ_QUOTA_BUCKET: str = _groq_quota_bucket()
+
 JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
 DATABASE_PATH: str = os.getenv("DATABASE_PATH", "./portfolio.db")
 
