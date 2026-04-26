@@ -18,6 +18,16 @@ export default function LoginPage() {
 
   const [resendBusy, setResendBusy] = useState(false)
 
+  const canSubmit = email.trim().length > 0 && password.length > 0
+
+  const handleLogin = () => {
+    if (!canSubmit) {
+      setError(t('auth_fill_required'))
+      return
+    }
+    login(email.trim(), password)
+  }
+
   const handleResend = async () => {
     if (resendBusy || resent || !email.trim()) return
     setResendBusy(true)
@@ -77,9 +87,9 @@ export default function LoginPage() {
 
           <button
             type='button'
-            onClick={() => login(email, password)}
-            disabled={loading}
-            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1 }}
+            onClick={handleLogin}
+            disabled={loading || !canSubmit}
+            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading || !canSubmit ? 'not-allowed' : 'pointer', opacity: loading || !canSubmit ? 0.5 : 1 }}
           >
             {loading ? '…' : t('auth_login_btn')}
           </button>

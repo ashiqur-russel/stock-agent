@@ -99,7 +99,7 @@ export default function PrivacyPage() {
         <Section title={t('privacy_controller_title')}>
           <p>
             {t('privacy_controller_body')}{' '}
-            <a href='/#contact' className='text-brand no-underline hover:underline text-xs'>Contact form ↗</a>
+            <Link href='/#contact' className='text-brand no-underline hover:underline text-xs'>Contact form ↗</Link>
           </p>
         </Section>
 
@@ -145,7 +145,7 @@ export default function PrivacyPage() {
         <Section title={t('privacy_rights_title')}>
           <p className='mb-3'>
             {t('privacy_rights_body')}{' '}
-            <a href='/#contact' className='text-brand no-underline hover:underline text-xs'>Contact form ↗</a>
+            <Link href='/#contact' className='text-brand no-underline hover:underline text-xs'>Contact form ↗</Link>
           </p>
           <div className='flex flex-wrap gap-3 text-xs'>
             <a href='https://gdpr-info.eu/art-15-gdpr/' target='_blank' rel='noopener noreferrer' className='text-brand no-underline hover:underline'>Art. 15 — Right of Access ↗</a>
@@ -181,7 +181,7 @@ export default function PrivacyPage() {
         <Section title={t('privacy_sponsor_title')}>
           <GreenBox>
             {t('privacy_sponsor_body')}{' '}
-            <a href='/#contact' className='text-brand-light no-underline hover:underline'>Contact form ↗</a>
+            <Link href='/#contact' className='text-brand-light no-underline hover:underline'>Contact form ↗</Link>
             {' · '}
             <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' className='text-brand-light no-underline hover:underline'>GitHub ↗</a>
           </GreenBox>

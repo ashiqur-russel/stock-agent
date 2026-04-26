@@ -19,9 +19,16 @@ export default function RegisterPage() {
   const [resent, setResent] = useState(false)
   const [resendBusy, setResendBusy] = useState(false)
 
+  const canSubmit =
+    name.trim().length > 0 && email.trim().length > 0 && password.length >= 8
+
   const handleSubmit = async () => {
     if (loading) return
-    const result = await register(email, name, password)
+    if (!canSubmit) {
+      setError(t('auth_register_fill'))
+      return
+    }
+    const result = await register(email.trim(), name.trim(), password)
     if (result.pending) {
       setPending(true)
     } else if (result.token) {
@@ -108,8 +115,8 @@ export default function RegisterPage() {
           <button
             type='button'
             onClick={handleSubmit}
-            disabled={loading}
-            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1 }}
+            disabled={loading || !canSubmit}
+            style={{ padding: '12px', background: '#22c55e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading || !canSubmit ? 'not-allowed' : 'pointer', opacity: loading || !canSubmit ? 0.5 : 1 }}
           >
             {loading ? '…' : t('auth_register_btn')}
           </button>
