@@ -9,6 +9,14 @@ export const translations = {
     nav_settings: 'Settings',
     nav_docs: 'Docs',
     nav_logout: 'Logout',
+    sidebar_app_version: 'App version',
+
+    whats_new_heading: "What's New",
+    whats_new_section_features: 'New features',
+    whats_new_section_fixes: 'Bug fixes',
+    whats_new_done: 'Get started',
+    whats_new_not_now: 'Remind me later',
+    whats_new_dont_show: "Don't show this release again until the next version",
 
     settings_title: 'Settings',
     settings_subtitle: 'Email notifications, AI chat (Groq), and related account options.',
@@ -445,6 +453,14 @@ export const translations = {
 
     chat_send_disabled_ai: 'Aktivieren Sie den KI-Chat unter Einstellungen, um Nachrichten zu senden.',
     nav_logout: 'Abmelden',
+    sidebar_app_version: 'App-Version',
+
+    whats_new_heading: 'Was ist neu',
+    whats_new_section_features: 'Neue Funktionen',
+    whats_new_section_fixes: 'Fehlerbehebungen',
+    whats_new_done: 'Loslegen',
+    whats_new_not_now: 'Später erinnern',
+    whats_new_dont_show: 'Diese Version nicht mehr anzeigen (bis zum nächsten Update)',
 
     // Auth
     auth_login: 'Anmelden',

@@ -1,0 +1,28 @@
+{
+  "0.2.0": {
+    "title": {
+      "en": "What's new in Stock Agent",
+      "de": "Neu in Stock Agent"
+    },
+    "features": {
+      "en": [
+        "App version is shown in the sidebar and on the API health endpoint.",
+        "\"What's new\" dialog when a release includes notes — dismiss or hide until the next version."
+      ],
+      "de": [
+        "App-Version in der Seitenleiste und im API-Health-Check.",
+        "„Was ist neu“-Dialog bei Releases mit Notizen — schließen oder bis zur nächsten Version ausblenden."
+      ]
+    },
+    "fixes": {
+      "en": [
+        "Safer live quotes when Yahoo returns empty data (no more €0 wipeouts).",
+        "Alert WebSocket compares support/resistance in EUR and ignores invalid price ticks."
+      ],
+      "de": [
+        "Robustere Live-Kurse, wenn Yahoo leere Daten liefert (kein €0-Reset mehr).",
+        "Alert-WebSocket vergleicht Support/Resistance in EUR und ignoriert ungültige Preise."
+      ]
+    }
+  }
+}

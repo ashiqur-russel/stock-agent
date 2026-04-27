@@ -149,6 +149,12 @@ def _migrate_postgres_ai_quota() -> None:
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_ai_chat_usage_user_created ON ai_chat_usage (user_id, created_at)"
         )
+        cur.execute(
+            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS whats_new_cleared_version TEXT"
+        )
+        cur.execute(
+            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS whats_new_read_version TEXT"
+        )
         conn.commit()
     finally:
         conn.close()
@@ -167,6 +173,8 @@ def init_db() -> None:
             "ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0",
             "ALTER TABLE user_settings ADD COLUMN market_region TEXT NOT NULL DEFAULT 'DE'",
             "ALTER TABLE user_settings ADD COLUMN ai_chat_enabled INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE user_settings ADD COLUMN whats_new_cleared_version TEXT",
+            "ALTER TABLE user_settings ADD COLUMN whats_new_read_version TEXT",
         ]:
             try:
                 c.execute(migration)
