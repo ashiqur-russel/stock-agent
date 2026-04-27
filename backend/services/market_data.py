@@ -133,6 +133,12 @@ def _german_yahoo_symbol_candidates(base_ticker: str) -> list[str]:
     return [f"{b}.DE", f"{b}.F", f"{b}.MU"]
 
 
+def _explicit_german_yahoo_listing(ticker_u: str) -> bool:
+    """User (or DB) used an explicit German Yahoo suffix; otherwise we quote the US line in DE mode."""
+    b = ticker_u.upper().strip()
+    return any(b.endswith(suf) for suf in (".DE", ".F", ".MU", ".BE", ".HA", ".SG", ".VI"))
+
+
 def _german_listing_has_usable_data(sym: str) -> bool:
     """True only if Yahoo returns both a last price and recent daily OHLC (avoids .DE ghost symbols)."""
     with _suppress_yfinance_stderr():
@@ -193,7 +199,9 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     ``(live_price - prev_close) / prev_close`` — above yesterday’s close → **+**, below → **-**.
     If Yahoo omits previous close, we fall back to its session change fields.
 
-    **DE:** Same math; optional German listing for price only. Pre-market badge hidden for DE (frontend).
+    **DE:** Plain tickers (e.g. ``BYND``) use the **US Yahoo line** converted to EUR so **today %**
+    matches US pre/RTH/post. For **Xetra / German line** prices and %, use an explicit suffix
+    (``BYND.DE``, ``.F``, ``.MU``, …). Pre-market badge: DE hides pre only (frontend).
     """
     region = (display_region or "US").upper()
     if region not in ("DE", "US"):
@@ -205,6 +213,8 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     use_xetra = False
     quote_sym = ticker_u
     if region == "DE":
+        if not _explicit_german_yahoo_listing(ticker_u):
+            return fetch_quote(ticker_u, "US")
         quote_sym, use_xetra = _pick_de_quote_symbol(ticker_u)
 
     t = yf.Ticker(quote_sym)
