@@ -103,10 +103,14 @@ export const LiveQuoteExtendedHint = memo(function LiveQuoteExtendedHint({
 }: {
   ticker: string
 }) {
-  const { t, formatPrice } = useApp()
+  const { t, formatPrice, marketRegion } = useApp()
   const quote = useLiveQuote(ticker)
 
   const session = quote?.quote_session
+  if (marketRegion === 'DE' && session === 'pre_market') {
+    return null
+  }
+
   const labelKey = typeof session === 'string' ? SESSION_LABEL[session] : undefined
 
   const regEur = quote?.regular_market_price

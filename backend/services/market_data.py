@@ -187,8 +187,10 @@ def _round_quote_price(val: float) -> float:
 def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     """Latest quote. DE preference: try `.DE` / `.F` / `.MU` when Yahoo has usable history, else US symbol.
 
-    Session price and % change always follow Yahoo ``marketState`` and pre/regular/post change fields;
-    amounts are converted to EUR (and USD) for the API based on the quote currency.
+    **US:** Session price and % follow Yahoo ``marketState`` and pre/regular/post change fields.
+
+    **DE:** During Yahoo ``PRE``, show **regular** (last close / regular quote), not extended-hours pre
+    price; **day_change_pct** is always vs **previous close**. No session-badge UI for DE (frontend).
     """
     region = (display_region or "US").upper()
     if region not in ("DE", "US"):
@@ -258,8 +260,6 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     primary_native: float | None = None
     quote_session = "unknown"
 
-    # Yahoo `marketState` drives session price and % for both US and DE display;
-    # DE preference only affects EUR fallback listing (Xetra) vs US symbol — not % math.
     if market_state == "PRE":
         primary_native = pre_n or reg_n or fast_last
         quote_session = "pre_market"
@@ -276,6 +276,10 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
         primary_native = reg_n or fast_last
         quote_session = "regular" if primary_native is not None else "unknown"
 
+    if region == "DE" and market_state == "PRE":
+        # Germany reference: show last regular / previous close, not extended-hours pre price.
+        primary_native = reg_n or prev_close_n or fast_last
+
     if primary_native is None:
         primary_native = 0.0
 
@@ -286,7 +290,11 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
             return ((primary_native - prev_basis_native) / prev_basis_native) * 100
         return 0.0
 
-    if quote_session == "after_hours":
+    if region == "DE":
+        day_change_pct = computed_day_pct()
+        if day_change_pct == 0.0 and prev_basis_native is None:
+            day_change_pct = reg_pct if reg_pct is not None else 0.0
+    elif quote_session == "after_hours":
         day_change_pct = (
             post_pct
             if post_pct is not None
