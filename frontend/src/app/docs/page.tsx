@@ -271,8 +271,11 @@ export default function DocsPage() {
                     padding: '6px 20px 6px 24px', fontSize: 13,
                     background: active === item.id ? '#0d2a1a' : 'transparent',
                     color: active === item.id ? '#22c55e' : '#94a3b8',
+                    borderTop: 'none',
+                    borderRight: 'none',
+                    borderBottom: 'none',
                     borderLeft: active === item.id ? '2px solid #22c55e' : '2px solid transparent',
-                    border: 'none', cursor: 'pointer',
+                    cursor: 'pointer',
                     transition: 'all 0.1s',
                   }}
                 >
