@@ -31,6 +31,10 @@ import yfinance as yf
 _eur_cache: dict = {"rate": None, "fetched_at": 0}
 _eur_lock = threading.Lock()
 
+# Cache yesterday's EUR/USD rate for 10 minutes (used for DE-mode FX-adjusted %)
+_prev_eur_cache: dict = {"rate": None, "fetched_at": 0}
+_prev_eur_lock = threading.Lock()
+
 
 def get_usd_to_eur_rate() -> float:
     """Returns how many EUR you get for 1 USD (e.g. 0.91 if 1 USD = 0.91 EUR)."""
@@ -54,6 +58,62 @@ def get_usd_to_eur_rate() -> float:
 
 def usd_to_eur(usd: float) -> float:
     return round(usd * get_usd_to_eur_rate(), 4)
+
+
+def _get_prev_eur_per_usd() -> float | None:
+    """
+    Yesterday's USD→EUR conversion rate from EURUSD=X daily history.
+    Used to compute EUR-based day_change_pct when falling back to a US symbol in DE mode,
+    so that FX movement between yesterday and today is accounted for.
+    Cached 10 minutes.
+    """
+    with _prev_eur_lock:
+        now = time.time()
+        if _prev_eur_cache["rate"] and now - _prev_eur_cache["fetched_at"] < 600:
+            return _prev_eur_cache["rate"]
+        try:
+            tk = yf.Ticker("EURUSD=X")
+            with _suppress_yfinance_stderr():
+                hist = tk.history(period="3d", interval="1d", prepost=False, auto_adjust=True)
+            if hist is None or hist.empty:
+                return None
+            closes = hist["Close"].dropna()
+            # Use the second-to-last row: iloc[-1] may be today's partial bar
+            if len(closes) < 2:
+                return None
+            # EURUSD=X: 1 EUR = N USD, so USD→EUR = 1/N
+            yesterday_eurusd = float(closes.iloc[-2])
+            rate = (1.0 / yesterday_eurusd) if yesterday_eurusd > 0 else None
+            _prev_eur_cache["rate"] = rate
+            _prev_eur_cache["fetched_at"] = now
+            return rate
+        except Exception:
+            return None
+
+
+def _history_prev_close(t: yf.Ticker, market_state: str) -> float | None:
+    """
+    Get the most recent confirmed session close from daily history.
+    More reliable than regularMarketPreviousClose for illiquid German listings
+    where Yahoo's info dict can return a stale value from days ago.
+    """
+    try:
+        with _suppress_yfinance_stderr():
+            hist = t.history(period="5d", interval="1d", prepost=False, auto_adjust=True)
+        if hist is None or hist.empty:
+            return None
+        closes = hist["Close"].dropna()
+        if closes.empty:
+            return None
+        if market_state == "REGULAR" and len(closes) >= 2:
+            # Market is currently open; the last bar is today's incomplete session
+            v = float(closes.iloc[-2])
+        else:
+            # Market closed/pre/post: last bar is the most recently completed session
+            v = float(closes.iloc[-1])
+        return v if v > 0 else None
+    except Exception:
+        return None
 
 
 def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[dict]:
@@ -298,6 +358,13 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
 
     prev_basis_native = prev_close_n if prev_close_n and prev_close_n > 0 else None
 
+    # Fix 1: for German listings, prefer history-derived previous close over
+    # regularMarketPreviousClose which can be stale for illiquid DE tickers.
+    if use_xetra:
+        hist_prev = _history_prev_close(t, market_state)
+        if hist_prev is not None:
+            prev_basis_native = hist_prev
+
     def computed_day_pct() -> float:
         if prev_basis_native:
             return ((primary_native - prev_basis_native) / prev_basis_native) * 100
@@ -321,6 +388,18 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
             day_change_pct = reg_pct if reg_pct is not None else day_change_pct
         else:
             day_change_pct = reg_pct if reg_pct is not None else day_change_pct
+
+    # Fix 2: when falling back to a US symbol in DE mode, recompute the percentage
+    # in EUR terms so FX movement between yesterday and today is included.
+    # USD % ≠ EUR % when the EUR/USD rate shifts — e.g. USD weakens → EUR price rises
+    # even if USD price is flat or down.
+    if region == "DE" and not use_xetra and prev_basis_native and prev_basis_native > 0:
+        prev_eur_rate = _get_prev_eur_per_usd()
+        if prev_eur_rate is not None:
+            prev_close_eur = prev_basis_native * prev_eur_rate
+            current_eur = primary_native * eur_rate
+            if prev_close_eur > 0:
+                day_change_pct = (current_eur - prev_close_eur) / prev_close_eur * 100
 
     day_change_pct = round(float(day_change_pct), 2)
 
