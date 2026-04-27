@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Block `git push` that updates the remote's default branch (main / master) from your machine.
+Block `git push` that updates protected integration branches from your machine
+(main / master / development).
 
 Use a topic branch + PR instead: feature/..., fix/..., hotfix/..., etc.
 
@@ -18,6 +19,7 @@ _PROTECTED = frozenset(
     {
         "refs/heads/main",
         "refs/heads/master",
+        "refs/heads/development",
     }
 )
 
@@ -35,7 +37,7 @@ def main() -> None:
         _lr, _ls, remote_ref, _rs = parts
         if remote_ref in _PROTECTED:
             print(
-                "Pushing directly to the remote's main branch is not allowed from this hook.\n"
+                "Pushing directly to a protected branch (main / master / development) is not allowed from this hook.\n"
                 f"  Blocked: {remote_ref}\n"
                 "  Use a topic branch and open a pull request (e.g. feature/..., fix/..., hotfix/...).\n"
                 "  Emergency bypass: ALLOW_PUSH_TO_MAIN=1 git push\n",
