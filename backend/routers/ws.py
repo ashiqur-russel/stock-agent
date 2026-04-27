@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -122,11 +123,9 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
             if not isinstance(result, Exception) and "error" not in result:
                 analysis_cache[ticker] = result
 
-    last_prices: dict[str, float] = {
-        t: analysis_cache[t]["current_price"]
-        for t in analysis_cache
-        if "current_price" in analysis_cache[t]
-    }
+    # EUR snapshots for move / level alerts (same currency as ``fetch_quote`` current_price).
+    # Seeded only from valid ticks — swing ``current_price`` is USD and must not be mixed here.
+    last_prices: dict[str, float] = {}
     last_signal_check = asyncio.get_event_loop().time()
 
     if not await _safe_send(
@@ -165,14 +164,37 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 if isinstance(quote, Exception):
                     continue
 
-                price = quote.get("current_price", 0)
-                prev = last_prices.get(ticker, price)
-                pct = (price - prev) / prev * 100 if prev else 0
-                last_prices[ticker] = price
+                raw = quote.get("current_price")
+                try:
+                    price = float(raw) if raw is not None else 0.0
+                except (TypeError, ValueError):
+                    price = 0.0
+
+                valid = math.isfinite(price) and price > 0.0
+                prev_stored = last_prices.get(ticker)
+                prev = prev_stored if prev_stored is not None and prev_stored > 0 else None
+
+                if valid:
+                    pct = ((price - prev) / prev * 100.0) if prev else 0.0
+                    last_prices[ticker] = price
+                else:
+                    price = prev if prev is not None else 0.0
+                    pct = 0.0
 
                 analysis = analysis_cache.get(ticker, {})
-                support = analysis.get("key_support")
-                resistance = analysis.get("key_resistance")
+                support_usd = analysis.get("key_support")
+                resistance_usd = analysis.get("key_resistance")
+                fx = float(quote.get("eur_rate") or 0.91)
+                support_eur = (
+                    float(support_usd) * fx
+                    if support_usd is not None and float(support_usd) > 0
+                    else None
+                )
+                resistance_eur = (
+                    float(resistance_usd) * fx
+                    if resistance_usd is not None and float(resistance_usd) > 0
+                    else None
+                )
 
                 # Per-ticker live-state: crypto is always live; stocks only
                 # during US hours. This decides whether we emit alerts.
@@ -195,8 +217,8 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                 if not ticker_live:
                     continue
 
-                # Intraday move alert
-                if abs(pct) >= PRICE_MOVE_THRESHOLD:
+                # Intraday move alert (ignore bad or stale-only ticks — avoids -100% on €0 glitches)
+                if valid and prev is not None and abs(pct) >= PRICE_MOVE_THRESHOLD:
                     direction = "SHARP RALLY" if pct > 0 else "SHARP DROP"
                     if not await _safe_send(
                         websocket,
@@ -210,29 +232,47 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
                     ):
                         return
 
-                # Support broken
-                if support and prev > support and price <= support:
+                # Support broken (levels from swing analysis are USD; compare in EUR)
+                if (
+                    valid
+                    and support_eur is not None
+                    and prev is not None
+                    and prev > support_eur
+                    and price <= support_eur
+                ):
                     if not await _safe_send(
                         websocket,
                         {
                             "type": "price_alert",
                             "ticker": ticker,
                             "title": f"SUPPORT BROKEN: {ticker}",
-                            "message": f"Price €{price:.4f} broke below key support €{support:.4f} — consider stop-loss",
+                            "message": (
+                                f"Price €{price:.4f} broke below key support €{support_eur:.4f} "
+                                "— consider stop-loss"
+                            ),
                             "severity": "critical",
                         },
                     ):
                         return
 
                 # Resistance broken
-                if resistance and prev < resistance and price >= resistance:
+                if (
+                    valid
+                    and resistance_eur is not None
+                    and prev is not None
+                    and prev < resistance_eur
+                    and price >= resistance_eur
+                ):
                     if not await _safe_send(
                         websocket,
                         {
                             "type": "price_alert",
                             "ticker": ticker,
                             "title": f"BREAKOUT: {ticker}",
-                            "message": f"Price €{price:.4f} broke above resistance €{resistance:.4f} — potential breakout",
+                            "message": (
+                                f"Price €{price:.4f} broke above resistance €{resistance_eur:.4f} "
+                                "— potential breakout"
+                            ),
                             "severity": "high",
                         },
                     ):

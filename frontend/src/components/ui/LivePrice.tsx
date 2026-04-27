@@ -3,7 +3,12 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { useApp, priceDecimalsForValue } from '@/contexts/AppContext'
 import type { TranslationKey } from '@/lib/i18n'
-import { useLiveQuote, type UsListingQuote } from '@/hooks/usePriceStream'
+import {
+  useLiveQuote,
+  liveQuoteHasValidPrices,
+  quoteSpotPrices,
+  type UsListingQuote,
+} from '@/hooks/usePriceStream'
 
 const num = (v: unknown): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : 0
@@ -44,13 +49,14 @@ function LivePriceImpl({
   const { currency, currencySymbol } = useApp()
   const quote = useLiveQuote(ticker)
 
-  const livePrice = quote
-    ? currency === 'USD' ? quote.current_price_usd : quote.current_price
-    : undefined
+  const spots = quote ? quoteSpotPrices(quote) : null
+  const livePrice = spots ? (currency === 'USD' ? spots.usd : spots.eur) : undefined
   const initialPrice = currency === 'USD' ? initialPriceUsd : initialPriceEur
-  const price = typeof livePrice === 'number' && Number.isFinite(livePrice)
+  const price = typeof livePrice === 'number' && Number.isFinite(livePrice) && livePrice > 0
     ? livePrice
-    : (typeof initialPrice === 'number' && Number.isFinite(initialPrice) ? initialPrice : null)
+    : (typeof initialPrice === 'number' && Number.isFinite(initialPrice) && initialPrice > 0
+        ? initialPrice
+        : (typeof initialPrice === 'number' && Number.isFinite(initialPrice) ? initialPrice : null))
 
   const prevPriceRef = useRef<number | null>(null)
   const [flashColor, setFlashColor] = useState<string | null>(null)
@@ -210,9 +216,10 @@ interface LiveDayChangeProps {
 
 function LiveDayChangeImpl({ ticker, initialPct, style }: LiveDayChangeProps) {
   const quote = useLiveQuote(ticker)
-  const pct = typeof quote?.day_change_pct === 'number'
-    ? quote.day_change_pct
-    : (typeof initialPct === 'number' && Number.isFinite(initialPct) ? initialPct : null)
+  const pct =
+    quote && liveQuoteHasValidPrices(quote) && typeof quote.day_change_pct === 'number'
+      ? quote.day_change_pct
+      : (typeof initialPct === 'number' && Number.isFinite(initialPct) ? initialPct : null)
   if (pct === null) return <span style={style}>—</span>
   const color = pct >= 0 ? '#22c55e' : '#ef4444'
   return (
@@ -248,13 +255,13 @@ export const LiveMarketValue = memo(function LiveMarketValue({
 }: LiveMarketValueProps) {
   const { currency, currencySymbol } = useApp()
   const quote = useLiveQuote(ticker)
-  const livePrice = quote
-    ? currency === 'USD' ? quote.current_price_usd : quote.current_price
-    : null
+  const spots = quote ? quoteSpotPrices(quote) : null
+  const livePrice = spots ? (currency === 'USD' ? spots.usd : spots.eur) : null
   const fallback = currency === 'USD' ? fallbackUsd : fallbackEur
-  const value = livePrice !== null && Number.isFinite(livePrice)
-    ? livePrice * num(shares)
-    : num(fallback)
+  const value =
+    livePrice !== null && Number.isFinite(livePrice) && livePrice > 0
+      ? livePrice * num(shares)
+      : num(fallback)
   return (
     <span style={{ color: '#f1f5f9', ...style }}>
       {currencySymbol}{fmtMoney(value, decimals)}
@@ -293,12 +300,17 @@ export const LivePnL = memo(function LivePnL({
 
   let pnl: number
   if (quote) {
-    if (currency === 'USD') {
-      const rate = quote.eur_rate || 0.91
-      const avgCostUsd = num(avgCostEur) / rate
-      pnl = (quote.current_price_usd - avgCostUsd) * num(shares)
+    const spots = quoteSpotPrices(quote)
+    if (spots) {
+      if (currency === 'USD') {
+        const rate = quote.eur_rate || 0.91
+        const avgCostUsd = num(avgCostEur) / rate
+        pnl = (spots.usd - avgCostUsd) * num(shares)
+      } else {
+        pnl = (spots.eur - num(avgCostEur)) * num(shares)
+      }
     } else {
-      pnl = (quote.current_price - num(avgCostEur)) * num(shares)
+      pnl = num(currency === 'USD' ? fallbackUsd : fallbackEur)
     }
   } else {
     pnl = num(currency === 'USD' ? fallbackUsd : fallbackEur)
@@ -343,7 +355,8 @@ export const LivePnLPct = memo(function LivePnLPct({
 
   let pct: number
   if (quote && cost > 0) {
-    pct = ((quote.current_price - cost) / cost) * 100
+    const spots = quoteSpotPrices(quote)
+    pct = spots ? ((spots.eur - cost) / cost) * 100 : num(fallbackPct)
   } else {
     pct = num(fallbackPct)
   }
