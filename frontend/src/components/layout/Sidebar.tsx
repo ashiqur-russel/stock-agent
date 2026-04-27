@@ -123,6 +123,12 @@ export default function Sidebar() {
           onChange={(v) => setMarketRegion(v as 'DE' | 'US')}
           activeColor='#0ea5e9'
         />
+        <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+          {t('sidebar_app_version')}{' '}
+          <span style={{ color: '#64748b', fontFamily: 'ui-monospace, monospace' }}>
+            v{process.env.NEXT_PUBLIC_APP_VERSION ?? '—'}
+          </span>
+        </div>
         <button
           onClick={logout}
           style={{

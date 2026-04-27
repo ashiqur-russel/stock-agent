@@ -58,11 +58,13 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 
 CREATE TABLE IF NOT EXISTS user_settings (
-    user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    notify_email    TEXT,
-    email_alerts    INTEGER DEFAULT 1,
-    market_region   TEXT NOT NULL DEFAULT 'DE' CHECK (market_region IN ('DE', 'US')),
-    ai_chat_enabled INTEGER NOT NULL DEFAULT 1
+    user_id                    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    notify_email               TEXT,
+    email_alerts               INTEGER DEFAULT 1,
+    market_region              TEXT NOT NULL DEFAULT 'DE' CHECK (market_region IN ('DE', 'US')),
+    ai_chat_enabled            INTEGER NOT NULL DEFAULT 1,
+    whats_new_cleared_version  TEXT,
+    whats_new_read_version     TEXT
 );
 
 -- Groq API usage for fair-share quotas (per user, UTC day + rolling minute window)

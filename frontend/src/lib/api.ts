@@ -245,6 +245,28 @@ export const chat = {
   getQuota: () => apiFetch<GroqQuotaSnapshot>('/api/v1/chat/quota'),
 }
 
+export type WhatsNewPayload = {
+  title: string
+  features: string[]
+  fixes: string[]
+}
+
+export const release = {
+  getWhatsNew: (lang: 'en' | 'de') =>
+    apiFetch<{
+      app_version: string
+      should_show: boolean
+      release: WhatsNewPayload | null
+      cleared_up_to: string | null
+      read_up_to: string | null
+    }>(`/api/v1/release/whats-new?lang=${lang}`),
+  dismissWhatsNew: (body: { action: 'done' | 'suppress' }) =>
+    apiFetch<{ ok: boolean; app_version: string; action: string }>(
+      '/api/v1/release/whats-new/dismiss',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+}
+
 export async function postContact(body: { name: string; email: string; message: string }): Promise<{ message: string }> {
   const res = await fetch(`${API_URL}/contact`, {
     method: 'POST',

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getToken } from '@/lib/api'
 import Sidebar from '@/components/layout/Sidebar'
 import LiveAlertToast from '@/components/layout/LiveAlertToast'
+import WhatsNewModal from '@/components/release/WhatsNewModal'
 import { useAlertWS, type LiveAlert } from '@/hooks/useAlertWS'
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <LiveAlertToast toasts={toasts} onDismiss={dismissToast} />
+      <WhatsNewModal />
     </div>
   )
 }
