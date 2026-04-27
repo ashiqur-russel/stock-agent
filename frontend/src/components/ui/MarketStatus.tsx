@@ -27,7 +27,9 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
 
   const hoursText =
     marketRegion === 'US' ? t('market_hours_us_caption') : t('market_hours_de_caption')
-  const showDeQuoteNote = marketRegion === 'DE' && type !== 'crypto'
+  const dataDisclaimer =
+    marketRegion === 'US' ? t('market_hours_us_quote_note') : t('market_hours_de_quote_note')
+  const showDataDisclaimer = type !== 'crypto'
 
   if (type === 'crypto') {
     return (
@@ -47,7 +49,7 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
   }
 
   const liveClock = formatLiveSessionClock(now, marketRegion, lang)
-  const compactTitle = [showDeQuoteNote ? t('market_hours_de_quote_note') : '', t('market_live_clock_title')]
+  const compactTitle = [showDataDisclaimer ? dataDisclaimer : '', t('market_live_clock_title')]
     .filter(Boolean)
     .join('\n\n')
 
@@ -153,7 +155,7 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
           {t('market_hours_now')}: {liveClock}
         </span>
       </div>
-      {showDeQuoteNote && (
+      {showDataDisclaimer && (
         <p
           style={{
             margin: 0,
@@ -163,7 +165,7 @@ export default function MarketStatus({ type = 'stock', compact = false }: Props)
             maxWidth: 520,
           }}
         >
-          {t('market_hours_de_quote_note')}
+          {dataDisclaimer}
         </p>
       )}
     </div>

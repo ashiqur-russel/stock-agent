@@ -84,10 +84,12 @@ export const translations = {
     // Reference market for open/closed indicator (UI only; can move to user settings later)
     market_hours_de_caption: 'Mon–Fri 7:30 AM – 10:00 PM (Europe/Berlin)',
     market_hours_de_quote_note:
-      'With “Germany” as reference, the **main row** is the German Yahoo line (EUR, today % vs that listing’s previous close). A **second row** shows **US** USD price and % when the US symbol differs (pre / RTH / after — like finanzen.net). Plain tickers use .DE / .F / .MU when Yahoo has history, else the US line. No pre-market badge on the main row for DE. Lamp: weekdays 7:30–22:00 Berlin.',
+      'Prices and percentage changes may differ from other sites or your broker. We pull quotes from Yahoo Finance; with Germany as reference, European and US lines can show different moves.',
     market_hours_now: 'Now',
     market_live_clock_title: 'Live time in the reference timezone (Berlin or New York)',
     market_hours_us_caption: 'Mon–Fri 9:30 AM – 4:00 PM ET (NYSE, US)',
+    market_hours_us_quote_note:
+      'Prices and percentage changes may differ from other sites or your broker. We pull quotes from Yahoo Finance (US listing).',
 
     // Portfolio Card
     pc_market_value: 'Market Value',
@@ -462,10 +464,12 @@ export const translations = {
     db_go_transactions: 'Transaktion hinzufügen',
     market_hours_de_caption: 'Mo–Fr 7:30 – 22:00 Uhr (Europe/Berlin)',
     market_hours_de_quote_note:
-      'Bei Referenz „Deutschland“: **Hauptzeile** = deutsche Yahoo-Zeile (EUR, Heute-% vs. deren Vortagesschluss). **Zweite Zeile** = **US** in USD mit % (Vor-/Haupt-/Nachbörse), wenn der US-Ticker abweicht (wie finanzen.net). Einfache Ticker: .DE / .F / .MU bei brauchbarer Historie, sonst US-Zeile. Kein Vorbörse-Badge auf der Hauptzeile für DE. Ampel: Mo–Fr 7:30–22:00 Berlin.',
+      'Kurse und prozentuale Veränderungen können von anderen Anbietern oder Ihrem Broker abweichen. Daten von Yahoo Finance; bei Referenz „Deutschland“ können europäische und US-Notierung unterschiedlich ausschlagen.',
     market_hours_now: 'Jetzt',
     market_live_clock_title: 'Live-Uhr in der Referenzzeitzone (Berlin oder New York)',
     market_hours_us_caption: 'Mo–Fr 9:30 – 16:00 Uhr Ortszeit New York (NYSE)',
+    market_hours_us_quote_note:
+      'Kurse und prozentuale Veränderungen können von anderen Anbietern oder Ihrem Broker abweichen. Daten von Yahoo Finance (US-Notierung).',
 
     // Portfolio Card
     pc_market_value: 'Marktwert',
