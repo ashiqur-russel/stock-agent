@@ -187,10 +187,13 @@ def _round_quote_price(val: float) -> float:
 def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     """Latest quote. DE preference: try `.DE` / `.F` / `.MU` when Yahoo has usable history, else US symbol.
 
-    **US:** Session price and % follow Yahoo ``marketState`` and pre/regular/post change fields.
+    Session **price** follows Yahoo ``marketState`` (pre / regular / post live quote).
 
-    **DE:** During Yahoo ``PRE``, show **regular** (last close / regular quote), not extended-hours pre
-    price; **day_change_pct** is always vs **previous close**. No session-badge UI for DE (frontend).
+    **day_change_pct** (“today”) is **vs previous regular close** when that close is known:
+    ``(live_price - prev_close) / prev_close`` — above yesterday’s close → **+**, below → **-**.
+    If Yahoo omits previous close, we fall back to its session change fields.
+
+    **DE:** Same math; optional German listing for price only. Pre-market badge hidden for DE (frontend).
     """
     region = (display_region or "US").upper()
     if region not in ("DE", "US"):
@@ -276,10 +279,6 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
         primary_native = reg_n or fast_last
         quote_session = "regular" if primary_native is not None else "unknown"
 
-    if region == "DE" and market_state == "PRE":
-        # Germany reference: show last regular / previous close, not extended-hours pre price.
-        primary_native = reg_n or prev_close_n or fast_last
-
     if primary_native is None:
         primary_native = 0.0
 
@@ -290,26 +289,24 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
             return ((primary_native - prev_basis_native) / prev_basis_native) * 100
         return 0.0
 
-    if region == "DE":
-        day_change_pct = computed_day_pct()
-        if day_change_pct == 0.0 and prev_basis_native is None:
-            day_change_pct = reg_pct if reg_pct is not None else 0.0
-    elif quote_session == "after_hours":
-        day_change_pct = (
-            post_pct
-            if post_pct is not None
-            else (reg_pct if reg_pct is not None else computed_day_pct())
-        )
-    elif quote_session == "pre_market":
-        day_change_pct = (
-            pre_pct
-            if pre_pct is not None
-            else (reg_pct if reg_pct is not None else computed_day_pct())
-        )
-    elif quote_session == "closed":
-        day_change_pct = reg_pct if reg_pct is not None else computed_day_pct()
-    else:
-        day_change_pct = reg_pct if reg_pct is not None else computed_day_pct()
+    day_change_pct = computed_day_pct()
+    if prev_basis_native is None:
+        if quote_session == "after_hours":
+            day_change_pct = (
+                post_pct
+                if post_pct is not None
+                else (reg_pct if reg_pct is not None else day_change_pct)
+            )
+        elif quote_session == "pre_market":
+            day_change_pct = (
+                pre_pct
+                if pre_pct is not None
+                else (reg_pct if reg_pct is not None else day_change_pct)
+            )
+        elif quote_session == "closed":
+            day_change_pct = reg_pct if reg_pct is not None else day_change_pct
+        else:
+            day_change_pct = reg_pct if reg_pct is not None else day_change_pct
 
     day_change_pct = round(float(day_change_pct), 2)
 

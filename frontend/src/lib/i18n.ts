@@ -84,7 +84,7 @@ export const translations = {
     // Reference market for open/closed indicator (UI only; can move to user settings later)
     market_hours_de_caption: 'Mon–Fri 7:30 AM – 10:00 PM (Europe/Berlin)',
     market_hours_de_quote_note:
-      'With “Germany” as reference, prices show in EUR. During US pre-market (Yahoo PRE), the app shows the **regular / previous close** line, not extended-hours pre pricing; **% change is vs previous close** (no pre-market badge; after-hours hint still shown when relevant). US reference keeps full Yahoo session badges. German Yahoo ticker (.DE / .F / .MU) only when history is usable; else US symbol. Lamp: weekdays 7:30–22:00 Berlin.',
+      'With “Germany” as reference, prices show in EUR. **Today %** is vs **previous day’s close** from the same live quote (above close → +, below → −). Live price follows Yahoo’s session (pre / regular / after). No pre-market badge for DE; US keeps session badges. German Yahoo ticker (.DE / .F / .MU) only when history is usable; else US symbol. Lamp: weekdays 7:30–22:00 Berlin.',
     market_hours_now: 'Now',
     market_live_clock_title: 'Live time in the reference timezone (Berlin or New York)',
     market_hours_us_caption: 'Mon–Fri 9:30 AM – 4:00 PM ET (NYSE, US)',
@@ -461,7 +461,7 @@ export const translations = {
     db_go_transactions: 'Transaktion hinzufügen',
     market_hours_de_caption: 'Mo–Fr 7:30 – 22:00 Uhr (Europe/Berlin)',
     market_hours_de_quote_note:
-      'Bei Referenz „Deutschland“: Kurse in EUR. Bei US-Vorbörse (Yahoo PRE): **Haupthandel / Schluss Vortag**, kein Extended-Hours-Preis; **Prozent vs. Vortagesschluss** (kein Vorbörse-Badge; Nachbörse-Hinweis bleibt). US-Referenz: volle Yahoo-Session-Badges. Deutsches Yahoo-Symbol nur bei brauchbarer Historie, sonst US-Symbol. Ampel: Mo–Fr 7:30–22:00 Berlin.',
+      'Bei Referenz „Deutschland“: Kurse in EUR. **Heute-%** = Veränderung zum **Vortagesschluss** aus dem gleichen Live-Kurs (über Schluss → +, darunter → −). Kurs folgt Yahoo-Session (Vor-/Haupt-/Nachbörse). Kein Vorbörse-Badge für DE; US mit Session-Badges. Deutsches Yahoo-Symbol nur bei brauchbarer Historie, sonst US-Symbol. Ampel: Mo–Fr 7:30–22:00 Berlin.',
     market_hours_now: 'Jetzt',
     market_live_clock_title: 'Live-Uhr in der Referenzzeitzone (Berlin oder New York)',
     market_hours_us_caption: 'Mo–Fr 9:30 – 16:00 Uhr Ortszeit New York (NYSE)',
