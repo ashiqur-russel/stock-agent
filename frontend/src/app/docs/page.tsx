@@ -40,6 +40,7 @@ const NAV = [
     items: [
       { id: 'guide-auth', label: 'Registration & Login' },
       { id: 'guide-portfolio', label: 'Portfolio & Transactions' },
+      { id: 'guide-charts-next', label: 'Charts — next steps' },
       { id: 'guide-paper', label: 'Paper Trading' },
       { id: 'guide-chat', label: 'AI Chat' },
       { id: 'guide-alerts', label: 'Price Alerts' },
@@ -734,6 +735,28 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
             <P>Any Yahoo Finance symbol: <Code>AAPL</Code>, <Code>TSLA</Code>, <Code>SPY</Code>, <Code>BTC-USD</Code>, <Code>ETH-USD</Code>, <Code>IWDA.AS</Code>, etc.</P>
           </Section>
 
+          {/* ── Guide: Charts roadmap ── */}
+          <Section id='guide-charts-next' title='Charts — next steps'>
+            <P>
+              Portfolio cards use <strong style={{ color: '#f1f5f9' }}>lightweight-charts</strong> (TradingView open-source) with Yahoo OHLC. The chart follows your <strong style={{ color: '#f1f5f9' }}>currency</strong> toggle (<Code>currency=EUR|USD</Code> on the history API). Daily bars will not match a TradingView <strong style={{ color: '#f1f5f9' }}>1h</strong> chart pixel-for-pixel — different timeframe and feed semantics.
+            </P>
+            <H3>Planned / optional improvements</H3>
+            <ul style={{ color: '#94a3b8', lineHeight: 1.65, paddingLeft: 20, marginTop: 8 }}>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>Intraday interval UI</strong> — Expose <Code>interval</Code> (e.g. <Code>1h</Code>, <Code>15m</Code>) on <Code>CandlestickChart</Code> and pass it to <Code>GET /api/v1/market/history</Code>; respect Yahoo rate limits on short intervals.
+              </li>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>German listing OHLC</strong> — For symbols like <Code>BYND.DE</Code>, Yahoo may return prices already in EUR; <Code>fetch_ohlcv</Code> should detect listing currency and skip double conversion (USD spot × history).
+              </li>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>Historical FX</strong> — EUR series currently applies one spot EUR/USD rate to all bars; for accuracy, use per-bar FX or keep native USD server-side and convert at display time.
+              </li>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>Vendor tick stream</strong> — For Webull/TradingView-grade live candles, add a paid market-data WebSocket (e.g. Polygon, Finnhub) — see <a href='#realtime-data' style={{ color: '#60a5fa' }}>Real-Time Data &amp; Polling</a>.
+              </li>
+            </ul>
+          </Section>
+
           {/* ── Guide: Paper ── */}
           <Section id='guide-paper' title='Paper Trading'>
             <P>Paper trading gives you a virtual <strong style={{ color: '#f1f5f9' }}>€100,000</strong> account to practise trading with real live prices. No real money is involved.</P>
@@ -934,10 +957,10 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
   "eur_rate": 0.91
 }`}</Code>
 
-            <Endpoint method='GET' path='/api/v1/market/history/{ticker}?period=3mo&interval=1d' auth desc='OHLCV candlestick data. period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y. interval: 1m, 5m, 1h, 1d, 1wk.' />
+            <Endpoint method='GET' path='/api/v1/market/history/{ticker}?period=3mo&interval=1d&currency=EUR' auth desc='OHLCV candlestick data. period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y. interval: 1m, 5m, 1h, 1d, 1wk. currency: EUR (Yahoo USD × spot rate) or USD (raw Yahoo USD for US listings).' />
             <Code block>{`[
   {
-    "date": "2025-01-15",
+    "time": "2025-01-15",
     "open": 182.10,
     "high": 185.80,
     "low": 181.50,
