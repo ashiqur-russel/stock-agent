@@ -10,6 +10,15 @@ export type QuoteSession =
   | 'closed'
   | 'unknown'
 
+/** US parent line when DE mode uses a German Yahoo symbol (finanzen.net-style). */
+export interface UsListingQuote {
+  ticker: string
+  current_price_usd: number
+  day_change_pct: number
+  quote_session?: QuoteSession | string | null
+  market_state?: string | null
+}
+
 export interface LiveQuote {
   ticker: string
   current_price: number
@@ -25,6 +34,7 @@ export interface LiveQuote {
   post_market_price_usd?: number | null
   regular_market_price?: number | null
   regular_market_price_usd?: number | null
+  us_listing?: UsListingQuote | null
 }
 
 type Listener = () => void
@@ -114,18 +124,21 @@ class PriceStream {
       try {
         const data = JSON.parse(event.data) as
           | { type: 'connected' }
-          | { type: 'prices'; quotes: Omit<LiveQuote, 'ts'>[] }
+          | { type: 'prices'; quotes: (Omit<LiveQuote, 'ts'> & { us_listing?: UsListingQuote | null })[] }
         if (data.type !== 'prices') return
         const ts = Date.now()
         for (const q of data.quotes) {
           const ticker = q.ticker.toUpperCase()
           const prev = this.quotes.get(ticker)
+          const usEq =
+            JSON.stringify(prev?.us_listing ?? null) === JSON.stringify(q.us_listing ?? null)
           if (
             prev &&
             prev.current_price === q.current_price &&
             prev.day_change_pct === q.day_change_pct &&
             prev.quote_session === q.quote_session &&
-            prev.regular_market_price === q.regular_market_price
+            prev.regular_market_price === q.regular_market_price &&
+            usEq
           ) {
             continue
           }

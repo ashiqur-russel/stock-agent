@@ -188,6 +188,7 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
                 "post_market_price_usd": quote.get("post_market_price_usd"),
                 "regular_market_price": quote.get("regular_market_price"),
                 "regular_market_price_usd": quote.get("regular_market_price_usd"),
+                "us_listing": quote.get("us_listing"),
                 "signal": signals.get(ticker),
             }
         )

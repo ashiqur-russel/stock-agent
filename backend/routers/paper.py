@@ -107,6 +107,7 @@ def get_account(
                 "pnl_usd": pnl_usd,
                 "pnl_pct": pnl_pct,
                 "day_change_pct": quote.get("day_change_pct", 0),
+                "us_listing": quote.get("us_listing"),
                 "realized_pnl": round(h.get("realized_pnl", 0), 2),
             }
         )

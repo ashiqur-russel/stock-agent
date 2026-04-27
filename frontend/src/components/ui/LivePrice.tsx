@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { useApp, priceDecimalsForValue } from '@/contexts/AppContext'
 import type { TranslationKey } from '@/lib/i18n'
-import { useLiveQuote } from '@/hooks/usePriceStream'
+import { useLiveQuote, type UsListingQuote } from '@/hooks/usePriceStream'
 
 const num = (v: unknown): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : 0
@@ -94,8 +94,56 @@ export const LivePrice = memo(LivePriceImpl)
 const SESSION_LABEL: Partial<Record<string, TranslationKey>> = {
   pre_market: 'pc_quote_session_pre',
   after_hours: 'pc_quote_session_after',
+  regular: 'pc_quote_session_regular',
   closed: 'pc_quote_session_closed',
 }
+
+/** Second row: US Yahoo USD price + % (pre/RTH/after) when DE mode uses a German listing. */
+export const LiveUsListingRow = memo(function LiveUsListingRow({
+  ticker,
+  fallback,
+}: {
+  ticker: string
+  fallback?: UsListingQuote | null
+}) {
+  const { t, marketRegion } = useApp()
+  const quote = useLiveQuote(ticker)
+  const us = quote?.us_listing ?? fallback ?? null
+  if (marketRegion !== 'DE' || !us || !Number.isFinite(us.current_price_usd)) return null
+
+  const dec = priceDecimalsForValue(us.current_price_usd)
+  const pct = Number(us.day_change_pct)
+  const pctOk = Number.isFinite(pct)
+  const sess = typeof us.quote_session === 'string' ? SESSION_LABEL[us.quote_session] : undefined
+
+  return (
+    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, lineHeight: 1.4 }}>
+      <span style={{ color: '#64748b', fontWeight: 600 }}>{t('pc_us_quote_prefix')}</span>
+      <span style={{ color: '#64748b' }}>{' · '}</span>
+      <span style={{ color: '#e2e8f0' }}>
+        $
+        {us.current_price_usd.toLocaleString(undefined, {
+          minimumFractionDigits: dec,
+          maximumFractionDigits: dec,
+        })}
+      </span>
+      {pctOk && (
+        <>
+          <span style={{ color: '#64748b' }}>{' · '}</span>
+          <span style={{ color: pct >= 0 ? '#22c55e' : '#ef4444' }}>
+            {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
+          </span>
+        </>
+      )}
+      {sess && (
+        <>
+          <span style={{ color: '#64748b' }}>{' · '}</span>
+          <span style={{ color: '#a78bfa' }}>{t(sess)}</span>
+        </>
+      )}
+    </div>
+  )
+})
 
 /** Pre-market / after-hours / closed badge + optional regular-session reference price (from Yahoo). */
 export const LiveQuoteExtendedHint = memo(function LiveQuoteExtendedHint({

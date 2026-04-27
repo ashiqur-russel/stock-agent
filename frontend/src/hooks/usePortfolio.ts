@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { portfolio } from '@/lib/api'
+import type { UsListingQuote } from '@/hooks/usePriceStream'
 
 export interface Holding {
   ticker: string
@@ -26,6 +27,7 @@ export interface Holding {
   post_market_price_usd?: number | null
   regular_market_price?: number | null
   regular_market_price_usd?: number | null
+  us_listing?: UsListingQuote | null
   signal?: SwingSignal | null
 }
 

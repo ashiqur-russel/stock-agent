@@ -84,7 +84,7 @@ export const translations = {
     // Reference market for open/closed indicator (UI only; can move to user settings later)
     market_hours_de_caption: 'Mon–Fri 7:30 AM – 10:00 PM (Europe/Berlin)',
     market_hours_de_quote_note:
-      'With “Germany” as reference, prices show in EUR (US Yahoo line for plain tickers like BYND so **today % matches US session**; use **BYND.DE** in the ticker if you want Xetra’s own close/%). **Today %** vs previous regular close when Yahoo provides it. No pre-market badge for DE; US keeps session badges. Lamp: weekdays 7:30–22:00 Berlin.',
+      'With “Germany” as reference, the **main row** is the German Yahoo line (EUR, today % vs that listing’s previous close). A **second row** shows **US** USD price and % when the US symbol differs (pre / RTH / after — like finanzen.net). Plain tickers use .DE / .F / .MU when Yahoo has history, else the US line. No pre-market badge on the main row for DE. Lamp: weekdays 7:30–22:00 Berlin.',
     market_hours_now: 'Now',
     market_live_clock_title: 'Live time in the reference timezone (Berlin or New York)',
     market_hours_us_caption: 'Mon–Fri 9:30 AM – 4:00 PM ET (NYSE, US)',
@@ -99,6 +99,7 @@ export const translations = {
     pc_quote_session_after: 'After-hours',
     pc_quote_session_regular: 'Regular session',
     pc_quote_session_closed: 'Market closed',
+    pc_us_quote_prefix: 'US',
     pc_regular_reference: 'Regular-hours last',
     pc_shares: 'Shares',
     pc_ask_ai: 'Ask AI',
@@ -461,7 +462,7 @@ export const translations = {
     db_go_transactions: 'Transaktion hinzufügen',
     market_hours_de_caption: 'Mo–Fr 7:30 – 22:00 Uhr (Europe/Berlin)',
     market_hours_de_quote_note:
-      'Bei Referenz „Deutschland“: Kurse in EUR (für einfache Ticker wie BYND die **US-Yahoo-Zeile**, damit **Heute-% zur US-Session** passt; für reines Xetra: **BYND.DE** im Symbol). **Heute-%** vs. regulärer Vortagesschluss, wenn Yahoo ihn liefert. Kein Vorbörse-Badge für DE; US mit Badges. Ampel: Mo–Fr 7:30–22:00 Berlin.',
+      'Bei Referenz „Deutschland“: **Hauptzeile** = deutsche Yahoo-Zeile (EUR, Heute-% vs. deren Vortagesschluss). **Zweite Zeile** = **US** in USD mit % (Vor-/Haupt-/Nachbörse), wenn der US-Ticker abweicht (wie finanzen.net). Einfache Ticker: .DE / .F / .MU bei brauchbarer Historie, sonst US-Zeile. Kein Vorbörse-Badge auf der Hauptzeile für DE. Ampel: Mo–Fr 7:30–22:00 Berlin.',
     market_hours_now: 'Jetzt',
     market_live_clock_title: 'Live-Uhr in der Referenzzeitzone (Berlin oder New York)',
     market_hours_us_caption: 'Mo–Fr 9:30 – 16:00 Uhr Ortszeit New York (NYSE)',
@@ -476,6 +477,7 @@ export const translations = {
     pc_quote_session_after: 'Nachbörse',
     pc_quote_session_regular: 'Haupthandel',
     pc_quote_session_closed: 'Börse geschlossen',
+    pc_us_quote_prefix: 'US',
     pc_regular_reference: 'Letzter RTH-Kurs',
     pc_shares: 'Anteile',
     pc_ask_ai: 'KI fragen',

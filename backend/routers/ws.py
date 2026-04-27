@@ -318,6 +318,7 @@ async def _broadcast_prices(
                 "post_market_price_usd": quote.get("post_market_price_usd"),
                 "regular_market_price": quote.get("regular_market_price"),
                 "regular_market_price_usd": quote.get("regular_market_price_usd"),
+                "us_listing": quote.get("us_listing"),
             }
         )
     await websocket.send_json(

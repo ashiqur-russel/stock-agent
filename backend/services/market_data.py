@@ -133,10 +133,16 @@ def _german_yahoo_symbol_candidates(base_ticker: str) -> list[str]:
     return [f"{b}.DE", f"{b}.F", f"{b}.MU"]
 
 
-def _explicit_german_yahoo_listing(ticker_u: str) -> bool:
-    """User (or DB) used an explicit German Yahoo suffix; otherwise we quote the US line in DE mode."""
+def _canonical_us_equity_symbol(ticker_u: str) -> str | None:
+    """Strip German Yahoo suffix for US parent (BYND.DE → BYND). None = skip US overlay (e.g. crypto)."""
     b = ticker_u.upper().strip()
-    return any(b.endswith(suf) for suf in (".DE", ".F", ".MU", ".BE", ".HA", ".SG", ".VI"))
+    if not b or "-" in b:
+        return None
+    for suf in (".DE", ".F", ".MU", ".BE", ".HA", ".SG", ".VI"):
+        if b.endswith(suf):
+            base = b[: -len(suf)]
+            return base if base else None
+    return b
 
 
 def _german_listing_has_usable_data(sym: str) -> bool:
@@ -190,7 +196,7 @@ def _round_quote_price(val: float) -> float:
     return round(val, 2)
 
 
-def fetch_quote(ticker: str, display_region: str = "US") -> dict:
+def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: bool = True) -> dict:
     """Latest quote. DE preference: try `.DE` / `.F` / `.MU` when Yahoo has usable history, else US symbol.
 
     Session **price** follows Yahoo ``marketState`` (pre / regular / post live quote).
@@ -199,9 +205,9 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     ``(live_price - prev_close) / prev_close`` — above yesterday’s close → **+**, below → **-**.
     If Yahoo omits previous close, we fall back to its session change fields.
 
-    **DE:** Plain tickers (e.g. ``BYND``) use the **US Yahoo line** converted to EUR so **today %**
-    matches US pre/RTH/post. For **Xetra / German line** prices and %, use an explicit suffix
-    (``BYND.DE``, ``.F``, ``.MU``, …). Pre-market badge: DE hides pre only (frontend).
+    **DE + German primary** (e.g. ``BYND`` → ``BYND.DE``): response may include **``us_listing``** —
+    the US parent symbol’s USD price and % (pre/RTH/after) like finanzen.net’s second row.
+    ``nest_us_overlay=False`` avoids recursion when fetching that US line internally.
     """
     region = (display_region or "US").upper()
     if region not in ("DE", "US"):
@@ -213,8 +219,6 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     use_xetra = False
     quote_sym = ticker_u
     if region == "DE":
-        if not _explicit_german_yahoo_listing(ticker_u):
-            return fetch_quote(ticker_u, "US")
         quote_sym, use_xetra = _pick_de_quote_symbol(ticker_u)
 
     t = yf.Ticker(quote_sym)
@@ -334,7 +338,7 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
     post_eur, post_usd_o = dual(post_n)
     reg_eur, reg_usd_o = dual(reg_n)
 
-    return {
+    out: dict = {
         "ticker": ticker_u,
         "current_price": ce or 0.0,
         "current_price_usd": cu or 0.0,
@@ -352,6 +356,23 @@ def fetch_quote(ticker: str, display_region: str = "US") -> dict:
         "regular_market_price_usd": reg_usd_o,
         "quote_listing": "XETRA" if use_xetra else "US",
     }
+
+    if nest_us_overlay and region == "DE":
+        us_sym = _canonical_us_equity_symbol(ticker_u)
+        if us_sym and quote_sym != us_sym:
+            try:
+                usq = fetch_quote(us_sym, "US", nest_us_overlay=False)
+                out["us_listing"] = {
+                    "ticker": us_sym,
+                    "current_price_usd": usq.get("current_price_usd", 0),
+                    "day_change_pct": usq.get("day_change_pct", 0),
+                    "quote_session": usq.get("quote_session"),
+                    "market_state": usq.get("market_state"),
+                }
+            except Exception:
+                pass
+
+    return out
 
 
 def fetch_news(ticker: str) -> list[dict]:
