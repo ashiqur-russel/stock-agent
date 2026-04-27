@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useApp, priceDecimalsForValue } from '@/contexts/AppContext'
 import { market } from '@/lib/api'
 import ModalShell from '@/components/ui/ModalShell'
-import CandlestickChart from '@/components/charts/CandlestickChart'
+import CandlestickChart, { type OHLCVBar } from '@/components/charts/CandlestickChart'
 import { DetailPanelTile } from '@/components/stock/DetailPanelTile'
 import { TickerNewsRow } from '@/components/stock/TickerNewsRow'
 import { LiveDayChange, LivePrice, LiveQuoteExtendedHint, LiveUsListingRow } from '@/components/ui/LivePrice'
@@ -97,28 +97,49 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
   const [quote, setQuote] = useState<StockQuoteDetail | null>(null)
   const [news, setNews] = useState<NewsItem[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [chartBars, setChartBars] = useState<OHLCVBar[] | null>(null)
+  const [chartLoading, setChartLoading] = useState(false)
+  const detailTarget = useRef({ ticker: null as string | null, period: '3mo', currency: 'EUR' as 'EUR' | 'USD' })
+  detailTarget.current = { ticker, period, currency }
 
   const load = useCallback(async () => {
-    if (!ticker) return
+    const { ticker: tk, period: per, currency: ccy } = detailTarget.current
+    if (!tk) return
+    const snap = { tk, per, ccy }
     setError(null)
+    setChartLoading(true)
     try {
-      const [q, n] = await Promise.all([
-        market.quote(ticker) as Promise<StockQuoteDetail>,
-        market.news(ticker) as Promise<NewsItem[]>,
+      const [q, n, h] = await Promise.all([
+        market.quote(tk) as Promise<StockQuoteDetail>,
+        market.news(tk) as Promise<NewsItem[]>,
+        market.history(tk, per, ccy) as Promise<OHLCVBar[]>,
       ])
+      const cur = detailTarget.current
+      if (cur.ticker !== snap.tk || cur.period !== snap.per || cur.currency !== snap.ccy) return
       setQuote(q)
       setNews(Array.isArray(n) ? n : [])
+      setChartBars(Array.isArray(h) ? h : [])
     } catch {
+      const cur = detailTarget.current
+      if (cur.ticker !== snap.tk || cur.period !== snap.per || cur.currency !== snap.ccy) return
       setQuote(null)
       setNews([])
+      setChartBars(null)
       setError(t('sdm_load_error'))
+    } finally {
+      const cur = detailTarget.current
+      if (cur.ticker === snap.tk && cur.period === snap.per && cur.currency === snap.ccy) {
+        setChartLoading(false)
+      }
     }
-  }, [ticker, t])
+  }, [t])
 
   useEffect(() => {
     if (!ticker) {
       setQuote(null)
       setNews([])
+      setChartBars(null)
+      setChartLoading(false)
       setError(null)
       setMaximized(false)
       setPeriod('3mo')
@@ -129,7 +150,7 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
     load()
     const id = setInterval(load, 30_000)
     return () => clearInterval(id)
-  }, [ticker, load])
+  }, [ticker, period, currency, load])
 
   if (!ticker) return null
 
@@ -308,7 +329,13 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
           </button>
         ))}
       </div>
-      <CandlestickChart ticker={ticker} period={period} height={chartH} />
+      <CandlestickChart
+        ticker={ticker}
+        period={period}
+        height={chartH}
+        data={chartBars}
+        loading={chartLoading}
+      />
     </section>
   )
 
