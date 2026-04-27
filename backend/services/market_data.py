@@ -358,12 +358,12 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
 
     prev_basis_native = prev_close_n if prev_close_n and prev_close_n > 0 else None
 
-    # Fix 1: for German listings, prefer history-derived previous close over
-    # regularMarketPreviousClose which can be stale for illiquid DE tickers.
-    if use_xetra:
-        hist_prev = _history_prev_close(t, market_state)
-        if hist_prev is not None:
-            prev_basis_native = hist_prev
+    # Always prefer history-derived previous close over regularMarketPreviousClose.
+    # Yahoo's info dict can return a stale value for any thinly-traded ticker
+    # (German listings OR US penny stocks like BYND) — history() is more reliable.
+    hist_prev = _history_prev_close(t, market_state)
+    if hist_prev is not None:
+        prev_basis_native = hist_prev
 
     def computed_day_pct() -> float:
         if prev_basis_native:
