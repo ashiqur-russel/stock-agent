@@ -8,6 +8,7 @@ from auth.service import decode_jwt
 from services.market_data import fetch_quote
 from services.portfolio_service import get_portfolio_for_user
 from services.technical import run_swing_analysis
+from services.user_prefs import get_user_market_region
 
 router = APIRouter()
 
@@ -153,9 +154,10 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
 
             now_loop = asyncio.get_event_loop().time()
 
+            display_region = await asyncio.to_thread(get_user_market_region, user_id)
             # Fetch all live quotes in parallel
             quotes = await asyncio.gather(
-                *[asyncio.to_thread(fetch_quote, t) for t in tickers],
+                *[asyncio.to_thread(fetch_quote, t, display_region) for t in tickers],
                 return_exceptions=True,
             )
 
@@ -285,11 +287,16 @@ async def ws_alerts(websocket: WebSocket, token: str = Query(...)):
 # ---------------------------------------------------------------------------
 
 
-async def _broadcast_prices(websocket: WebSocket, tickers: list[str], market_open: bool) -> None:
+async def _broadcast_prices(
+    websocket: WebSocket,
+    tickers: list[str],
+    market_open: bool,
+    display_region: str = "US",
+) -> None:
     if not tickers:
         return
     quotes = await asyncio.gather(
-        *[asyncio.to_thread(fetch_quote, t) for t in tickers],
+        *[asyncio.to_thread(fetch_quote, t, display_region) for t in tickers],
         return_exceptions=True,
     )
     payload = []
@@ -303,6 +310,14 @@ async def _broadcast_prices(websocket: WebSocket, tickers: list[str], market_ope
                 "current_price_usd": quote.get("current_price_usd", 0),
                 "day_change_pct": quote.get("day_change_pct", 0),
                 "eur_rate": quote.get("eur_rate", 0.91),
+                "quote_session": quote.get("quote_session"),
+                "market_state": quote.get("market_state"),
+                "pre_market_price": quote.get("pre_market_price"),
+                "pre_market_price_usd": quote.get("pre_market_price_usd"),
+                "post_market_price": quote.get("post_market_price"),
+                "post_market_price_usd": quote.get("post_market_price_usd"),
+                "regular_market_price": quote.get("regular_market_price"),
+                "regular_market_price_usd": quote.get("regular_market_price_usd"),
             }
         )
     await websocket.send_json(
@@ -318,12 +333,13 @@ async def _broadcast_prices(websocket: WebSocket, tickers: list[str], market_ope
 @router.websocket("/api/v1/ws/prices")
 async def ws_prices(websocket: WebSocket, token: str = Query(...)):
     try:
-        decode_jwt(token)
+        user = decode_jwt(token)
     except HTTPException:
         await websocket.close(code=4001)
         return
 
     await websocket.accept()
+    user_id = user["user_id"]
 
     subscribed: set[str] = set()
     pending_change = asyncio.Event()
@@ -388,7 +404,8 @@ async def ws_prices(websocket: WebSocket, token: str = Query(...)):
 
             if tickers:
                 try:
-                    await _broadcast_prices(websocket, tickers, us_market_open)
+                    display_region = await asyncio.to_thread(get_user_market_region, user_id)
+                    await _broadcast_prices(websocket, tickers, us_market_open, display_region)
                 except Exception as e:
                     if _is_closed_socket_error(e):
                         break  # client gone, exit cleanly

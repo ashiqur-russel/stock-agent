@@ -10,6 +10,7 @@ import CandlestickChart from '@/components/charts/CandlestickChart'
 import { isStockMarketOpen } from '@/lib/marketHours'
 import {
   LivePrice,
+  LiveQuoteExtendedHint,
   LiveDayChange,
   LiveMarketValue,
   LivePnL,
@@ -236,12 +237,13 @@ function PaperContent() {
                       <td style={{ padding: '10px', color: '#94a3b8' }}>
                         <AmountLocale eur={h.avg_cost} usd={h.avg_cost / 0.91} decimals={2} />
                       </td>
-                      <td style={{ padding: '10px', color: '#f1f5f9' }}>
+                      <td style={{ padding: '10px', color: '#f1f5f9', verticalAlign: 'top' }}>
                         <LivePrice
                           ticker={h.ticker}
                           initialPriceEur={h.current_price}
                           initialPriceUsd={h.current_price_usd}
                         />
+                        <LiveQuoteExtendedHint ticker={h.ticker} />
                       </td>
                       <td style={{ padding: '10px', color: '#f1f5f9', fontWeight: 600 }}>
                         <LiveMarketValue

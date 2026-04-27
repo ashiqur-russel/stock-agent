@@ -10,6 +10,7 @@ import {
   LiveMarketValue,
   LivePnL,
   LivePnLPct,
+  LiveQuoteExtendedHint,
 } from '@/components/ui/LivePrice'
 import SignalBadge from '@/components/ui/SignalBadge'
 import CandlestickChart from '@/components/charts/CandlestickChart'
@@ -81,6 +82,7 @@ function PortfolioCardImpl({ holding }: Props) {
               initialPriceEur={holding.current_price}
               initialPriceUsd={holding.current_price_usd}
             />
+            <LiveQuoteExtendedHint ticker={holding.ticker} />
           </div>
         </div>
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>

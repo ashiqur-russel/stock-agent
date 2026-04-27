@@ -82,7 +82,11 @@ export const translations = {
     db_refresh: 'Refresh',
     db_go_transactions: 'Add Transaction',
     // Reference market for open/closed indicator (UI only; can move to user settings later)
-    market_hours_de_caption: 'Mon–Fri 7:30 AM – 11:00 PM (Europe/Berlin)',
+    market_hours_de_caption: 'Mon–Fri 7:30 AM – 10:00 PM (Europe/Berlin)',
+    market_hours_de_quote_note:
+      'With “Germany” as reference, prices show in EUR (converted when the quote is in USD). Session, pre/regular/after prices, and % change follow Yahoo Finance for that symbol (same fields as the US reference). We only use a German Yahoo ticker (.DE / .F / .MU) when Yahoo returns usable daily history; otherwise the US symbol is used. Lamp: weekdays 7:30–22:00 Berlin.',
+    market_hours_now: 'Now',
+    market_live_clock_title: 'Live time in the reference timezone (Berlin or New York)',
     market_hours_us_caption: 'Mon–Fri 9:30 AM – 4:00 PM ET (NYSE, US)',
 
     // Portfolio Card
@@ -91,6 +95,11 @@ export const translations = {
     pc_realized: 'Realized P&L',
     pc_avg_cost: 'Avg Cost',
     pc_current: 'Current Price',
+    pc_quote_session_pre: 'Pre-market',
+    pc_quote_session_after: 'After-hours',
+    pc_quote_session_regular: 'Regular session',
+    pc_quote_session_closed: 'Market closed',
+    pc_regular_reference: 'Regular-hours last',
     pc_shares: 'Shares',
     pc_ask_ai: 'Ask AI',
     pc_analyze: 'Analyze',
@@ -450,7 +459,11 @@ export const translations = {
     db_add_first: 'Fügen Sie Ihre erste Transaktion hinzu.',
     db_refresh: 'Aktualisieren',
     db_go_transactions: 'Transaktion hinzufügen',
-    market_hours_de_caption: 'Mo–Fr 7:30 – 23:00 Uhr (Europe/Berlin)',
+    market_hours_de_caption: 'Mo–Fr 7:30 – 22:00 Uhr (Europe/Berlin)',
+    market_hours_de_quote_note:
+      'Bei Referenz „Deutschland“: Kurse in EUR (Umrechnung bei USD-Quotes). Session, Vorbörse/Haupthandel/Nachbörse und Prozent wie bei Yahoo Finance — gleiche Logik wie US-Referenz. Deutsches Yahoo-Symbol (.DE / .F / .MU) nur bei brauchbarer Tages-Historie, sonst US-Symbol. Ampel: Mo–Fr 7:30–22:00 Berlin.',
+    market_hours_now: 'Jetzt',
+    market_live_clock_title: 'Live-Uhr in der Referenzzeitzone (Berlin oder New York)',
     market_hours_us_caption: 'Mo–Fr 9:30 – 16:00 Uhr Ortszeit New York (NYSE)',
 
     // Portfolio Card
@@ -459,6 +472,11 @@ export const translations = {
     pc_realized: 'Realisierter G/V',
     pc_avg_cost: 'Ø Einstandspreis',
     pc_current: 'Aktueller Kurs',
+    pc_quote_session_pre: 'Vorbörse',
+    pc_quote_session_after: 'Nachbörse',
+    pc_quote_session_regular: 'Haupthandel',
+    pc_quote_session_closed: 'Börse geschlossen',
+    pc_regular_reference: 'Letzter RTH-Kurs',
     pc_shares: 'Anteile',
     pc_ask_ai: 'KI fragen',
     pc_analyze: 'Analysieren',

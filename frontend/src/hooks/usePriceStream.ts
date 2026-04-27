@@ -3,6 +3,13 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { getToken, API_URL } from '@/lib/api'
 
+export type QuoteSession =
+  | 'pre_market'
+  | 'after_hours'
+  | 'regular'
+  | 'closed'
+  | 'unknown'
+
 export interface LiveQuote {
   ticker: string
   current_price: number
@@ -10,6 +17,14 @@ export interface LiveQuote {
   day_change_pct: number
   eur_rate: number
   ts: number
+  quote_session?: QuoteSession | string
+  market_state?: string | null
+  pre_market_price?: number | null
+  pre_market_price_usd?: number | null
+  post_market_price?: number | null
+  post_market_price_usd?: number | null
+  regular_market_price?: number | null
+  regular_market_price_usd?: number | null
 }
 
 type Listener = () => void
@@ -105,7 +120,13 @@ class PriceStream {
         for (const q of data.quotes) {
           const ticker = q.ticker.toUpperCase()
           const prev = this.quotes.get(ticker)
-          if (prev && prev.current_price === q.current_price && prev.day_change_pct === q.day_change_pct) {
+          if (
+            prev &&
+            prev.current_price === q.current_price &&
+            prev.day_change_pct === q.day_change_pct &&
+            prev.quote_session === q.quote_session &&
+            prev.regular_market_price === q.regular_market_price
+          ) {
             continue
           }
           this.quotes.set(ticker, { ...q, ticker, ts })

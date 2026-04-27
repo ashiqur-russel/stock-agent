@@ -5,6 +5,7 @@ from threading import Lock
 from database import get_connection
 from services.market_data import fetch_quote
 from services.technical import run_swing_analysis
+from services.user_prefs import get_user_market_region
 
 # In-memory cache for swing-setup signals.
 #
@@ -149,9 +150,10 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
             for tk, sig in zip(tickers, pool.map(_signal_for, tickers)):
                 signals[tk] = sig
 
+    display_region = get_user_market_region(user_id)
     result = []
     for ticker, h in holdings.items():
-        quote = fetch_quote(ticker)
+        quote = fetch_quote(ticker, display_region=display_region)
         # current_price from fetch_quote is already in EUR
         current_price_eur = quote["current_price"]
         shares_held = h["shares_held"]
@@ -178,6 +180,14 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
                 "day_change_pct": quote["day_change_pct"],
                 "currency": "EUR",
                 "eur_rate": quote.get("eur_rate", 0.92),
+                "quote_session": quote.get("quote_session"),
+                "market_state": quote.get("market_state"),
+                "pre_market_price": quote.get("pre_market_price"),
+                "pre_market_price_usd": quote.get("pre_market_price_usd"),
+                "post_market_price": quote.get("post_market_price"),
+                "post_market_price_usd": quote.get("post_market_price_usd"),
+                "regular_market_price": quote.get("regular_market_price"),
+                "regular_market_price_usd": quote.get("regular_market_price_usd"),
                 "signal": signals.get(ticker),
             }
         )
