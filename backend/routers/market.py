@@ -18,9 +18,16 @@ def get_history(
     ticker: str,
     period: str = Query("3mo"),
     interval: str = Query("1d"),
+    currency: str = Query(
+        "EUR",
+        description="EUR: convert Yahoo USD OHLC with spot rate; USD: raw Yahoo USD (matches US portals better)",
+    ),
     user=Depends(get_current_user),
 ):
-    return market_data.fetch_ohlcv(ticker.upper(), period, interval)
+    ccy = (currency or "EUR").upper()
+    if ccy not in ("EUR", "USD"):
+        ccy = "EUR"
+    return market_data.fetch_ohlcv(ticker.upper(), period, interval, target_ccy=ccy)
 
 
 @router.get("/news/{ticker}")

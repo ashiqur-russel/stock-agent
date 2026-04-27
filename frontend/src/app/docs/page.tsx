@@ -40,9 +40,10 @@ const NAV = [
     items: [
       { id: 'guide-auth', label: 'Registration & Login' },
       { id: 'guide-portfolio', label: 'Portfolio & Transactions' },
+      { id: 'guide-charts-next', label: 'Charts — next steps' },
       { id: 'guide-paper', label: 'Paper Trading' },
       { id: 'guide-chat', label: 'AI Chat' },
-      { id: 'guide-alerts', label: 'Price Alerts' },
+      { id: 'guide-alerts', label: 'Swing signal alerts' },
     ],
   },
   {
@@ -298,7 +299,7 @@ export default function DocsPage() {
                 { icon: '📊', t: 'Live Portfolio', d: 'Real-time holdings with P&L calculated from transactions' },
                 { icon: '🤖', t: 'AI Advisor', d: 'Streaming analysis using live data tools' },
                 { icon: '📝', t: 'Paper Trading', d: 'Virtual €100k account with live prices' },
-                { icon: '🔔', t: 'Price Alerts', d: 'WebSocket push + email notifications' },
+                { icon: '🔔', t: 'Swing signal alerts', d: 'Email, WebSocket toasts, and browser push when a setup changes' },
                 { icon: '🌍', t: 'EUR / USD', d: 'Instant currency toggle across all views' },
                 { icon: '🔒', t: 'Auth + JWT', d: 'Email verification, bcrypt, 30-day tokens' },
               ].map((f) => (
@@ -347,7 +348,7 @@ export default function DocsPage() {
               ))}
             </div>
             <P>You also need a <strong style={{ color: '#f1f5f9' }}>Groq API key</strong> (free at <code style={{ color: '#67e8f9' }}>console.groq.com</code>) to power the AI chat.</P>
-            <P>Optional: a Gmail App Password for email verification and price alert emails.</P>
+            <P>Optional: a Gmail App Password for email verification and swing-signal alert emails.</P>
             <Note>
               Open source contributors: see <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong> in the repository root for <Code>pre-commit</Code> setup, branch names (e.g. <Code>feature/SA-42-description</Code>), commit subjects (<Code>[SA-42] fix: short summary</Code>), and pull request expectations.
             </Note>
@@ -630,10 +631,10 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 └── services/
     ├── market_data.py         # fetch_quote(), fetch_ohlcv(), fetch_news() via yfinance
     ├── technical.py           # compute_indicators(), run_swing_analysis()
-    ├── portfolio_service.py   # get_portfolio_for_user(), add/delete transaction
+    ├── portfolio_service.py   # get_portfolio_for_user() + per-ticker swing signal (cache + signal_history fallback)
     ├── agent_service.py       # system prompt, tool dispatcher, stream_agent_response()
     ├── ai_quota.py            # Groq fair-share caps, usage aggregates, quota snapshot
-    └── alert_service.py       # check_all_portfolios() — runs every 30 min`}</Code>
+    └── alert_service.py       # check_all_portfolios() — swing signal scan every ALERT_INTERVAL_MINUTES`}</Code>
           </Section>
 
           {/* ── Frontend structure ── */}
@@ -662,15 +663,22 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 │   │   ├── AuthGuard.tsx      # JWT check → redirect, wraps WebSocket listener
 │   │   └── LiveAlertToast.tsx # Bottom-right toast notifications
 │   ├── ui/
+│   │   ├── ModalShell.tsx     # Shared overlay, focus trap, aria — used by Modal + detail/trade dialogs
+│   │   ├── Modal.tsx          # Generic modal on ModalShell
+│   │   ├── ConfirmDialog.tsx  # Confirm/cancel on ModalShell
 │   │   ├── Amount.tsx         # EUR↔USD money display
 │   │   ├── Toggle.tsx         # Two-option toggle button
 │   │   ├── FormInput.tsx      # Labelled input
 │   │   ├── MarketStatus.tsx   # Open/closed by DE (Berlin) or US (NYSE) user toggle
 │   │   ├── Button.tsx         # Reusable button (primary / secondary / ghost variants)
 │   │   └── GitHubIcon.tsx     # GitHub SVG icon component
+│   ├── stock/
+│   │   ├── StockDetailModal.tsx  # Overview (chart + fundamentals) + News tab
+│   │   ├── DetailPanelTile.tsx
+│   │   └── TickerNewsRow.tsx
 │   ├── dashboard/
-│   │   ├── PortfolioCard.tsx  # Per-ticker card with P&L + chart
-│   │   └── SignalBadge.tsx    # BUY/SELL/HOLD badge
+│   │   ├── PortfolioCard.tsx  # Per-ticker card; opens StockDetailModal for chart/detail
+│   │   └── SignalBadge.tsx    # strong_buy … strong_sell + tooltip (live vs alert timing)
 │   ├── charts/
 │   │   └── CandlestickChart.tsx  # lightweight-charts v5
 │   ├── paper/
@@ -684,6 +692,7 @@ PRICES_TICK_INTERVAL_CLOSED = 30  # /ws/prices cadence when nothing is live`}</C
 ├── hooks/
 │   ├── useAuth.ts             # login, register, logout, getToken, getStoredUser
 │   ├── usePublicAuth.ts       # Auth state for public pages (landing, docs, privacy)
+│   ├── useBodyScrollLock.ts   # Lock document scroll while a modal is open
 │   ├── usePortfolio.ts        # fetch + 30s auto-refresh
 │   ├── useChat.ts             # SSE streaming hook
 │   └── useAlertWS.ts          # WebSocket reconnect hook
@@ -732,6 +741,36 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
 
             <H3>Supported tickers</H3>
             <P>Any Yahoo Finance symbol: <Code>AAPL</Code>, <Code>TSLA</Code>, <Code>SPY</Code>, <Code>BTC-USD</Code>, <Code>ETH-USD</Code>, <Code>IWDA.AS</Code>, etc.</P>
+
+            <H3>Dashboard: swing badge &amp; stock detail</H3>
+            <P>
+              On <strong style={{ color: '#f1f5f9' }}>Dashboard</strong> (<Code>/user/dashboard</Code>), each holding shows a compact <strong style={{ color: '#f1f5f9' }}>swing setup</strong> label (e.g. Potential buy, Strong sell) from the same model as <Code>GET /api/v1/indicators/…/swing</Code>. The badge reflects a <strong style={{ color: '#f1f5f9' }}>live</strong> computation when the portfolio loads; it can differ from an alert you received earlier, because alerts capture a <strong style={{ color: '#f1f5f9' }}>change snapshot</strong> when the scheduled scan ran.
+            </P>
+            <P>
+              Click the ticker or the chart control on a card to open the <strong style={{ color: '#f1f5f9' }}>stock detail modal</strong>: candlestick chart (period buttons), fundamentals, and a separate <strong style={{ color: '#f1f5f9' }}>News</strong> tab. US overlay pricing for German listings appears when the API returns <Code>us_listing</Code>.
+            </P>
+          </Section>
+
+          {/* ── Guide: Charts roadmap ── */}
+          <Section id='guide-charts-next' title='Charts — next steps'>
+            <P>
+              The dashboard opens the chart inside <strong style={{ color: '#f1f5f9' }}>StockDetailModal</strong> (<Code>lightweight-charts</Code> v5) with Yahoo OHLC. The chart follows your <strong style={{ color: '#f1f5f9' }}>currency</strong> toggle (<Code>currency=EUR|USD</Code> on the history API). Daily bars will not match a TradingView <strong style={{ color: '#f1f5f9' }}>1h</strong> chart pixel-for-pixel — different timeframe and feed semantics.
+            </P>
+            <H3>Planned / optional improvements</H3>
+            <ul style={{ color: '#94a3b8', lineHeight: 1.65, paddingLeft: 20, marginTop: 8 }}>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>Intraday interval UI</strong> — Expose <Code>interval</Code> (e.g. <Code>1h</Code>, <Code>15m</Code>) on <Code>CandlestickChart</Code> and pass it to <Code>GET /api/v1/market/history</Code>; respect Yahoo rate limits on short intervals.
+              </li>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>German listing OHLC</strong> — For symbols like <Code>BYND.DE</Code>, Yahoo may return prices already in EUR; <Code>fetch_ohlcv</Code> should detect listing currency and skip double conversion (USD spot × history).
+              </li>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>Historical FX</strong> — EUR series currently applies one spot EUR/USD rate to all bars; for accuracy, use per-bar FX or keep native USD server-side and convert at display time.
+              </li>
+              <li>
+                <strong style={{ color: '#f1f5f9' }}>Vendor tick stream</strong> — For Webull/TradingView-grade live candles, add a paid market-data WebSocket (e.g. Polygon, Finnhub) — see <a href='#realtime-data' style={{ color: '#60a5fa' }}>Real-Time Data &amp; Polling</a>.
+              </li>
+            </ul>
           </Section>
 
           {/* ── Guide: Paper ── */}
@@ -784,10 +823,17 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
           </Section>
 
           {/* ── Guide: Alerts ── */}
-          <Section id='guide-alerts' title='Price Alerts'>
-            <P>Set alerts on any ticker. Choose <strong style={{ color: '#f1f5f9' }}>above</strong> or <strong style={{ color: '#f1f5f9' }}>below</strong> a target price. The backend scans all user portfolios every <Code>ALERT_INTERVAL_MINUTES</Code> (default: 30 minutes).</P>
-            <P>When triggered, the alert is stored in the database, the unread counter in the sidebar increments, and if email notifications are enabled, an email is sent to the address in your notification settings.</P>
-            <P>Live alerts also push in real time through the WebSocket connection (<Code>/api/v1/ws/alerts</Code>) as toast notifications.</P>
+          <Section id='guide-alerts' title='Swing signal alerts'>
+            <P>
+              Alerts are <strong style={{ color: '#f1f5f9' }}>not</strong> user-defined price targets. The backend job <Code>check_all_portfolios()</Code> (APScheduler, interval <Code>ALERT_INTERVAL_MINUTES</Code>, default 30) re-runs the swing model for every <strong style={{ color: '#f1f5f9' }}>held</strong> ticker, compares the new quality bucket to the last stored value in <Code>signal_history</Code>, and when an actionable transition occurs it writes a row to <Code>alerts</Code> with the full text breakdown.
+            </P>
+            <P>
+              Signal buckets are <Code>strong_buy</Code>, <Code>potential_buy</Code>, <Code>hold</Code>, <Code>potential_sell</Code>, <Code>strong_sell</Code>. The scanner skips noisy updates when both old and new states are non-actionable (e.g. hold → hold). After each successful check, history is updated and the in-memory swing cache for that ticker is invalidated so the next dashboard load stays consistent.
+            </P>
+            <P>
+              When a scheduled transition creates a row: the unread counter updates, optional <strong style={{ color: '#f1f5f9' }}>email</strong> goes out if enabled in Settings, and <strong style={{ color: '#f1f5f9' }}>browser push</strong> may fire (VAPID configured). In-app toasts from <Code>/api/v1/ws/alerts</Code> are separate: <Code>price_alert</Code> for intraday moves / levels, and <Code>signal_change</Code> when the socket&apos;s live swing recheck sees a bucket change (see <a href='#api-ws' style={{ color: '#60a5fa' }}>WebSocket</a>). History is under <Code>/user/alerts</Code>.
+            </P>
+            <Note>The <strong style={{ color: '#f1f5f9' }}>dashboard badge</strong> is computed on demand when you load the portfolio; an <strong style={{ color: '#f1f5f9' }}>alert row</strong> is a point-in-time record from the last scan — both can legitimately differ if the model output changed between runs.</Note>
           </Section>
 
           {/* ──────────────────────── API REFERENCE ──────────────────────── */}
@@ -856,14 +902,15 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
           <Section id='api-portfolio' title='API — Portfolio'>
             <Endpoint method='GET' path='/api/v1/portfolio' auth desc='Returns all holdings calculated from transactions, enriched with live prices and P&L.' />
             <H3>Response</H3>
+            <Note>Each row includes live quote fields (session, pre/post prices when present) and <Code>signal</Code>: fresh swing bucket when the analysis succeeds, else last <Code>signal_history</Code> value for that user+ticker. German-primary tickers may include <Code>us_listing</Code> (US parent line).</Note>
             <Code block>{`[
   {
     "ticker": "AAPL",
     "shares_held": 10.0,
     "avg_cost": 185.50,
-    "current_price": 195.20,       // EUR
+    "current_price": 195.20,
     "current_price_usd": 214.35,
-    "market_value": 1952.00,       // EUR
+    "market_value": 1952.00,
     "market_value_usd": 2143.52,
     "unrealized_pnl": 97.00,
     "unrealized_pnl_usd": 106.59,
@@ -871,7 +918,10 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
     "realized_pnl": 0.00,
     "realized_pnl_usd": 0.00,
     "day_change_pct": 1.20,
-    "eur_rate": 0.91
+    "eur_rate": 0.91,
+    "quote_session": "regular",
+    "signal": "potential_buy",
+    "us_listing": null
   }
 ]`}</Code>
 
@@ -925,19 +975,32 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
           <Section id='api-market' title='API — Market Data'>
             <Note>All market data comes from Yahoo Finance via <Code>yfinance</Code>. Data is live — not cached.</Note>
 
-            <Endpoint method='GET' path='/api/v1/market/quote/{ticker}' auth desc='Current price, day change %, and EUR/USD rate for a ticker.' />
+            <Endpoint method='GET' path='/api/v1/market/quote/{ticker}' auth desc='Latest quote and fundamentals excerpt. Listing and session fields follow the user&apos;s market region (DE may resolve Xetra; US listing overlay nested as us_listing).' />
             <Code block>{`{
   "ticker": "AAPL",
-  "current_price": 195.20,       // EUR
+  "current_price": 195.20,
   "current_price_usd": 214.35,
+  "prev_close": 192.80,
   "day_change_pct": 1.20,
-  "eur_rate": 0.91
+  "currency": "EUR",
+  "eur_rate": 0.9105,
+  "quote_session": "regular",
+  "market_state": "regular",
+  "display_name": "Apple Inc.",
+  "pe_ratio": 28.5,
+  "fundamentals_more": {
+    "beta": 1.12,
+    "forward_pe": 26.3,
+    "eps_ttm": 6.85
+  },
+  "us_listing": null
 }`}</Code>
+            <Note>Optional keys include pre/post/regular market prices (EUR+USD), 52-week range, market cap, and <Code>us_listing</Code> when DE mode quotes a German line but a US parent exists.</Note>
 
-            <Endpoint method='GET' path='/api/v1/market/history/{ticker}?period=3mo&interval=1d' auth desc='OHLCV candlestick data. period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y. interval: 1m, 5m, 1h, 1d, 1wk.' />
+            <Endpoint method='GET' path='/api/v1/market/history/{ticker}?period=3mo&interval=1d&currency=EUR' auth desc='OHLCV candlestick data. period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y. interval: 1m, 5m, 1h, 1d, 1wk. currency: EUR (Yahoo USD × spot rate) or USD (raw Yahoo USD for US listings).' />
             <Code block>{`[
   {
-    "date": "2025-01-15",
+    "time": "2025-01-15",
     "open": 182.10,
     "high": 185.80,
     "low": 181.50,
@@ -950,7 +1013,8 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
             <Code block>{`[
   {
     "title": "Apple beats earnings estimates",
-    "published": "2025-04-20T18:00:00",
+    "publisher": "Reuters",
+    "published_at": "2025-04-20T18:00:00",
     "url": "https://..."
   }
 ]`}</Code>
@@ -973,18 +1037,23 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
   "ema50": 186.40
 }`}</Code>
 
-            <Endpoint method='GET' path='/api/v1/indicators/{ticker}/swing' auth desc='Composite swing setup analysis combining indicators, key levels, and news.' />
+            <Endpoint method='GET' path='/api/v1/indicators/{ticker}/swing' auth desc='Composite swing setup: indicator scores, key levels from Bollinger/EMAs, news sentiment, and a quality bucket used for portfolio badges and alerts.' />
             <Code block>{`{
   "ticker": "AAPL",
-  "swing_setup_quality": "GOOD",    // EXCELLENT | GOOD | FAIR | POOR
-  "signal": "BUY",                  // BUY | SELL | HOLD
-  "key_support": 188.00,
-  "key_resistance": 200.00,
+  "current_price": 214.35,
+  "swing_setup_quality": "potential_buy",
+  "score": 3,
+  "rsi_14": 58.4,
+  "trend": "above_both_emas",
   "macd_signal": "bullish_crossover",
   "bb_position": "middle",
-  "rsi": 58.4,
-  "summary": "AAPL is trading above both EMAs with a bullish MACD crossover..."
+  "ema_20": 208.10,
+  "ema_50": 198.40,
+  "key_support": 205.20,
+  "key_resistance": 218.90,
+  "news_sentiment": "positive"
 }`}</Code>
+            <Note><Code>swing_setup_quality</Code> is one of <Code>strong_buy</Code>, <Code>potential_buy</Code>, <Code>hold</Code>, <Code>potential_sell</Code>, <Code>strong_sell</Code>. On failure, the response may contain <Code>error</Code> instead.</Note>
           </Section>
 
           {/* ── API: Paper ── */}
@@ -1036,16 +1105,17 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
 
           {/* ── API: Alerts ── */}
           <Section id='api-alerts' title='API — Alerts'>
-            <Endpoint method='GET' path='/api/v1/alerts' auth desc='List all alerts for the authenticated user, newest first (max 50).' />
+            <Endpoint method='GET' path='/api/v1/alerts' auth desc='Swing signal change history for the authenticated user, newest first (max 50). Each row is created when the scheduled scan detects an actionable transition.' />
             <Code block>{`[
   {
     "id": 7,
+    "user_id": 1,
     "ticker": "AAPL",
-    "condition": "above",
-    "target_price": 200.00,
-    "is_active": true,
-    "triggered_at": null,
-    "is_read": false,
+    "old_signal": "hold",
+    "new_signal": "potential_buy",
+    "message": "Signal changed: …\\nRSI-14: …",
+    "price_eur": 180.2500,
+    "is_read": 0,
     "created_at": "2025-04-20T10:00:00"
   }
 ]`}</Code>
@@ -1068,11 +1138,17 @@ unrealized_pnl_pct = unrealized_pnl / (avg_cost × shares_held) × 100`}</Code>
   "email_alerts": true
 }`}</Code>
 
-            <Endpoint method='GET' path='/api/v1/settings/preferences' auth desc='User UI preferences (reference market for open/close hours, stored per account).' />
-            <Code block>{`{ "market_region": "DE" }`}</Code>
+            <Endpoint method='GET' path='/api/v1/settings/preferences' auth desc='User UI preferences: reference market for open/close hours, and whether AI chat is enabled for this account (fair-share quota).' />
+            <Code block>{`{
+  "market_region": "DE",
+  "ai_chat_enabled": true
+}`}</Code>
 
-            <Endpoint method='PUT' path='/api/v1/settings/preferences' auth desc='Update UI preferences. `market_region` is `DE` (Europe/Berlin hours) or `US` (NYSE hours) for the Market Open/Closed indicator.' />
-            <Code block>{`{ "market_region": "US" }`}</Code>
+            <Endpoint method='PUT' path='/api/v1/settings/preferences' auth desc='Update preferences. `market_region` is `DE` or `US`. Optional `ai_chat_enabled` toggles access to the AI chat endpoint and quota pool.' />
+            <Code block>{`{
+  "market_region": "US",
+  "ai_chat_enabled": true
+}`}</Code>
           </Section>
 
           {/* ── API: Push ── */}
@@ -1143,17 +1219,38 @@ const reader = res.body.getReader()
 
           {/* ── API: WS ── */}
           <Section id='api-ws' title='API — WebSocket'>
-            <Endpoint method='WS' path='/api/v1/ws/alerts?token=<jwt>' desc='Real-time alert push channel. Connect with the JWT as a query parameter. The server pushes a JSON object whenever an alert is triggered.' />
+            <Endpoint method='WS' path='/api/v1/ws/alerts?token=<jwt>' desc='Per-ticker price ticks plus intraday technical alerts and live swing signal transitions. JWT as query parameter.' />
             <Endpoint method='WS' path='/api/v1/ws/prices?token=<jwt>' desc='Live price stream. Send {action:"subscribe"|"unsubscribe"|"set", tickers:[...]} to manage the subscription. Server pushes {type:"prices", quotes:[...]} on a 3s cadence when any subscribed ticker is live, 30s otherwise.' />
-            <H3>Message format</H3>
-            <Code block>{`{
-  "id": "alert-42",
+            <H3><Code>/ws/alerts</Code> message types</H3>
+            <P><Code>price_update</Code> — frequent quote line for subscribed holdings. <Code>price_alert</Code> — sharp move, support break, or resistance break while the ticker is considered live. <Code>signal_change</Code> — swing bucket changed between server-side rechecks (in-memory), not the same row as <Code>GET /api/v1/alerts</Code> history.</P>
+            <Code block>{`// Quote tick (most common)
+{
+  "type": "price_update",
   "ticker": "AAPL",
-  "condition": "above",
-  "target_price": 200.00,
-  "current_price": 201.35,
-  "message": "AAPL crossed above €200.00 (now €201.35)",
-  "timestamp": "2025-04-20T18:30:00Z"
+  "price": 195.20,
+  "change_pct": 0.12,
+  "day_change_pct": 1.20,
+  "market_open": true
+}
+
+// Intraday technical / move toast
+{
+  "type": "price_alert",
+  "ticker": "AAPL",
+  "title": "SHARP RALLY: AAPL",
+  "message": "Price moved +2.10% to €195.2000 in last 30s",
+  "severity": "high"
+}
+
+// Swing bucket flip (live socket recheck)
+{
+  "type": "signal_change",
+  "ticker": "AAPL",
+  "title": "Signal Changed: AAPL",
+  "old_signal": "hold",
+  "new_signal": "potential_buy",
+  "message": "HOLD → POTENTIAL_BUY",
+  "severity": "high"
 }`}</Code>
             <H3>Reconnection</H3>
             <P>The frontend <Code>useAlertWS</Code> hook reconnects automatically after <strong style={{ color: '#f1f5f9' }}>10 seconds</strong> if the connection drops.</P>

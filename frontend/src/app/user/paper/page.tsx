@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback, memo, useRef } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { useApp } from '@/contexts/AppContext'
 import { AmountLocale } from '@/components/ui/Amount'
 import MarketStatus from '@/components/ui/MarketStatus'
 import TradeModal from '@/components/paper/TradeModal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import CandlestickChart from '@/components/charts/CandlestickChart'
+import StockDetailModal from '@/components/stock/StockDetailModal'
 import { isStockMarketOpen } from '@/lib/marketHours'
 import {
   LivePrice,
@@ -53,14 +53,6 @@ function normalizeTicker(input: string): string {
 
 const isCrypto = (ticker: string) => ticker.endsWith('-USD')
 
-const PERIODS = [
-  { label: '1W', value: '5d' },
-  { label: '1M', value: '1mo' },
-  { label: '3M', value: '3mo' },
-  { label: '6M', value: '6mo' },
-  { label: '1Y', value: '1y' },
-]
-
 type WatchFilter = 'all' | 'stocks' | 'crypto'
 
 function PaperContent() {
@@ -75,10 +67,7 @@ function PaperContent() {
   // Watchlist filter
   const [watchFilter, setWatchFilter] = useState<WatchFilter>('all')
 
-  // Chart panel
-  const [chartTicker, setChartTicker] = useState<string | null>(null)
-  const [chartPeriod, setChartPeriod] = useState('3mo')
-  const chartRef = useRef<HTMLDivElement>(null)
+  const [detailTicker, setDetailTicker] = useState<string | null>(null)
 
   // Market hours — re-check every minute
   const [marketOpen, setMarketOpen] = useState(() => isStockMarketOpen(marketRegion))
@@ -128,7 +117,7 @@ function PaperContent() {
   }
 
   const removeFromWatchlist = async (ticker: string) => {
-    if (chartTicker === ticker) setChartTicker(null)
+    if (detailTicker === ticker) setDetailTicker(null)
     setWatchlist((prev) => prev.filter((t) => t !== ticker))
     try {
       await paperApi.watchlist.remove(ticker)
@@ -143,11 +132,7 @@ function PaperContent() {
     setResetOpen(false)
   }
 
-  const openChart = (ticker: string) => {
-    setChartTicker(ticker)
-    setChartPeriod('3mo')
-    setTimeout(() => chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
-  }
+  const openDetail = (ticker: string) => setDetailTicker(ticker)
 
   const getHolding = (ticker: string) => account?.holdings.find((h) => h.ticker === ticker)
 
@@ -226,7 +211,7 @@ function PaperContent() {
                     <tr key={h.ticker} style={{ borderBottom: '1px solid #0d1117' }}>
                       <td style={{ padding: '10px', fontWeight: 700, color: '#f1f5f9' }}>
                         <button
-                          onClick={() => openChart(h.ticker)}
+                          onClick={() => openDetail(h.ticker)}
                           style={{ background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 14 }}
                           title={`View ${h.ticker} chart`}
                         >
@@ -340,63 +325,18 @@ function PaperContent() {
               ticker={ticker}
               heldShares={getHolding(ticker)?.shares}
               marketOpen={marketOpen}
-              isActive={chartTicker === ticker}
+              isActive={detailTicker === ticker}
               onRemove={removeFromWatchlist}
               onTrade={setModal}
-              onChart={openChart}
+              onChart={openDetail}
               labels={{ buy: t('pt_buy'), sell: t('pt_sell') }}
             />
           ))}
         </div>
       </div>
 
-      {/* Chart panel */}
-      {chartTicker && (
-        <div ref={chartRef} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 24, marginTop: 24 }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>{chartTicker}</span>
-              <span style={{ fontSize: 16, fontWeight: 600 }}>
-                <LivePrice ticker={chartTicker} />
-              </span>
-              <span style={{ fontSize: 13 }}>
-                <LiveDayChange ticker={chartTicker} />
-              </span>
-              {isCrypto(chartTicker)
-                ? <span style={{ fontSize: 11, color: '#22c55e', background: '#052e16', border: '1px solid #166534', borderRadius: 4, padding: '2px 6px' }}>24/7</span>
-                : !marketOpen && <span style={{ fontSize: 11, color: '#ef4444', background: '#2d0a0a', border: '1px solid #7f1d1d', borderRadius: 4, padding: '2px 6px' }}>Market Closed</span>
-              }
-            </div>
-            <button
-              onClick={() => setChartTicker(null)}
-              style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 4px' }}
-              aria-label='Close chart'
-            >
-              ×
-            </button>
-          </div>
-
-          {/* Period selector */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-            {PERIODS.map(({ label, value }) => (
-              <button
-                key={value}
-                onClick={() => setChartPeriod(value)}
-                style={{
-                  padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-                  cursor: 'pointer', border: 'none',
-                  background: chartPeriod === value ? '#22c55e' : '#1e293b',
-                  color: chartPeriod === value ? '#fff' : '#94a3b8',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <CandlestickChart ticker={chartTicker} period={chartPeriod} height={420} />
-        </div>
+      {detailTicker && (
+        <StockDetailModal ticker={detailTicker} onClose={() => setDetailTicker(null)} />
       )}
 
       {modal && (
@@ -458,8 +398,13 @@ const WatchCard = memo(function WatchCard({
     <div style={{
       background: '#020617',
       border: `1px solid ${isActive ? '#22c55e' : '#1e293b'}`,
-      borderRadius: 10, padding: 16,
+      borderRadius: 10,
+      padding: 16,
       transition: 'border-color 0.2s',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      minHeight: 0,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <button
@@ -484,12 +429,10 @@ const WatchCard = memo(function WatchCard({
       <div style={{ fontSize: 12, marginBottom: 10 }}>
         <LiveDayChange ticker={ticker} />
       </div>
-      {hasHolding && (
-        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-          Held: {heldShares!.toFixed(4)} shares
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, minHeight: 18, lineHeight: 1.5 }}>
+        {hasHolding ? `Held: ${heldShares!.toFixed(4)} shares` : '\u00a0'}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 4 }}>
         <button
           onClick={() => onTrade({ ticker, mode: 'BUY' })}
           disabled={stockBuyDisabled}

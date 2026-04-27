@@ -58,6 +58,7 @@ export default function ConfirmDialog({
       }}
       title={title}
       width={420}
+      lockBodyScroll
       footer={
         <>
           <button

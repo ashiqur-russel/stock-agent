@@ -116,8 +116,19 @@ def _history_prev_close(t: yf.Ticker, market_state: str) -> float | None:
         return None
 
 
-def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[dict]:
+def fetch_ohlcv(
+    ticker: str,
+    period: str = "3mo",
+    interval: str = "1d",
+    target_ccy: str = "EUR",
+) -> list[dict]:
+    """OHLC from Yahoo. US listings are in USD in yfinance; multiply by spot EUR/USD for EUR display."""
     import pandas as pd
+
+    tcy = (target_ccy or "EUR").upper()
+    if tcy not in ("EUR", "USD"):
+        tcy = "EUR"
+    mult = get_usd_to_eur_rate() if tcy == "EUR" else 1.0
 
     with _suppress_yfinance_stderr():
         df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
@@ -125,7 +136,6 @@ def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[
         return []
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
-    eur_rate = get_usd_to_eur_rate()
     df = df.reset_index()
     records = []
     for _, row in df.iterrows():
@@ -135,10 +145,10 @@ def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[
                 "time": date_val.strftime("%Y-%m-%d")
                 if hasattr(date_val, "strftime")
                 else str(date_val)[:10],
-                "open": round(float(row["Open"]) * eur_rate, 4),
-                "high": round(float(row["High"]) * eur_rate, 4),
-                "low": round(float(row["Low"]) * eur_rate, 4),
-                "close": round(float(row["Close"]) * eur_rate, 4),
+                "open": round(float(row["Open"]) * mult, 4),
+                "high": round(float(row["High"]) * mult, 4),
+                "low": round(float(row["Low"]) * mult, 4),
+                "close": round(float(row["Close"]) * mult, 4),
                 "volume": int(row["Volume"]),
             }
         )
@@ -435,6 +445,80 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
         "regular_market_price_usd": reg_usd_o,
         "quote_listing": "XETRA" if use_xetra else "US",
     }
+
+    name = detail.get("shortName") or detail.get("longName")
+    if name:
+        out["display_name"] = str(name)
+
+    mcap = _safe_float(detail.get("marketCap"))
+    if mcap is not None and mcap > 0:
+        mc_eur, mc_usd = dual(mcap)
+        if mc_eur is not None and mc_eur > 0:
+            out["market_cap_eur"] = round(mc_eur, 2)
+        if mc_usd is not None and mc_usd > 0:
+            out["market_cap_usd"] = round(mc_usd, 2)
+
+    # Include negative P/E (unprofitable names like BYND); omit only NaN/missing.
+    trail_pe = _safe_float(detail.get("trailingPE"))
+    if trail_pe is None or trail_pe != trail_pe:
+        trail_pe = _safe_float(detail.get("forwardPE"))
+    if trail_pe is not None and trail_pe == trail_pe:
+        out["pe_ratio"] = round(float(trail_pe), 2)
+
+    wh = _safe_float(detail.get("fiftyTwoWeekHigh"))
+    wl = _safe_float(detail.get("fiftyTwoWeekLow"))
+    if wh is not None and wh > 0:
+        he, hu = dual(wh)
+        if he is not None:
+            out["week_52_high_eur"] = _round_quote_price(he)
+        if hu is not None:
+            out["week_52_high_usd"] = _round_quote_price(hu)
+    if wl is not None and wl > 0:
+        le, lu = dual(wl)
+        if le is not None:
+            out["week_52_low_eur"] = _round_quote_price(le)
+        if lu is not None:
+            out["week_52_low_usd"] = _round_quote_price(lu)
+
+    more: dict = {}
+    b = _safe_float(detail.get("beta"))
+    if b is not None and b == b:
+        more["beta"] = round(float(b), 3)
+
+    dy = _safe_float(detail.get("dividendYield"))
+    if dy is not None and dy > 0:
+        more["dividend_yield_pct"] = round(float(dy) * 100.0, 2)
+
+    eps = _safe_float(detail.get("trailingEps"))
+    if eps is not None and eps == eps:
+        more["eps_ttm"] = round(float(eps), 2)
+
+    fpe_only = _safe_float(detail.get("forwardPE"))
+    if fpe_only is not None and fpe_only > 0 and fpe_only == fpe_only:
+        more["forward_pe"] = round(float(fpe_only), 2)
+
+    rev = _safe_float(detail.get("totalRevenue"))
+    if rev is not None and rev > 0:
+        r_eur, r_usd = dual(rev)
+        if r_eur is not None and r_eur > 0:
+            more["revenue_eur"] = round(float(r_eur), 2)
+        if r_usd is not None and r_usd > 0:
+            more["revenue_usd"] = round(float(r_usd), 2)
+
+    pm = _safe_float(detail.get("profitMargins"))
+    if pm is not None and pm == pm:
+        more["profit_margin_pct"] = round(float(pm) * 100.0, 2)
+
+    de = _safe_float(detail.get("debtToEquity"))
+    if de is not None and de == de:
+        more["debt_to_equity"] = round(float(de), 2)
+
+    so = _safe_float(detail.get("sharesOutstanding"))
+    if so is not None and so > 0:
+        more["shares_outstanding"] = int(so)
+
+    if more:
+        out["fundamentals_more"] = more
 
     if nest_us_overlay and region == "DE":
         us_sym = _canonical_us_equity_symbol(ticker_u)

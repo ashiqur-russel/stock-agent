@@ -70,7 +70,7 @@ export default function SignalBadge({ signal, size = 'sm' }: Props) {
         letterSpacing: '0.05em',
         lineHeight: 1.2,
       }}
-      title={t(s.label)}
+      title={`${t(s.label)} — ${t('signal_live_hint')}`}
     >
       {t(s.label)}
     </span>

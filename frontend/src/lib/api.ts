@@ -134,8 +134,10 @@ export async function fetchPublicLandingQuotes(): Promise<{
 
 export const market = {
   quote: (ticker: string) => apiFetch(`/api/v1/market/quote/${ticker}`),
-  history: (ticker: string, period = '3mo') =>
-    apiFetch(`/api/v1/market/history/${ticker}?period=${period}`),
+  history: (ticker: string, period = '3mo', currency: 'EUR' | 'USD' = 'EUR') =>
+    apiFetch(
+      `/api/v1/market/history/${encodeURIComponent(ticker)}?period=${encodeURIComponent(period)}&currency=${currency}`,
+    ),
   news: (ticker: string) => apiFetch(`/api/v1/market/news/${ticker}`),
 }
 
