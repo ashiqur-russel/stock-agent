@@ -110,7 +110,7 @@ function PortfolioCardImpl({ holding }: Props) {
         <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_realized')}</div>
           <div style={{ fontSize: 14, color: num(holding.realized_pnl) >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600, marginTop: 2 }}>
-            {num(holding.realized_pnl) >= 0 ? '+' : ''}{currencySymbol}{num(currency === 'USD' ? holding.realized_pnl_usd : holding.realized_pnl).toFixed(2)}
+            {num(holding.realized_pnl) >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(num(currency === 'USD' ? holding.realized_pnl_usd : holding.realized_pnl)).toFixed(2)}
           </div>
         </div>
       </div>

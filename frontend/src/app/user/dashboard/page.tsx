@@ -87,7 +87,7 @@ function DashboardContent() {
           <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '16px 20px' }}>
             <div style={{ fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('db_unrealized_lbl')}</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: totalUnrealized >= 0 ? '#22c55e' : '#ef4444', marginTop: 4 }}>
-              {totalUnrealized >= 0 ? '+' : ''}{currencySymbol}{Math.abs(totalUnrealized).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totalUnrealized >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(totalUnrealized).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
