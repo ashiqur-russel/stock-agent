@@ -398,8 +398,13 @@ const WatchCard = memo(function WatchCard({
     <div style={{
       background: '#020617',
       border: `1px solid ${isActive ? '#22c55e' : '#1e293b'}`,
-      borderRadius: 10, padding: 16,
+      borderRadius: 10,
+      padding: 16,
       transition: 'border-color 0.2s',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      minHeight: 0,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <button
@@ -424,12 +429,10 @@ const WatchCard = memo(function WatchCard({
       <div style={{ fontSize: 12, marginBottom: 10 }}>
         <LiveDayChange ticker={ticker} />
       </div>
-      {hasHolding && (
-        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-          Held: {heldShares!.toFixed(4)} shares
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, minHeight: 18, lineHeight: 1.5 }}>
+        {hasHolding ? `Held: ${heldShares!.toFixed(4)} shares` : '\u00a0'}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 4 }}>
         <button
           onClick={() => onTrade({ ticker, mode: 'BUY' })}
           disabled={stockBuyDisabled}
