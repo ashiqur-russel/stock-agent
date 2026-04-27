@@ -199,12 +199,14 @@ export const translations = {
     paper_pnl: 'P&L',
     paper_actions: 'Actions',
 
-    // Signal labels (swing setup quality on portfolio cards)
-    signal_strong_buy: 'Strong Buy',
-    signal_potential_buy: 'Buy',
+    // Signal labels (swing setup quality — match backend POTENTIAL vs STRONG wording)
+    signal_strong_buy: 'Strong buy',
+    signal_potential_buy: 'Potential buy',
     signal_hold: 'Hold',
-    signal_potential_sell: 'Sell',
-    signal_strong_sell: 'Strong Sell',
+    signal_potential_sell: 'Potential sell',
+    signal_strong_sell: 'Strong sell',
+    signal_live_hint:
+      'Live swing score (RSI, MACD, bands, news). Updates as data changes; an alert shows the reading when the signal last changed.',
 
     // Buy/Sell Modal
     modal_buy: 'Buy',
@@ -605,11 +607,13 @@ export const translations = {
     paper_actions: 'Aktionen',
 
     // Signal labels
-    signal_strong_buy: 'Stark Kaufen',
-    signal_potential_buy: 'Kaufen',
+    signal_strong_buy: 'Stark kaufen',
+    signal_potential_buy: 'Potenzielles Kaufen',
     signal_hold: 'Halten',
-    signal_potential_sell: 'Verkaufen',
-    signal_strong_sell: 'Stark Verkaufen',
+    signal_potential_sell: 'Potenzielles Verkaufen',
+    signal_strong_sell: 'Stark verkaufen',
+    signal_live_hint:
+      'Live-Swing-Score (RSI, MACD, Bänder, News). Ändert sich mit den Daten; ein Alert zeigt den Stand beim letzten Wechsel.',
 
     // Buy/Sell Modal
     modal_buy: 'Kaufen',

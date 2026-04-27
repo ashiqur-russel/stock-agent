@@ -14,23 +14,51 @@ from services.user_prefs import get_user_market_region
 # Memory only — clears on process restart, which is fine for dev. For prod
 # this should move to Redis or be persisted.
 SIGNAL_TTL = 600  # 10 minutes
-_signal_cache: dict[str, tuple[float, str | None]] = {}
+_signal_cache: dict[str, tuple[float, str]] = {}
 _signal_lock = Lock()
 
 
-def _signal_for(ticker: str) -> str | None:
-    now = time.time()
+def invalidate_swing_signal_cache(ticker: str | None = None) -> None:
+    """Drop cached swing labels so the next portfolio load recomputes (e.g. after an alert scan)."""
     with _signal_lock:
-        cached = _signal_cache.get(ticker)
+        if ticker:
+            _signal_cache.pop(ticker.upper(), None)
+        else:
+            _signal_cache.clear()
+
+
+def _db_last_signal(user_id: int, ticker: str) -> str | None:
+    """Latest row from periodic alert scans — used when live analysis fails transiently."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT signal FROM signal_history WHERE user_id=? AND ticker=? ORDER BY checked_at DESC LIMIT 1",
+            (user_id, ticker),
+        ).fetchone()
+    return row["signal"] if row else None
+
+
+def _signal_for(ticker: str) -> str | None:
+    """
+    Live swing_setup_quality from run_swing_analysis. Only successful runs are cached;
+    errors are not cached (avoids a 10-minute blank badge after a transient yfinance failure).
+    """
+    now = time.time()
+    tk = ticker.upper()
+    with _signal_lock:
+        cached = _signal_cache.get(tk)
         if cached and now - cached[0] < SIGNAL_TTL:
             return cached[1]
     try:
         analysis = run_swing_analysis(ticker)
-        sig = analysis.get("swing_setup_quality") if isinstance(analysis, dict) else None
     except Exception:
-        sig = None
+        return None
+    if not isinstance(analysis, dict) or "error" in analysis:
+        return None
+    sig = analysis.get("swing_setup_quality")
+    if not sig:
+        return None
     with _signal_lock:
-        _signal_cache[ticker] = (now, sig)
+        _signal_cache[tk] = (now, sig)
     return sig
 
 
@@ -200,7 +228,7 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
                 "regular_market_price": quote.get("regular_market_price"),
                 "regular_market_price_usd": quote.get("regular_market_price_usd"),
                 "us_listing": quote.get("us_listing"),
-                "signal": signals.get(ticker),
+                "signal": signals.get(ticker) or _db_last_signal(user_id, ticker),
             }
         )
 

@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 import config
 from database import get_connection
 from services.market_data import get_usd_to_eur_rate
-from services.portfolio_service import get_portfolio_for_user
+from services.portfolio_service import get_portfolio_for_user, invalidate_swing_signal_cache
 from services.technical import run_swing_analysis
 
 SIGNAL_LABELS = {
@@ -144,6 +144,7 @@ def check_all_portfolios():
                 new_signal = analysis["swing_setup_quality"]
                 old_signal = get_last_signal(user_id, ticker)
                 save_signal(user_id, ticker, new_signal)
+                invalidate_swing_signal_cache(ticker)
 
                 if old_signal == new_signal:
                     continue
