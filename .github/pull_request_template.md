@@ -2,6 +2,7 @@
 Title format: [SA-<n>] <Kind>/<Short Description>
 Example branch: fix/SA-7-auth-password-reset-ux
 Example title:  [SA-7] Fix/Auth Password Reset UX
+Base branch:    development (feature/fix PRs — not main)
 See CONTRIBUTING.md → Pull requests for the full convention.
 -->
 

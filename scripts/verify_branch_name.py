@@ -13,13 +13,21 @@ import re
 import subprocess
 import sys
 
-# Exact names where commits are still allowed. Do NOT list main/master — you must
-# use a topic branch (feature/…, fix/…) and merge via PR. (GitHub merges and PR
-# checks do not use this local hook.)
+# Long-lived branches where direct local commits are allowed (rare).
+# Do NOT list main/master/development — use a topic branch and merge via PR.
 _EXACT: frozenset[str] = frozenset(
     {
-        "develop",
         "gh-pages",
+    }
+)
+
+# Integration/default branches: never commit locally; open a PR instead (see CONTRIBUTING.md).
+_NO_DIRECT_COMMIT: frozenset[str] = frozenset(
+    {
+        "main",
+        "master",
+        "development",
+        "develop",
     }
 )
 
@@ -188,16 +196,18 @@ def main() -> None:
             file=sys.stderr,
         )
         return
-    if branch in ("main", "master"):
+    if branch in _NO_DIRECT_COMMIT:
         print(
-            "Do not make commits while checked out on the default branch (main or master).\n"
+            "Do not make commits while checked out on an integration branch "
+            "(main, master, development, or develop).\n"
             f"  Current branch: {branch!r}\n"
-            "  Create a topic branch and open a pull request, for example:\n"
-            "    git checkout -b feature/SA-1-short-description\n"
+            "  Create a topic branch and open a pull request **into `development`**, for example:\n"
+            "    git fetch origin && git checkout -b feature/SA-1-short-description origin/development\n"
             "    # also: fix/SA-2-…, hotfix/SA-3-…, chore/SA-4-…\n"
             "  (Ticket id is SA-<number> right after the prefix.)\n"
-            "  Merges on GitHub are fine; a local `git merge` on main is blocked by this hook.\n"
-            "  Rare exception:  git commit --no-verify  (e.g. emergency merge on main)\n",
+            "  Feature and fix PRs target **development**, not **main**.\n"
+            "  Merges on GitHub are fine; this hook only blocks local commits on protected branches.\n"
+            "  Rare exception:  git commit --no-verify\n",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -218,11 +228,12 @@ def main() -> None:
     print(
         "Invalid branch name for this repository.\n"
         f"  Current: {branch!r}\n"
-        "  Use one of:\n"
-        f"    {', '.join(sorted(_EXACT))}\n"
-        "    or a topic branch:  <prefix>SA-<number>[-description]\n"
+        "  Use a topic branch (PR base = **development**):\n"
+        f"    <prefix>SA-<number>[-description]\n"
         f"     prefixes: {', '.join(_PREFIXES)}\n"
-        "  (also allowed: dependabot/*, renovate/*, …)\n",
+        "  Rare exceptions: "
+        + (f"{', '.join(sorted(_EXACT))}, " if _EXACT else "")
+        + "dependabot/*, renovate/*, …\n",
         file=sys.stderr,
     )
     raise SystemExit(1)

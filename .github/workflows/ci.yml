@@ -1,12 +1,12 @@
-# Run on every PR targeting main and on pushes to main.
+# Run on PRs and pushes to main and development (integration branch for feature work).
 # Merging should be blocked until this workflow passes (GitHub: branch protection → require status checks).
 name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, development]
   push:
-    branches: [main]
+    branches: [main, development]
 
 # Code scanning: restrict GITHUB_TOKEN (alert “Workflow does not contain permissions”).
 # actions: write is needed for pip/npm + Docker GHA caches in this workflow.

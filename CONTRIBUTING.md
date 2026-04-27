@@ -148,7 +148,13 @@ Use a topic prefix and **`SA-<digits>`** right after it, for example:
 - `feature/SA-12-add-export`
 - `fix/SA-7-auth-timeout`
 
-Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `release/`. Exact exceptions such as `develop` are listed in [`scripts/verify_branch_name.py`](scripts/verify_branch_name.py).
+Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `release/`. Rare exceptions (e.g. `gh-pages`) are listed in [`scripts/verify_branch_name.py`](scripts/verify_branch_name.py).
+
+### Integration branch and pull request targets
+
+- **`development`** is the integration branch: open **feature** and **fix** PRs with base **`development`**, not **`main`**.
+- **`main`** is the release line (e.g. production). Routine work is merged **`development` → `main`** via a separate release/maintainer PR when ready — not by opening feature PRs directly against `main`.
+- Do **not** commit or push directly to **`main`**, **`master`**, **`development`**, or **`develop`** from your machine. Hooks enforce this; use a topic branch and a GitHub PR.
 
 **Open source workflow:** use the **GitHub issue number** as the number in `SA-<n>` when you work from an issue (e.g. issue **#24** → `feature/SA-24-short-description`). If maintainers use another tracker, match the id they specify.
 
@@ -165,7 +171,7 @@ Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `rele
    git branch -a | grep -oE 'SA-[0-9]+' | sed 's/SA-//' | sort -n | uniq
    ```
 
-Do not commit directly on `main` / `master`; hooks and project practice expect **pull requests**.
+Do not commit directly on `main`, `master`, `development`, or `develop`; use a **topic branch** and a **pull request into `development`**.
 
 ### Commit messages
 
@@ -230,7 +236,7 @@ GitHub may auto-fill the PR title from the latest commit; **edit it** to follow 
 
 ### PR description (what reviewers need)
 
-Open the PR against the default branch (not `main`/`master` via direct push). In the description, include:
+Open the PR with base branch **`development`** (GitHub: compare against `development`, not `main`). In the description, include:
 
 1. **Summary** — What you changed and **why** (problem, approach, trade-offs). Link the issue: `Closes #123` or `Refs #123` when relevant.
 2. **Screenshots or screen recording** — For any **UI** change, add before/after images or a short video/GIF. For **API-only** or **docs-only** work, write **N/A** and paste sample request/response or a log snippet if it helps.
