@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { postContact } from '@/lib/api'
 import { useApp } from '@/contexts/AppContext'
-import Button from '@/components/ui/Button'
+import { Button } from '@/components/ui/Button'
 import GitHubIcon from '@/components/ui/GitHubIcon'
 
 const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } }
@@ -173,9 +173,8 @@ export default function ContactSection() {
                   <Button
                     type='submit'
                     size='lg'
-                    fullWidth
                     disabled={status === 'sending'}
-                    className='mt-1'
+                    className='mt-1 w-full'
                   >
                     {status === 'sending' ? t('contact_sending') : t('contact_submit')}
                   </Button>

@@ -4,6 +4,10 @@ import './globals.css'
 import Providers from '@/components/Providers'
 import CookieBanner from '@/components/CookieBanner'
 import AuthDashboardBridge from '@/components/AuthDashboardBridge'
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -24,8 +28,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang='en'>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} style={{ margin: 0, background: '#020617', color: '#f1f5f9' }}>
+    <html lang='en' className={cn('dark font-sans', geist.variable)} suppressHydrationWarning>
+      <body className={cn(geistSans.variable, geistMono.variable, 'min-h-screen antialiased')}>
         <Providers>
           <AuthDashboardBridge />
           {children}
