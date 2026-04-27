@@ -103,7 +103,15 @@ def _history_prev_close(
     Yahoo often still has only the **last completed** session (e.g. Mon 9:55 ET with
     Fri as the latest bar). Using iloc[-2] in that case picks the wrong baseline and
     yields nonsense % (e.g. ~0% when the real move from Friday's close is +2–3%).
+
+    Yahoo's ``info`` dict often omits ``marketState``. An empty value used to skip the
+    REGULAR branch and take iloc[-1]; when that row is "today" with Close ≈ live price,
+    the computed day change is ~0% everywhere (dashboard shows +0.00% while RTH).
     """
+    ms = (market_state or "").strip().upper() or "REGULAR"
+    if ms not in ("REGULAR", "PRE", "POST", "POSTPOST", "CLOSED"):
+        ms = "REGULAR"
+
     try:
         with _suppress_yfinance_stderr():
             hist = t.history(period="10d", interval="1d", prepost=False, auto_adjust=True)
@@ -112,7 +120,7 @@ def _history_prev_close(
         closes = hist["Close"].dropna()
         if closes.empty:
             return None
-        if market_state == "REGULAR" and len(closes) >= 2:
+        if ms == "REGULAR" and len(closes) >= 2:
             trading_tz = ZoneInfo("Europe/Berlin") if use_xetra else ZoneInfo("America/New_York")
             today = datetime.now(trading_tz).date()
             last_ts = pd.Timestamp(closes.index[-1])
@@ -127,10 +135,26 @@ def _history_prev_close(
             else:
                 # Latest row is today's developing daily bar; baseline is the prior session.
                 v = float(closes.iloc[-2])
-        elif market_state == "REGULAR" and len(closes) == 1:
+        elif ms == "REGULAR" and len(closes) == 1:
             v = float(closes.iloc[-1])
         else:
             v = float(closes.iloc[-1])
+        return v if v > 0 else None
+    except Exception:
+        return None
+
+
+def _fallback_last_close_for_quote(t: yf.Ticker) -> float | None:
+    """Last daily close when Yahoo's ``info`` / ``fast_info`` live fields are missing (429s, scrape gaps)."""
+    try:
+        with _suppress_yfinance_stderr():
+            hist = t.history(period="10d", interval="1d", prepost=False, auto_adjust=True)
+        if hist is None or hist.empty:
+            return None
+        closes = hist["Close"].dropna()
+        if closes.empty:
+            return None
+        v = float(closes.iloc[-1])
         return v if v > 0 else None
     except Exception:
         return None
@@ -388,6 +412,11 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
     else:
         primary_native = reg_n or fast_last
         quote_session = "regular" if primary_native is not None else "unknown"
+
+    if primary_native is None or primary_native <= 0:
+        fb_close = _fallback_last_close_for_quote(t)
+        if fb_close is not None and fb_close > 0:
+            primary_native = fb_close
 
     if primary_native is None:
         primary_native = 0.0

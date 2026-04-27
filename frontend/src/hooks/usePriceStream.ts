@@ -37,6 +37,37 @@ export interface LiveQuote {
   us_listing?: UsListingQuote | null
 }
 
+/** True when at least one of EUR / USD spot prices is a positive finite number. */
+export function liveQuoteHasValidPrices(q: LiveQuote): boolean {
+  const eur = q.current_price
+  const usd = q.current_price_usd
+  return (
+    (typeof eur === 'number' && Number.isFinite(eur) && eur > 0) ||
+    (typeof usd === 'number' && Number.isFinite(usd) && usd > 0)
+  )
+}
+
+/** Derive both legs from whichever side Yahoo filled (guards against €0 with valid $). */
+export function quoteSpotPrices(q: LiveQuote): { eur: number; usd: number } | null {
+  const rate = q.eur_rate && q.eur_rate > 0 ? q.eur_rate : 0.91
+  let eur =
+    typeof q.current_price === 'number' && Number.isFinite(q.current_price) ? q.current_price : NaN
+  let usd =
+    typeof q.current_price_usd === 'number' && Number.isFinite(q.current_price_usd)
+      ? q.current_price_usd
+      : NaN
+  if (!(eur > 0) && usd > 0) {
+    eur = usd * rate
+  }
+  if (!(usd > 0) && eur > 0) {
+    usd = eur / rate
+  }
+  if (eur > 0 && usd > 0) {
+    return { eur, usd }
+  }
+  return null
+}
+
 type Listener = () => void
 
 const WS_URL = API_URL.replace(/^http/, 'ws')
@@ -130,6 +161,13 @@ class PriceStream {
         for (const q of data.quotes) {
           const ticker = q.ticker.toUpperCase()
           const prev = this.quotes.get(ticker)
+          const incoming = { ...q, ticker } as LiveQuote
+          if (!liveQuoteHasValidPrices(incoming)) {
+            if (prev && liveQuoteHasValidPrices(prev)) {
+              continue
+            }
+            continue
+          }
           const usEq =
             JSON.stringify(prev?.us_listing ?? null) === JSON.stringify(q.us_listing ?? null)
           if (
@@ -142,7 +180,7 @@ class PriceStream {
           ) {
             continue
           }
-          this.quotes.set(ticker, { ...q, ticker, ts })
+          this.quotes.set(ticker, { ...incoming, ts })
           const subs = this.listenersByTicker.get(ticker)
           if (subs) subs.forEach((fn) => fn())
         }
