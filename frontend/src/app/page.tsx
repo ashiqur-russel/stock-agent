@@ -10,8 +10,8 @@ import { fetchPublicLandingQuotes } from '@/lib/api'
 import { usePublicAuth } from '@/hooks/usePublicAuth'
 import Toggle from '@/components/ui/Toggle'
 import GitHubIcon from '@/components/ui/GitHubIcon'
-import GlowCard from '@/components/ui/GlowCard'
 import BackgroundBeams from '@/components/ui/BackgroundBeams'
+import { HoverEffect, type HoverEffectItem } from '@/components/ui/card-hover-effect'
 import { SpotlightCard } from '@/components/ui/Spotlight'
 
 // Keep in sync with backend LANDING_TICKERS in `routers/public_landing.py`
@@ -46,15 +46,6 @@ const CANDLES = [
   [10,55,45,60,48],[30,42,50,52,40],[50,38,48,50,35],[70,30,42,44,28],
   [90,25,38,40,22],[110,28,35,37,25],[130,20,30,32,18],[150,15,25,27,12],
   [170,18,22,24,15],[190,12,20,22,10],[210,8,15,17,6],[230,10,14,16,8],
-]
-
-const features = [
-  { icon: '📊', title: 'Portfolio Tracking',   desc: 'Log every buy and sell. Auto-calculated holdings, average cost, and P&L in real time.' },
-  { icon: '🤖', title: 'AI Swing Advisor',     desc: 'AI analyzes your stocks with live price data, RSI, MACD, and Bollinger Bands.' },
-  { icon: '📈', title: 'Live Charts',           desc: 'Interactive candlestick charts powered by real Yahoo Finance data.' },
-  { icon: '📝', title: 'Paper Trading',         desc: 'Practice with a virtual €100k account at real live prices. No risk.' },
-  { icon: '🔔', title: 'Price Alerts',          desc: 'WebSocket push + email notifications when a stock hits your target.' },
-  { icon: '🌍', title: 'EUR / USD',             desc: 'Instant currency toggle across every view. Rates updated live.' },
 ]
 
 const steps = [
@@ -142,6 +133,68 @@ export default function Home() {
   }, [tickerRows])
   const qAapl = tickerRows?.find((r) => r.sym === 'AAPL')
   const qNvda = tickerRows?.find((r) => r.sym === 'NVDA')
+
+  const valueProps: HoverEffectItem[] = useMemo(
+    () => [
+      {
+        id: 'ai',
+        icon: '🤖',
+        title: t('land_solves_ai_title'),
+        description: t('land_solves_ai_desc'),
+        link: '/register',
+      },
+      {
+        id: 'hub',
+        icon: '📊',
+        title: t('land_solves_oneplace_title'),
+        description: t('land_solves_oneplace_desc'),
+        link: '/register',
+      },
+      {
+        id: 'swing',
+        icon: '🔔',
+        title: t('land_solves_swing_title'),
+        description: t('land_solves_swing_desc'),
+        link: '/register',
+      },
+      {
+        id: 'paper',
+        icon: '📝',
+        title: t('land_solves_paper_title'),
+        description: t('land_solves_paper_desc'),
+        link: '/register',
+      },
+      {
+        id: 'ledger',
+        icon: '📒',
+        title: t('land_solves_ledger_title'),
+        description: t('land_solves_ledger_desc'),
+        link: '/register',
+      },
+      {
+        id: 'calm',
+        icon: '🧘',
+        title: t('land_solves_calm_title'),
+        description: t('land_solves_calm_desc'),
+        link: '/register',
+      },
+      {
+        id: 'fifo',
+        icon: '⚖️',
+        title: t('land_solves_fifo_title'),
+        description: t('land_solves_fifo_desc'),
+        link: '/register',
+      },
+      {
+        id: 'live',
+        icon: '📈',
+        title: t('land_solves_live_title'),
+        description: t('land_solves_live_desc'),
+        link: '/register',
+      },
+    ],
+    [t]
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#060e20', color: '#f1f5f9', fontFamily: 'var(--font-geist-sans)', overflowX: 'hidden' }}>
@@ -477,29 +530,21 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* ── Features ── */}
+      {/* ── Value props (Aceternity-style hover grid) ── */}
       <section style={{ padding: '60px 32px 80px', maxWidth: 1100, margin: '0 auto' }}>
         <motion.div
           initial='hidden' whileInView='show'
           variants={{ show: { transition: { staggerChildren: 0.08 } } }}
           viewport={{ once: true, margin: '-80px' }}
         >
-          <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 52 }}>
+          <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 24 }}>
             <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>{t('land_what_label')}</div>
             <h2 style={{ fontSize: 34, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>{t('land_what_title')}</h2>
           </motion.div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-            {features.map((f, i) => (
-              <motion.div key={f.title} variants={fadeUp}>
-                <GlowCard style={{ padding: '22px 24px', height: '100%' }}>
-                  <div style={{ fontSize: 30, marginBottom: 12 }}>{f.icon}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 7, color: '#f1f5f9' }}>{f.title}</div>
-                  <div style={{ fontSize: 14, color: '#64748b', lineHeight: 1.65 }}>{f.desc}</div>
-                </GlowCard>
-              </motion.div>
-            ))}
-          </div>
+          <motion.div variants={fadeUp} className='max-w-5xl mx-auto px-0 md:px-4'>
+            <HoverEffect items={valueProps} className='py-6' />
+          </motion.div>
         </motion.div>
       </section>
 
