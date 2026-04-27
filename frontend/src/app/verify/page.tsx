@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { auth as authApi } from '@/lib/api'
 import { dispatchAuthSessionChanged } from '@/lib/authEvents'
+import { consumeWhatsNewIntentPath } from '@/lib/whatsNewFunnel'
 
 function VerifyContent() {
   const { t } = useApp()
@@ -36,7 +37,7 @@ function VerifyContent() {
           dispatchAuthSessionChanged()
         }
         setStatus('success')
-        setTimeout(() => router.push('/user/dashboard'), 1500)
+        setTimeout(() => router.push(consumeWhatsNewIntentPath()), 1500)
       })
       .catch(() => setStatus('error'))
   }, [token, router])

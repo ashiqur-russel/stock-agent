@@ -6,7 +6,8 @@ import { motion } from 'framer-motion'
 import { openCookieSettings } from '@/components/CookieBanner'
 import ContactSection from '@/components/ContactSection'
 import { useApp } from '@/contexts/AppContext'
-import { fetchPublicLandingQuotes } from '@/lib/api'
+import { fetchPublicLandingQuotes, release, type ReleasePreviewPayload } from '@/lib/api'
+import { setWhatsNewIntent } from '@/lib/whatsNewFunnel'
 import { usePublicAuth } from '@/hooks/usePublicAuth'
 import Toggle from '@/components/ui/Toggle'
 import GitHubIcon from '@/components/ui/GitHubIcon'
@@ -63,6 +64,8 @@ export default function Home() {
   const { t, lang, setLang, currency, setCurrency, currencySymbol } = useApp()
   const { user: authUser, logout: publicLogout, mounted: authMounted } = usePublicAuth()
   const [tickerRows, setTickerRows] = useState<LandingRow[] | null>(null)
+  const [whatsNewPreview, setWhatsNewPreview] = useState<ReleasePreviewPayload | null>(null)
+  const [whatsNewPreviewVer, setWhatsNewPreviewVer] = useState('')
 
   const loadQuotes = useCallback(() => {
     fetchPublicLandingQuotes()
@@ -101,6 +104,19 @@ export default function Home() {
     const id = setInterval(loadQuotes, 60_000)
     return () => clearInterval(id)
   }, [loadQuotes])
+
+  useEffect(() => {
+    release
+      .getPreview(lang === 'de' ? 'de' : 'en')
+      .then((d) => {
+        setWhatsNewPreview(d.release)
+        setWhatsNewPreviewVer(d.app_version ?? '')
+      })
+      .catch(() => {
+        setWhatsNewPreview(null)
+        setWhatsNewPreviewVer('')
+      })
+  }, [lang])
 
   // When language changes, auto-switch currency to match region expectation
   const handleLangChange = (v: string) => {
@@ -349,6 +365,125 @@ export default function Home() {
           </motion.div>
         </motion.div>
       </section>
+
+      {/* ── What's New (public teaser) ── */}
+      {whatsNewPreview ? (
+        <section style={{ padding: '0 32px 56px', maxWidth: 944, margin: '0 auto', width: '100%' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 22 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            style={{
+              position: 'relative',
+              borderRadius: 18,
+              border: '1px solid rgba(34,197,94,0.22)',
+              background: 'linear-gradient(165deg, rgba(15,23,42,0.96) 0%, rgba(2,6,23,0.99) 100%)',
+              overflow: 'hidden',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.35)',
+            }}
+          >
+            <div style={{ padding: '28px 28px 112px', position: 'relative', zIndex: 1 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  color: '#4ade80',
+                  textTransform: 'uppercase',
+                  marginBottom: 10,
+                }}
+              >
+                {t('land_whats_new_kicker')}
+                {whatsNewPreviewVer ? ` · v${whatsNewPreviewVer}` : ''}
+              </div>
+              <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '0 0 18px', color: '#f8fafc', lineHeight: 1.25 }}>
+                {whatsNewPreview.title}
+              </h2>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {whatsNewPreview.features_teaser.map((line, i) => (
+                  <li
+                    key={`${i}-${line.slice(0, 24)}`}
+                    style={{
+                      fontSize: 15,
+                      color: '#cbd5e1',
+                      lineHeight: 1.55,
+                      paddingLeft: 16,
+                      borderLeft: '3px solid rgba(34,197,94,0.45)',
+                    }}
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+              {whatsNewPreview.has_more ? (
+                <p style={{ margin: '18px 0 0', fontSize: 14, color: '#64748b', lineHeight: 1.5 }}>{t('land_whats_new_more')}</p>
+              ) : null}
+            </div>
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: '52%',
+                background: 'linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.55) 38%, rgba(2,6,23,0.94) 100%)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                pointerEvents: 'none',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                padding: '22px 24px 26px',
+                zIndex: 2,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              {authMounted && authUser ? (
+                <Link
+                  href='/user/dashboard?show_whats_new=1'
+                  className='shimmer-btn'
+                  style={{
+                    padding: '12px 28px',
+                    borderRadius: 10,
+                    color: '#fff',
+                    fontSize: 15,
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-block',
+                  }}
+                >
+                  {t('land_whats_new_dashboard')}
+                </Link>
+              ) : (
+                <Link
+                  href='/register?from=whats_new'
+                  onClick={() => setWhatsNewIntent()}
+                  className='shimmer-btn'
+                  style={{
+                    padding: '12px 28px',
+                    borderRadius: 10,
+                    color: '#fff',
+                    fontSize: 15,
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-block',
+                  }}
+                >
+                  {t('land_whats_new_cta')}
+                </Link>
+              )}
+            </div>
+          </motion.div>
+        </section>
+      ) : null}
 
       {/* ── MacBook Mockup ── */}
       <section style={{ padding: '0 32px 80px', display: 'flex', justifyContent: 'center' }}>

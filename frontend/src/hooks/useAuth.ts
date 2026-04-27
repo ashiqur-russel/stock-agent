@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/api'
 import { dispatchAuthSessionChanged } from '@/lib/authEvents'
+import { consumeWhatsNewIntentPath } from '@/lib/whatsNewFunnel'
 
 interface StoredUser {
   user_id: number
@@ -47,7 +48,7 @@ export function useAuth() {
     try {
       const res = await auth.login(email, password)
       saveSession(res.access_token, { user_id: res.user_id, name: res.name, email: res.email })
-      router.push('/user/dashboard')
+      router.push(consumeWhatsNewIntentPath())
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Login failed')
     } finally {

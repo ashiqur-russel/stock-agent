@@ -18,6 +18,15 @@ export const translations = {
     whats_new_not_now: 'Remind me later',
     whats_new_dont_show: "Don't show this release again until the next version",
 
+    land_whats_new_kicker: "What's new",
+    land_whats_new_cta: 'Create free account to read full notes',
+    land_whats_new_more: 'Plus fixes and more — sign up to see everything.',
+    land_whats_new_dashboard: 'Open dashboard',
+
+    dash_whats_new_row: "See what's new in this version",
+    dash_whats_new_sub: 'Open the full release notes.',
+    dash_whats_new_badge: 'New',
+
     settings_title: 'Settings',
     settings_subtitle: 'Email notifications, AI chat (Groq), and related account options.',
     settings_alerts_footer:
@@ -461,6 +470,15 @@ export const translations = {
     whats_new_done: 'Loslegen',
     whats_new_not_now: 'Später erinnern',
     whats_new_dont_show: 'Diese Version nicht mehr anzeigen (bis zum nächsten Update)',
+
+    land_whats_new_kicker: 'Was ist neu',
+    land_whats_new_cta: 'Kostenloses Konto — vollständige Release-Notes',
+    land_whats_new_more: 'Plus Fehlerbehebungen und mehr — nach der Registrierung alles lesen.',
+    land_whats_new_dashboard: 'Zum Dashboard',
+
+    dash_whats_new_row: 'Neuigkeiten in dieser Version',
+    dash_whats_new_sub: 'Vollständige Release-Notes öffnen.',
+    dash_whats_new_badge: 'Neu',
 
     // Auth
     auth_login: 'Anmelden',
