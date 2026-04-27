@@ -310,8 +310,32 @@ export const translations = {
     land_cta_create: 'Create free account',
     land_signin: 'Sign In',
     land_get_started: 'Get Started',
-    land_what_label: 'Features',
-    land_what_title: 'Everything you need to trade smarter',
+    land_what_label: 'What we solve',
+    land_what_title: 'Less noise, clearer decisions — your portfolio in one place',
+    land_solves_ai_title: 'AI adviser',
+    land_solves_ai_desc:
+      'Swing-style help grounded in live prices, RSI, MACD, Bollinger Bands, and headlines — so answers reflect what the market is doing now.',
+    land_solves_oneplace_title: 'One portfolio hub',
+    land_solves_oneplace_desc:
+      'Holdings, average cost, and P&L from a single transaction log — no more scattered spreadsheets or broker screenshots.',
+    land_solves_swing_title: 'Swing signal alerts',
+    land_solves_swing_desc:
+      'Get notified when swing indicators shift on positions you hold — email and optional browser push so you are not glued to a chart all day.',
+    land_solves_paper_title: 'Paper trading',
+    land_solves_paper_desc:
+      'Practice with a virtual €100,000 account at real market prices before you put capital at risk.',
+    land_solves_ledger_title: 'Full transaction history',
+    land_solves_ledger_desc:
+      'Every buy and sell in one chronological ledger — the source of truth for how your portfolio is calculated.',
+    land_solves_calm_title: 'Trade with less stress',
+    land_solves_calm_desc:
+      'Watching every tick breeds anxiety and impulsive orders. Logging real trades here keeps you aligned with a plan instead of reacting to short-term screen drama.',
+    land_solves_fifo_title: 'Profit & loss you can trust',
+    land_solves_fifo_desc:
+      'Unrealized P&L on open positions plus realized gains and losses on sells using FIFO lot matching — transparent accounting, not guesswork.',
+    land_solves_live_title: 'Live charts & dual currency',
+    land_solves_live_desc:
+      'Interactive candlesticks from live data, technical context in the app, and an instant EUR ↔ USD toggle everywhere.',
     land_how_label: 'How it works',
     land_how_title: 'Three steps to smarter trading',
     land_ready: 'Ready to start?',
@@ -654,8 +678,32 @@ export const translations = {
     land_cta_create: 'Kostenloses Konto erstellen',
     land_signin: 'Anmelden',
     land_get_started: 'Loslegen',
-    land_what_label: 'Funktionen',
-    land_what_title: 'Alles, was Sie für intelligenteres Trading brauchen',
+    land_what_label: 'Was wir lösen',
+    land_what_title: 'Weniger Lärm, klarere Entscheidungen — Ihr Portfolio an einem Ort',
+    land_solves_ai_title: 'KI-Berater',
+    land_solves_ai_desc:
+      'Swing-orientierte Hilfe auf Basis von Live-Kursen, RSI, MACD, Bollinger-Bändern und Schlagzeilen — Antworten spiegeln, was der Markt gerade tut.',
+    land_solves_oneplace_title: 'Ein Portfolio-Hub',
+    land_solves_oneplace_desc:
+      'Bestände, Durchschnittskosten und P&L aus einem einzigen Transaktionslog — keine verstreuten Tabellen oder Broker-Screenshots mehr.',
+    land_solves_swing_title: 'Swing-Signal-Benachrichtigungen',
+    land_solves_swing_desc:
+      'Hinweise, wenn sich Swing-Indikatoren bei Ihren Positionen ändern — E-Mail und optional Browser-Push, damit Sie nicht den ganzen Tag am Chart hängen.',
+    land_solves_paper_title: 'Papierhandel',
+    land_solves_paper_desc:
+      'Üben Sie mit einem virtuellen Konto von 100.000 € zu echten Marktpreisen, bevor Sie Kapital riskieren.',
+    land_solves_ledger_title: 'Vollständige Transaktionshistorie',
+    land_solves_ledger_desc:
+      'Jeder Kauf und Verkauf in einem chronologischen Journal — die Grundlage für alle Portfolioberechnungen.',
+    land_solves_calm_title: 'Weniger Stress beim Handeln',
+    land_solves_calm_desc:
+      'Jeden Tick zu beobachten erzeugt Nervosität und Schnell-Orders. Echte Trades hier zu erfassen hält Sie am Plan statt an kurzfristigem Bildschirmtheater.',
+    land_solves_fifo_title: 'Gewinn und Verlust nachvollziehbar',
+    land_solves_fifo_desc:
+      'Unrealisierter P&L auf offene Positionen plus realisierte Gewinne und Verluste bei Verkäufen per FIFO-Lot-Matching — nachvollziehbare Buchhaltung.',
+    land_solves_live_title: 'Live-Charts & Doppelwährung',
+    land_solves_live_desc:
+      'Interaktive Kerzen aus Live-Daten, technischer Kontext in der App und ein sofortiger EUR ↔ USD-Schalter überall.',
     land_how_label: 'So funktioniert es',
     land_how_title: 'Drei Schritte zu besserem Trading',
     land_ready: 'Bereit loszulegen?',
