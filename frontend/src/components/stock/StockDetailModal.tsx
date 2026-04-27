@@ -84,12 +84,13 @@ interface Props {
   usListingFallback?: UsListingQuote | null
 }
 
-type DetailTab = 'stats' | 'chart' | 'news'
+/** Overview = fundamentals + chart; News is separate. */
+type DetailTab = 'overview' | 'news'
 
 export default function StockDetailModal({ ticker, onClose, usListingFallback }: Props) {
   const { t, currency, currencySymbol, lang } = useApp()
   const narrowChart = useNarrowChartHeight()
-  const [tab, setTab] = useState<DetailTab>('chart')
+  const [tab, setTab] = useState<DetailTab>('overview')
   const [maximized, setMaximized] = useState(false)
   const [period, setPeriod] = useState('3mo')
   const [moreOpen, setMoreOpen] = useState(false)
@@ -124,7 +125,7 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
       setMoreOpen(false)
       return
     }
-    setTab('chart')
+    setTab('overview')
     load()
     const id = setInterval(load, 30_000)
     return () => clearInterval(id)
@@ -332,14 +333,12 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
   )
 
   const tabIds: Record<DetailTab, string> = {
-    chart: 'sdm-tab-chart',
+    overview: 'sdm-tab-overview',
     news: 'sdm-tab-news',
-    stats: 'sdm-tab-stats',
   }
   const panelIds: Record<DetailTab, string> = {
-    chart: 'sdm-panel-chart',
+    overview: 'sdm-panel-overview',
     news: 'sdm-panel-news',
-    stats: 'sdm-panel-stats',
   }
 
   const tabBtn = (id: DetailTab, label: string) => (
@@ -411,9 +410,8 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
           background: '#0f172a',
         }}
       >
-        {tabBtn('chart', t('sdm_tab_chart'))}
+        {tabBtn('overview', t('sdm_tab_overview'))}
         {tabBtn('news', t('sdm_tab_news'))}
-        {tabBtn('stats', t('sdm_tab_stats'))}
       </div>
       <div
         role="tabpanel"
@@ -422,8 +420,12 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
         style={{ overflowY: 'auto', flex: 1, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 20 }}
       >
         {error && <div style={{ color: '#f87171', fontSize: 14 }}>{error}</div>}
-        {tab === 'stats' && statsSection}
-        {tab === 'chart' && chartSection}
+        {tab === 'overview' && (
+          <>
+            {statsSection}
+            {chartSection}
+          </>
+        )}
         {tab === 'news' && newsSection}
       </div>
     </>
