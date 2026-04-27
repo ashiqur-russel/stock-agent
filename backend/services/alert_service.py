@@ -160,7 +160,10 @@ def check_all_portfolios():
 
                 new_signal = analysis["swing_setup_quality"]
                 old_signal = get_last_signal(user_id, ticker)
-                save_signal(user_id, ticker, new_signal)
+                # Only persist when the label changes (or first observation). Inserting every
+                # scan made signal_history grow as O(users × holdings × scans).
+                if old_signal is None or old_signal != new_signal:
+                    save_signal(user_id, ticker, new_signal)
                 invalidate_swing_signal_cache(ticker)
 
                 if old_signal == new_signal:
