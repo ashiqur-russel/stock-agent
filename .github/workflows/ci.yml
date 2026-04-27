@@ -8,6 +8,12 @@ on:
   push:
     branches: [main]
 
+# Code scanning: restrict GITHUB_TOKEN (alert “Workflow does not contain permissions”).
+# actions: write is needed for pip/npm + Docker GHA caches in this workflow.
+permissions:
+  contents: read
+  actions: write
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
