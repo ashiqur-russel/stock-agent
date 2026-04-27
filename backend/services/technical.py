@@ -6,13 +6,25 @@ from services.market_data import _suppress_yfinance_stderr
 
 
 def compute_indicators(ticker: str) -> dict:
-    with _suppress_yfinance_stderr():
-        df = yf.download(ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
-    if df.empty or len(df) < 50:
-        return {"error": f"Not enough data for {ticker}"}
+    """
+    Per-ticker OHLC via ``Ticker.history`` — not ``yf.download``.
 
-    # Flatten MultiIndex columns if present
+    ``download()`` shares global batch/thread state; concurrent calls (e.g. from
+    ``ThreadPoolExecutor`` in ``get_portfolio_for_user``) can return the wrong
+    symbol's bars, producing nonsense prices (e.g. BYND showing ~\\$350 like TSLA).
+    """
+    tk = (ticker or "").strip().upper()
+    if not tk:
+        return {"error": "Missing ticker"}
+
+    with _suppress_yfinance_stderr():
+        df = yf.Ticker(tk).history(period="6mo", interval="1d", auto_adjust=True, prepost=False)
+    if df.empty or len(df) < 50:
+        return {"error": f"Not enough data for {tk}"}
+
+    # Rare: some yfinance builds still return a MultiIndex
     if isinstance(df.columns, pd.MultiIndex):
+        df = df.copy()
         df.columns = df.columns.get_level_values(0)
 
     df = df.copy()
@@ -104,7 +116,7 @@ def compute_indicators(ticker: str) -> dict:
     rsi = float(last["RSI_14"]) if not pd.isna(last.get("RSI_14", float("nan"))) else None
 
     return {
-        "ticker": ticker.upper(),
+        "ticker": tk,
         "current_price": round(close, 4),
         "rsi_14": round(rsi, 2) if rsi else None,
         "macd": {

@@ -1,5 +1,6 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from threading import Lock
 
 from database import get_connection
@@ -37,7 +38,7 @@ def _db_last_signal(user_id: int, ticker: str) -> str | None:
     return row["signal"] if row else None
 
 
-def _signal_for(ticker: str) -> str | None:
+def _signal_for(user_id: int, ticker: str) -> str | None:
     """
     Live swing_setup_quality from run_swing_analysis. Only successful runs are cached;
     errors are not cached (avoids a 10-minute blank badge after a transient yfinance failure).
@@ -54,6 +55,17 @@ def _signal_for(ticker: str) -> str | None:
         return None
     if not isinstance(analysis, dict) or "error" in analysis:
         return None
+    try:
+        region = get_user_market_region(user_id)
+        q = fetch_quote(ticker, display_region=region)
+        q_usd = float(q.get("current_price_usd") or 0)
+        a_usd = float(analysis.get("current_price") or 0)
+        if q_usd > 0.05 and a_usd > 0.05:
+            lo, hi = (q_usd, a_usd) if q_usd <= a_usd else (a_usd, q_usd)
+            if hi / lo > 4.0:
+                return None
+    except Exception:
+        pass
     sig = analysis.get("swing_setup_quality")
     if not sig:
         return None
@@ -174,8 +186,9 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
     tickers = list(holdings.keys())
     signals: dict[str, str | None] = {}
     if tickers:
+        _fn = partial(_signal_for, user_id)
         with ThreadPoolExecutor(max_workers=min(8, len(tickers))) as pool:
-            for tk, sig in zip(tickers, pool.map(_signal_for, tickers)):
+            for tk, sig in zip(tickers, pool.map(_fn, tickers)):
                 signals[tk] = sig
 
     display_region = get_user_market_region(user_id)
