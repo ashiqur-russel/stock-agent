@@ -24,7 +24,9 @@ import logging
 import threading
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
+import pandas as pd
 import yfinance as yf
 
 # Cache the EUR rate for 5 minutes to avoid fetching on every request
@@ -91,25 +93,43 @@ def _get_prev_eur_per_usd() -> float | None:
             return None
 
 
-def _history_prev_close(t: yf.Ticker, market_state: str) -> float | None:
+def _history_prev_close(
+    t: yf.Ticker, market_state: str, *, use_xetra: bool = False
+) -> float | None:
     """
-    Get the most recent confirmed session close from daily history.
-    More reliable than regularMarketPreviousClose for illiquid German listings
-    where Yahoo's info dict can return a stale value from days ago.
+    Get the prior **session** close from daily history for computing "today's" % change.
+
+    During REGULAR hours we must not assume the latest daily row is always "today":
+    Yahoo often still has only the **last completed** session (e.g. Mon 9:55 ET with
+    Fri as the latest bar). Using iloc[-2] in that case picks the wrong baseline and
+    yields nonsense % (e.g. ~0% when the real move from Friday's close is +2–3%).
     """
     try:
         with _suppress_yfinance_stderr():
-            hist = t.history(period="5d", interval="1d", prepost=False, auto_adjust=True)
+            hist = t.history(period="10d", interval="1d", prepost=False, auto_adjust=True)
         if hist is None or hist.empty:
             return None
         closes = hist["Close"].dropna()
         if closes.empty:
             return None
         if market_state == "REGULAR" and len(closes) >= 2:
-            # Market is currently open; the last bar is today's incomplete session
-            v = float(closes.iloc[-2])
+            trading_tz = ZoneInfo("Europe/Berlin") if use_xetra else ZoneInfo("America/New_York")
+            today = datetime.now(trading_tz).date()
+            last_ts = pd.Timestamp(closes.index[-1])
+            if last_ts.tzinfo is not None:
+                last_bar_date = last_ts.tz_convert(trading_tz).date()
+            else:
+                last_bar_date = last_ts.date()
+
+            if last_bar_date < today:
+                # Latest row is still the last *completed* session (not today's candle yet).
+                v = float(closes.iloc[-1])
+            else:
+                # Latest row is today's developing daily bar; baseline is the prior session.
+                v = float(closes.iloc[-2])
+        elif market_state == "REGULAR" and len(closes) == 1:
+            v = float(closes.iloc[-1])
         else:
-            # Market closed/pre/post: last bar is the most recently completed session
             v = float(closes.iloc[-1])
         return v if v > 0 else None
     except Exception:
@@ -123,7 +143,6 @@ def fetch_ohlcv(
     target_ccy: str = "EUR",
 ) -> list[dict]:
     """OHLC from Yahoo. US listings are in USD in yfinance; multiply by spot EUR/USD for EUR display."""
-    import pandas as pd
 
     tcy = (target_ccy or "EUR").upper()
     if tcy not in ("EUR", "USD"):
@@ -371,7 +390,7 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
     # Always prefer history-derived previous close over regularMarketPreviousClose.
     # Yahoo's info dict can return a stale value for any thinly-traded ticker
     # (German listings OR US penny stocks like BYND) — history() is more reliable.
-    hist_prev = _history_prev_close(t, market_state)
+    hist_prev = _history_prev_close(t, market_state, use_xetra=use_xetra)
     if hist_prev is not None:
         prev_basis_native = hist_prev
 
