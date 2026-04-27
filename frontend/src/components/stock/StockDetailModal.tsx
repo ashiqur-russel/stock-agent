@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { useApp, priceDecimalsForValue } from '@/contexts/AppContext'
 import { market } from '@/lib/api'
+import ModalShell from '@/components/ui/ModalShell'
 import CandlestickChart from '@/components/charts/CandlestickChart'
+import { DetailPanelTile } from '@/components/stock/DetailPanelTile'
+import { TickerNewsRow } from '@/components/stock/TickerNewsRow'
 import { LiveDayChange, LivePrice, LiveQuoteExtendedHint, LiveUsListingRow } from '@/components/ui/LivePrice'
 import type { UsListingQuote } from '@/hooks/usePriceStream'
 
@@ -62,7 +65,8 @@ function formatCompactCap(n: number, sym: string): string {
 
 const MOBILE_MQ = '(max-width: 640px)'
 
-function useIsMobileTabs(): boolean {
+/** Slightly shorter chart on narrow viewports (tabbed layout has less vertical space). */
+function useNarrowChartHeight(): boolean {
   const [narrow, setNarrow] = useState(false)
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_MQ)
@@ -84,7 +88,7 @@ type DetailTab = 'stats' | 'chart' | 'news'
 
 export default function StockDetailModal({ ticker, onClose, usListingFallback }: Props) {
   const { t, currency, currencySymbol, lang } = useApp()
-  const mobileTabs = useIsMobileTabs()
+  const narrowChart = useNarrowChartHeight()
   const [tab, setTab] = useState<DetailTab>('chart')
   const [maximized, setMaximized] = useState(false)
   const [period, setPeriod] = useState('3mo')
@@ -126,29 +130,6 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
     return () => clearInterval(id)
   }, [ticker, load])
 
-  useEffect(() => {
-    if (!ticker) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [ticker, onClose])
-
-  useEffect(() => {
-    if (!ticker) return
-    const body = document.body
-    const prevOverflow = body.style.overflow
-    const prevPadding = body.style.paddingRight
-    const sb = window.innerWidth - document.documentElement.clientWidth
-    body.style.overflow = 'hidden'
-    if (sb > 0) body.style.paddingRight = `${sb}px`
-    return () => {
-      body.style.overflow = prevOverflow
-      body.style.paddingRight = prevPadding
-    }
-  }, [ticker])
-
   if (!ticker) return null
 
   const locale = lang === 'de' ? 'de' : 'en'
@@ -167,9 +148,9 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
 
   const chartH = maximized
     ? Math.min(520, Math.floor(window.innerHeight * 0.45))
-    : mobileTabs
+    : narrowChart
       ? Math.min(320, Math.floor(window.innerHeight * 0.32))
-      : 240
+      : 300
 
   const cap =
     currency === 'USD'
@@ -246,10 +227,7 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
         { label: t('sdm_52w_high'), value: fmtPrice(wHigh) },
         { label: t('sdm_52w_low'), value: fmtPrice(wLow) },
       ].map((row) => (
-        <div key={row.label} style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</div>
-          <div style={{ fontSize: 15, color: '#f1f5f9', fontWeight: 600, marginTop: 4 }}>{row.value}</div>
-        </div>
+        <DetailPanelTile key={row.label} label={row.label} value={row.value} />
       ))}
     </div>
   )
@@ -289,10 +267,7 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
             }}
           >
             {moreRows.map((row) => (
-              <div key={row.label} style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</div>
-                <div style={{ fontSize: 15, color: '#f1f5f9', fontWeight: 600, marginTop: 4 }}>{row.value}</div>
-              </div>
+              <DetailPanelTile key={row.label} label={row.label} value={row.value} />
             ))}
           </div>
         )}
@@ -337,51 +312,45 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
   )
 
   const newsSection: ReactNode = (
-    <section>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-        {t('sdm_news')}
-      </div>
+    <section aria-label={t('sdm_news')}>
       {news.length === 0 ? (
         <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>{t('sdm_no_news')}</p>
       ) : (
-        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {news.map((item, i) => (
-            <li
+            <TickerNewsRow
               key={`${item.title}-${i}`}
-              style={{
-                background: '#020617',
-                borderRadius: 8,
-                padding: '12px 14px',
-                border: '1px solid #1e293b',
-              }}
-            >
-              {item.url ? (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: 15, fontWeight: 600, color: '#60a5fa', textDecoration: 'none' }}
-                >
-                  {item.title}
-                </a>
-              ) : (
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#f1f5f9' }}>{item.title}</div>
-              )}
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {item.publisher ? <span>{item.publisher}</span> : null}
-                <span>{relativePublished(item.published_at ?? '')}</span>
-              </div>
-            </li>
+              title={item.title}
+              url={item.url}
+              publisher={item.publisher}
+              timeLabel={relativePublished(item.published_at ?? '')}
+            />
           ))}
-        </ul>
+        </div>
       )}
     </section>
   )
+
+  const tabIds: Record<DetailTab, string> = {
+    chart: 'sdm-tab-chart',
+    news: 'sdm-tab-news',
+    stats: 'sdm-tab-stats',
+  }
+  const panelIds: Record<DetailTab, string> = {
+    chart: 'sdm-panel-chart',
+    news: 'sdm-panel-news',
+    stats: 'sdm-panel-stats',
+  }
 
   const tabBtn = (id: DetailTab, label: string) => (
     <button
       key={id}
       type="button"
+      role="tab"
+      id={tabIds[id]}
+      aria-selected={tab === id}
+      aria-controls={panelIds[id]}
+      tabIndex={tab === id ? 0 : -1}
       onClick={() => setTab(id)}
       style={{
         flex: 1,
@@ -430,9 +399,11 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
         overflow: 'hidden',
       }
 
-  const bodyContent = mobileTabs ? (
+  const bodyContent = (
     <>
       <div
+        role="tablist"
+        aria-label={`${ticker} ${t('sdm_tabs_aria')}`}
         style={{
           flexShrink: 0,
           display: 'flex',
@@ -444,113 +415,99 @@ export default function StockDetailModal({ ticker, onClose, usListingFallback }:
         {tabBtn('news', t('sdm_tab_news'))}
         {tabBtn('stats', t('sdm_tab_stats'))}
       </div>
-      <div style={{ overflowY: 'auto', flex: 1, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div
+        role="tabpanel"
+        id={panelIds[tab]}
+        aria-labelledby={tabIds[tab]}
+        style={{ overflowY: 'auto', flex: 1, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 20 }}
+      >
         {error && <div style={{ color: '#f87171', fontSize: 14 }}>{error}</div>}
         {tab === 'stats' && statsSection}
         {tab === 'chart' && chartSection}
         {tab === 'news' && newsSection}
       </div>
     </>
-  ) : (
-    <div style={{ overflowY: 'auto', flex: 1, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {error && <div style={{ color: '#f87171', fontSize: 14 }}>{error}</div>}
-      {statsSection}
-      {chartSection}
-      {newsSection}
-    </div>
   )
 
   return (
-    <div
-      role="presentation"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999,
-        background: 'rgba(2, 6, 23, 0.72)',
-        display: 'flex',
-        alignItems: maximized ? 'stretch' : 'center',
-        justifyContent: maximized ? 'stretch' : 'center',
-        padding: maximized ? 0 : 16,
-      }}
-      onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+    <ModalShell
+      open
+      onClose={onClose}
+      lockBodyScroll
+      zIndex={999}
+      backdropTint="slate"
+      fillViewport={maximized}
+      outerPadding={maximized ? 0 : 16}
+      ariaLabelledBy="stock-detail-title"
+      panelStyle={shellStyle}
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="stock-detail-title"
-        style={shellStyle}
-        onClick={(e) => e.stopPropagation()}
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '16px 18px',
+          borderBottom: '1px solid #1e293b',
+        }}
       >
-        <div
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '16px 18px',
-            borderBottom: '1px solid #1e293b',
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div id="stock-detail-title" style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>
-              {quote?.display_name ?? ticker}
-            </div>
-            <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{ticker}</div>
-            <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '8px 14px' }}>
-              <span style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>
-                <LivePrice ticker={ticker} />
-              </span>
-              <span style={{ fontSize: 15, fontWeight: 600 }}>
-                <LiveDayChange ticker={ticker} initialPct={quote?.day_change_pct} />
-              </span>
-            </div>
-            <div style={{ marginTop: 6, fontSize: 12 }}>
-              <LiveQuoteExtendedHint ticker={ticker} />
-              <LiveUsListingRow ticker={ticker} fallback={usListingFallback ?? undefined} />
-            </div>
+        <div style={{ minWidth: 0 }}>
+          <div id="stock-detail-title" style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>
+            {quote?.display_name ?? ticker}
           </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={() => setMaximized((m) => !m)}
-              style={{
-                padding: '8px 12px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                borderRadius: 8,
-                color: '#94a3b8',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {maximized ? t('sdm_collapse') : t('sdm_expand')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '8px 12px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                borderRadius: 8,
-                color: '#94a3b8',
-                fontSize: 18,
-                lineHeight: 1,
-                cursor: 'pointer',
-              }}
-              aria-label={t('sdm_close')}
-            >
-              ×
-            </button>
+          <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{ticker}</div>
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '8px 14px' }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>
+              <LivePrice ticker={ticker} />
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>
+              <LiveDayChange ticker={ticker} initialPct={quote?.day_change_pct} />
+            </span>
+          </div>
+          <div style={{ marginTop: 6, fontSize: 12 }}>
+            <LiveQuoteExtendedHint ticker={ticker} />
+            <LiveUsListingRow ticker={ticker} fallback={usListingFallback ?? undefined} />
           </div>
         </div>
-
-        {bodyContent}
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setMaximized((m) => !m)}
+            style={{
+              padding: '8px 12px',
+              background: '#1e293b',
+              border: '1px solid #334155',
+              borderRadius: 8,
+              color: '#94a3b8',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {maximized ? t('sdm_collapse') : t('sdm_expand')}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '8px 12px',
+              background: '#1e293b',
+              border: '1px solid #334155',
+              borderRadius: 8,
+              color: '#94a3b8',
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: 'pointer',
+            }}
+            aria-label={t('sdm_close')}
+          >
+            ×
+          </button>
+        </div>
       </div>
-    </div>
+
+      {bodyContent}
+    </ModalShell>
   )
 }
