@@ -11,10 +11,11 @@ export const translations = {
     nav_logout: 'Logout',
     sidebar_app_version: 'App version',
 
-    whats_new_section_features: 'New',
-    whats_new_section_fixes: 'Fixes',
-    whats_new_done: 'Done',
-    whats_new_not_now: 'Not now',
+    whats_new_heading: "What's New",
+    whats_new_section_features: 'New features',
+    whats_new_section_fixes: 'Bug fixes',
+    whats_new_done: 'Get started',
+    whats_new_not_now: 'Remind me later',
     whats_new_dont_show: "Don't show this release again until the next version",
 
     settings_title: 'Settings',
@@ -454,10 +455,11 @@ export const translations = {
     nav_logout: 'Abmelden',
     sidebar_app_version: 'App-Version',
 
-    whats_new_section_features: 'Neu',
-    whats_new_section_fixes: 'Korrekturen',
-    whats_new_done: 'Fertig',
-    whats_new_not_now: 'Jetzt nicht',
+    whats_new_heading: 'Was ist neu',
+    whats_new_section_features: 'Neue Funktionen',
+    whats_new_section_fixes: 'Fehlerbehebungen',
+    whats_new_done: 'Loslegen',
+    whats_new_not_now: 'Später erinnern',
     whats_new_dont_show: 'Diese Version nicht mehr anzeigen (bis zum nächsten Update)',
 
     // Auth
