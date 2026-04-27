@@ -14,7 +14,7 @@ import {
   LiveUsListingRow,
 } from '@/components/ui/LivePrice'
 import SignalBadge from '@/components/ui/SignalBadge'
-import CandlestickChart from '@/components/charts/CandlestickChart'
+import StockDetailModal from '@/components/stock/StockDetailModal'
 
 interface Props {
   holding: Holding
@@ -25,7 +25,7 @@ const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v)
 function PortfolioCardImpl({ holding }: Props) {
   const { t, formatPrice, currency, currencySymbol } = useApp()
   const router = useRouter()
-  const [showChart, setShowChart] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   const shares = num(holding.shares_held)
   const marketValueEur = num(holding.market_value)
@@ -42,7 +42,18 @@ function PortfolioCardImpl({ holding }: Props) {
       gap: 12,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setDetailOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setDetailOpen(true)
+            }
+          }}
+          style={{ cursor: 'pointer', minWidth: 0 }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{holding.ticker}</span>
             <SignalBadge signal={holding.signal} />
@@ -126,20 +137,23 @@ function PortfolioCardImpl({ holding }: Props) {
           🤖 {t('pc_ask_ai')}
         </button>
         <button
-          onClick={() => setShowChart(!showChart)}
+          onClick={() => setDetailOpen(true)}
           style={{
             padding: '8px 14px', background: '#1e293b', border: '1px solid #334155',
             borderRadius: 8, color: '#94a3b8', fontSize: 13, cursor: 'pointer',
           }}
+          title="Chart & details"
         >
-          {showChart ? '▲' : '📈'}
+          📈
         </button>
       </div>
 
-      {showChart && (
-        <div style={{ marginTop: 4, borderRadius: 8, overflow: 'hidden' }}>
-          <CandlestickChart ticker={holding.ticker} height={200} />
-        </div>
+      {detailOpen && (
+        <StockDetailModal
+          ticker={holding.ticker}
+          onClose={() => setDetailOpen(false)}
+          usListingFallback={holding.us_listing}
+        />
       )}
     </div>
   )

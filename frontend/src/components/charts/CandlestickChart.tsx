@@ -25,18 +25,22 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
   const { currency, currencySymbol, t } = useApp()
 
   useEffect(() => {
-    if (!containerRef.current) return
+    const container = containerRef.current
+    if (!container) return
 
+    let alive = true
     let chart: IChartApi | null = null
     const sym = currencySymbol
 
-    const init = async () => {
+    ;(async () => {
       const { createChart, CandlestickSeries } = await import('lightweight-charts')
 
-      if (!containerRef.current) return
+      if (!alive || !containerRef.current) return
 
-      chart = createChart(containerRef.current, {
-        width: containerRef.current.clientWidth,
+      container.replaceChildren()
+
+      chart = createChart(container, {
+        width: container.clientWidth,
         height,
         layout: { background: { color: '#020617' }, textColor: '#94a3b8' },
         grid: { vertLines: { color: '#1e293b' }, horzLines: { color: '#1e293b' } },
@@ -54,6 +58,12 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
         },
       })
 
+      if (!alive) {
+        chart.remove()
+        chart = null
+        return
+      }
+
       const series = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
         downColor: '#ef4444',
@@ -65,6 +75,9 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
 
       try {
         const data = (await market.history(ticker, period, currency)) as OHLCVBar[]
+        // If deps changed, cleanup already removed the chart — do not touch or double-remove.
+        if (!alive) return
+
         const formatted = data
           .filter((bar) => bar.open && bar.high && bar.low && bar.close)
           .map((bar) => ({
@@ -79,14 +92,14 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
         series.setData(formatted)
         chart.timeScale().fitContent()
       } catch {
-        // silently fail if ticker not found
+        if (alive) series.setData([])
       }
-    }
-
-    init()
+    })()
 
     return () => {
+      alive = false
       chart?.remove()
+      chart = null
     }
   }, [ticker, height, period, currency, currencySymbol, t])
 
