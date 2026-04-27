@@ -353,7 +353,7 @@ export default function DocsPage() {
             <P>You also need a <strong style={{ color: '#f1f5f9' }}>Groq API key</strong> (free at <code style={{ color: '#67e8f9' }}>console.groq.com</code>) to power the AI chat.</P>
             <P>Optional: a Gmail App Password for email verification and swing-signal alert emails.</P>
             <Note>
-              Open source contributors: see <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong> in the repository root for <Code>pre-commit</Code> setup, branch names (e.g. <Code>feature/SA-42-description</Code>), commit subjects (<Code>[SA-42] fix: short summary</Code>), and pull request expectations.
+              Open source contributors: see <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong> for <Code>pre-commit</Code>, branch names (<Code>feature/SA-42-description</Code>), commits (<Code>[SA-42] fix: short summary</Code>), the <strong style={{ color: '#f1f5f9' }}>development → main</strong> flow (PRs target <Code>development</Code> first), and PR titles like <Code>[SA-36] feature: development branch workflow</Code>.
             </Note>
           </Section>
 
@@ -453,11 +453,11 @@ npm run dev`}</Code>
           {/* ── Open source ── */}
           <Section id='open-source' title='Open source'>
             <P>
-              Full contributor workflow — <Code>pre-commit</Code>, branch names (<Code>feature/SA-42-…</Code>), commit subjects (<Code>[SA-42] type: summary</Code>), tests, and troubleshooting — is in the repo root file{' '}
+              Full contributor workflow — <Code>pre-commit</Code>, branch names (<Code>feature/SA-42-…</Code>), commit subjects (<Code>[SA-42] fix: summary</Code>), <strong style={{ color: '#f1f5f9' }}>Git branching</strong> (merge into <Code>development</Code> first; release via <Code>development</Code> → <Code>main</Code>), tests, and troubleshooting — is in{' '}
               <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong>. The root <strong style={{ color: '#f1f5f9' }}>README.md</strong> covers deploy pitfalls and Supabase connectivity.
             </P>
             <Note>
-              Pull requests: use titles like <Code>[SA-7] Fix/Auth Password Reset UX</Code> (see <strong style={{ color: '#f1f5f9' }}>CONTRIBUTING.md</strong>), include screenshots for UI changes, and document what you tested. GitHub loads the template from <Code>.github/pull_request_template.md</Code>.
+              Pull request <strong style={{ color: '#f1f5f9' }}>titles</strong>: <Code>[SA-36] feature: development branch workflow</Code> — ticket in brackets, lowercase type (<Code>feature</Code>, <Code>fix</Code>, <Code>docs</Code>, …), colon, short description. Base branch: <Code>development</Code>. Include screenshots for UI changes; fill in <Code>.github/pull_request_template.md</Code>.
             </Note>
           </Section>
 
