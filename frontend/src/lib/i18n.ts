@@ -27,6 +27,29 @@ export const translations = {
     dash_whats_new_sub: 'Open the full release notes.',
     dash_whats_new_badge: 'New',
 
+    land_nav_home: 'Home',
+    land_nav_whats_new: "What's New",
+    page_whats_new_hero_kicker: 'Updates & mission',
+    page_whats_new_hero_title: 'What we ship — and why it matters',
+    page_whats_new_hero_sub:
+      'Latest release highlights, why StockAgent exists, and the portfolio problems we focus on solving.',
+    page_whats_new_purpose_kicker: 'Purpose',
+    page_whats_new_purpose_title: 'Clarity for your portfolio without spreadsheet chaos',
+    page_whats_new_purpose_body:
+      'StockAgent helps you record real trades, see live value and P&L in the currencies you use, and chat with an AI that understands your holdings — so you spend less time in tabs, exports, and generic tools.',
+    page_whats_new_release_kicker: 'Latest release',
+    page_whats_new_inapp_kicker: 'In the app',
+    page_whats_new_inapp_title: 'Full release notes after you sign in',
+    page_whats_new_inapp_body:
+      'This page only shows a short teaser. With a free account, the dashboard opens the complete What’s New dialog — features, fixes, and options to dismiss or hide a release until the next version.',
+    page_whats_new_inapp_cta: 'Create free account',
+    page_whats_new_os_kicker: 'Open source',
+    page_whats_new_os_title: 'Code, issues, and developer docs',
+    page_whats_new_os_body:
+      'See how live quotes, swing alerts, and AI chat fit together. Star the repo for releases or use the in-app docs for setup and architecture.',
+    page_whats_new_os_cta_repo: 'GitHub repository',
+    page_whats_new_os_cta_docs: 'Developer docs',
+
     settings_title: 'Settings',
     settings_subtitle: 'Email notifications, AI chat (Groq), and related account options.',
     settings_alerts_footer:
@@ -479,6 +502,29 @@ export const translations = {
     dash_whats_new_row: 'Neuigkeiten in dieser Version',
     dash_whats_new_sub: 'Vollständige Release-Notes öffnen.',
     dash_whats_new_badge: 'Neu',
+
+    land_nav_home: 'Start',
+    land_nav_whats_new: 'Was ist neu',
+    page_whats_new_hero_kicker: 'Updates & Ausrichtung',
+    page_whats_new_hero_title: 'Was wir liefern — und warum es zählt',
+    page_whats_new_hero_sub:
+      'Aktuelle Release-Highlights, warum es StockAgent gibt, und welche Portfolio-Probleme wir lösen wollen.',
+    page_whats_new_purpose_kicker: 'Ziel',
+    page_whats_new_purpose_title: 'Klarheit im Portfolio ohne Tabellen-Chaos',
+    page_whats_new_purpose_body:
+      'Mit StockAgent erfassen Sie echte Trades, sehen Live-Wert und Gewinn/Verlust in Ihrer Währung und chatten mit einer KI, die Ihre Positionen kennt — weniger Tab-Wechsel, Exporte und generische Tools.',
+    page_whats_new_release_kicker: 'Aktuelles Release',
+    page_whats_new_inapp_kicker: 'In der App',
+    page_whats_new_inapp_title: 'Vollständige Release-Notes nach der Anmeldung',
+    page_whats_new_inapp_body:
+      'Diese Seite zeigt nur einen Teaser. Mit kostenlosem Konto öffnet das Dashboard den vollständigen „Was ist neu“-Dialog — Funktionen, Fixes und Optionen zum Schließen oder Ausblenden bis zur nächsten Version.',
+    page_whats_new_inapp_cta: 'Kostenloses Konto erstellen',
+    page_whats_new_os_kicker: 'Open Source',
+    page_whats_new_os_title: 'Code, Issues und Entwickler-Dokumentation',
+    page_whats_new_os_body:
+      'Sehen Sie, wie Live-Kurse, Swing-Alerts und KI-Chat zusammenspielen. Stern für Releases oder nutzen Sie die In-App-Doku für Setup und Architektur.',
+    page_whats_new_os_cta_repo: 'GitHub-Repository',
+    page_whats_new_os_cta_docs: 'Entwickler-Dokumentation',
 
     // Auth
     auth_login: 'Anmelden',
