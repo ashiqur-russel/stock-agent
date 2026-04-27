@@ -102,6 +102,8 @@ export const translations = {
     pc_quote_session_regular: 'Regular session',
     pc_quote_session_closed: 'Market closed',
     pc_us_quote_prefix: 'US',
+    pc_chart_footnote:
+      'Daily candles from Yahoo Finance (not intraday like a 1h TradingView chart). The last bar is the previous session’s close — it can differ slightly from the live price above.',
     pc_regular_reference: 'Regular-hours last',
     pc_shares: 'Shares',
     pc_ask_ai: 'Ask AI',
@@ -482,6 +484,8 @@ export const translations = {
     pc_quote_session_regular: 'Haupthandel',
     pc_quote_session_closed: 'Börse geschlossen',
     pc_us_quote_prefix: 'US',
+    pc_chart_footnote:
+      'Tageskerzen von Yahoo Finance (kein Intraday wie TradingView 1h). Die letzte Kerze ist der Schluss der letzten Session — kann leicht vom Live-Kurs oben abweichen.',
     pc_regular_reference: 'Letzter RTH-Kurs',
     pc_shares: 'Anteile',
     pc_ask_ai: 'KI fragen',

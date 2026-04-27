@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import type { IChartApi } from 'lightweight-charts'
 import { market } from '@/lib/api'
+import { useApp, priceDecimalsForValue } from '@/contexts/AppContext'
 
 interface Props {
   ticker: string
@@ -21,11 +22,13 @@ interface OHLCVBar {
 
 export default function CandlestickChart({ ticker, height = 300, period = '3mo' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const { currency, currencySymbol, t } = useApp()
 
   useEffect(() => {
     if (!containerRef.current) return
 
     let chart: IChartApi | null = null
+    const sym = currencySymbol
 
     const init = async () => {
       const { createChart, CandlestickSeries } = await import('lightweight-charts')
@@ -40,6 +43,15 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
         crosshair: { mode: 1 },
         rightPriceScale: { borderColor: '#1e293b' },
         timeScale: { borderColor: '#1e293b', timeVisible: true },
+        localization: {
+          priceFormatter: (p: number) => {
+            const d = priceDecimalsForValue(p)
+            return `${sym}${p.toLocaleString(undefined, {
+              minimumFractionDigits: d,
+              maximumFractionDigits: d,
+            })}`
+          },
+        },
       })
 
       const series = chart.addSeries(CandlestickSeries, {
@@ -52,7 +64,7 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
       })
 
       try {
-        const data = await market.history(ticker, period) as OHLCVBar[]
+        const data = (await market.history(ticker, period, currency)) as OHLCVBar[]
         const formatted = data
           .filter((bar) => bar.open && bar.high && bar.low && bar.close)
           .map((bar) => ({
@@ -76,7 +88,21 @@ export default function CandlestickChart({ ticker, height = 300, period = '3mo' 
     return () => {
       chart?.remove()
     }
-  }, [ticker, height, period])
+  }, [ticker, height, period, currency, currencySymbol, t])
 
-  return <div ref={containerRef} style={{ width: '100%', height }} />
+  return (
+    <div>
+      <div ref={containerRef} style={{ width: '100%', height }} />
+      <p
+        style={{
+          margin: '8px 0 0',
+          fontSize: 10,
+          color: '#64748b',
+          lineHeight: 1.4,
+        }}
+      >
+        {t('pc_chart_footnote')}
+      </p>
+    </div>
+  )
 }

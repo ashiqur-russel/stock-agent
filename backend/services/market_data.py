@@ -116,8 +116,19 @@ def _history_prev_close(t: yf.Ticker, market_state: str) -> float | None:
         return None
 
 
-def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[dict]:
+def fetch_ohlcv(
+    ticker: str,
+    period: str = "3mo",
+    interval: str = "1d",
+    target_ccy: str = "EUR",
+) -> list[dict]:
+    """OHLC from Yahoo. US listings are in USD in yfinance; multiply by spot EUR/USD for EUR display."""
     import pandas as pd
+
+    tcy = (target_ccy or "EUR").upper()
+    if tcy not in ("EUR", "USD"):
+        tcy = "EUR"
+    mult = get_usd_to_eur_rate() if tcy == "EUR" else 1.0
 
     with _suppress_yfinance_stderr():
         df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
@@ -125,7 +136,6 @@ def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[
         return []
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
-    eur_rate = get_usd_to_eur_rate()
     df = df.reset_index()
     records = []
     for _, row in df.iterrows():
@@ -135,10 +145,10 @@ def fetch_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> list[
                 "time": date_val.strftime("%Y-%m-%d")
                 if hasattr(date_val, "strftime")
                 else str(date_val)[:10],
-                "open": round(float(row["Open"]) * eur_rate, 4),
-                "high": round(float(row["High"]) * eur_rate, 4),
-                "low": round(float(row["Low"]) * eur_rate, 4),
-                "close": round(float(row["Close"]) * eur_rate, 4),
+                "open": round(float(row["Open"]) * mult, 4),
+                "high": round(float(row["High"]) * mult, 4),
+                "low": round(float(row["Low"]) * mult, 4),
+                "close": round(float(row["Close"]) * mult, 4),
                 "volume": int(row["Volume"]),
             }
         )
