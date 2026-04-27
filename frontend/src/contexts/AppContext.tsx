@@ -13,6 +13,15 @@ import {
 
 export type Currency = 'EUR' | 'USD'
 
+/** More decimals for penny / sub-€10 names so $0.8972 is not shown as $0.90. */
+export function priceDecimalsForValue(val: number): number {
+  if (!Number.isFinite(val)) return 2
+  const a = Math.abs(val)
+  if (a > 0 && a < 1) return 4
+  if (a < 10) return 3
+  return 2
+}
+
 interface AppCtx {
   lang: Lang
   setLang: (l: Lang) => void
@@ -88,7 +97,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const formatPrice = (eur: number, usd?: number): string => {
     const val = currency === 'USD' ? (usd ?? eur / 0.91) : eur
-    return `${currencySymbol}${val.toFixed(2)}`
+    const d = priceDecimalsForValue(val)
+    return `${currencySymbol}${val.toFixed(d)}`
   }
 
   const t = (key: TranslationKey) => translate(key, lang)

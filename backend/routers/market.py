@@ -2,13 +2,15 @@ from fastapi import APIRouter, Depends, Query
 
 from middleware.auth import get_current_user
 from services import market_data
+from services.user_prefs import get_user_market_region
 
 router = APIRouter(prefix="/api/v1/market", tags=["market"])
 
 
 @router.get("/quote/{ticker}")
 def get_quote(ticker: str, user=Depends(get_current_user)):
-    return market_data.fetch_quote(ticker.upper())
+    region = get_user_market_region(user["user_id"])
+    return market_data.fetch_quote(ticker.upper(), display_region=region)
 
 
 @router.get("/history/{ticker}")

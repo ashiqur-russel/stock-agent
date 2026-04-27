@@ -2,9 +2,12 @@ import pandas as pd
 import pandas_ta as ta
 import yfinance as yf
 
+from services.market_data import _suppress_yfinance_stderr
+
 
 def compute_indicators(ticker: str) -> dict:
-    df = yf.download(ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
+    with _suppress_yfinance_stderr():
+        df = yf.download(ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
     if df.empty or len(df) < 50:
         return {"error": f"Not enough data for {ticker}"}
 

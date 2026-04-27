@@ -39,6 +39,11 @@ GROQ_QUOTA_BUCKET: str = _groq_quota_bucket()
 JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
 DATABASE_PATH: str = os.getenv("DATABASE_PATH", "./portfolio.db")
 
+# Future: German listing quotes beyond Yahoo (e.g. Deutsche Börse MDS, vendor API).
+# Real-time exchange data is licensed; there is no built-in free realtime Xetra REST.
+# QUOTE_PROVIDER_DE = os.getenv("QUOTE_PROVIDER_DE", "yfinance")  # yfinance | custom
+# DEUTSCHE_BOERSE_API_KEY = os.getenv("DEUTSCHE_BOERSE_API_KEY", "")
+
 
 def _cors_origins() -> list[str]:
     raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")

@@ -82,8 +82,14 @@ export const translations = {
     db_refresh: 'Refresh',
     db_go_transactions: 'Add Transaction',
     // Reference market for open/closed indicator (UI only; can move to user settings later)
-    market_hours_de_caption: 'Mon–Fri 7:30 AM – 11:00 PM (Europe/Berlin)',
+    market_hours_de_caption: 'Mon–Fri 7:30 AM – 10:00 PM (Europe/Berlin)',
+    market_hours_de_quote_note:
+      'Prices and today’s change (%) may differ from other sites or your broker. We pull quotes from Yahoo Finance; with Germany as reference, European and US listings can show different numbers.',
+    market_hours_now: 'Now',
+    market_live_clock_title: 'Live time in the reference timezone (Berlin or New York)',
     market_hours_us_caption: 'Mon–Fri 9:30 AM – 4:00 PM ET (NYSE, US)',
+    market_hours_us_quote_note:
+      'Prices and today’s change (%) may differ from other sites or your broker. We pull quotes from Yahoo Finance (US listing).',
 
     // Portfolio Card
     pc_market_value: 'Market Value',
@@ -91,6 +97,12 @@ export const translations = {
     pc_realized: 'Realized P&L',
     pc_avg_cost: 'Avg Cost',
     pc_current: 'Current Price',
+    pc_quote_session_pre: 'Pre-market',
+    pc_quote_session_after: 'After-hours',
+    pc_quote_session_regular: 'Regular session',
+    pc_quote_session_closed: 'Market closed',
+    pc_us_quote_prefix: 'US',
+    pc_regular_reference: 'Regular-hours last',
     pc_shares: 'Shares',
     pc_ask_ai: 'Ask AI',
     pc_analyze: 'Analyze',
@@ -450,8 +462,14 @@ export const translations = {
     db_add_first: 'Fügen Sie Ihre erste Transaktion hinzu.',
     db_refresh: 'Aktualisieren',
     db_go_transactions: 'Transaktion hinzufügen',
-    market_hours_de_caption: 'Mo–Fr 7:30 – 23:00 Uhr (Europe/Berlin)',
+    market_hours_de_caption: 'Mo–Fr 7:30 – 22:00 Uhr (Europe/Berlin)',
+    market_hours_de_quote_note:
+      'Kurse und die angezeigte Tagesänderung (%) können von anderen Anbietern oder Ihrem Broker abweichen. Daten von Yahoo Finance; bei Referenz „Deutschland“ können europäische und US-Notierung unterschiedlich ausfallen.',
+    market_hours_now: 'Jetzt',
+    market_live_clock_title: 'Live-Uhr in der Referenzzeitzone (Berlin oder New York)',
     market_hours_us_caption: 'Mo–Fr 9:30 – 16:00 Uhr Ortszeit New York (NYSE)',
+    market_hours_us_quote_note:
+      'Kurse und die angezeigte Tagesänderung (%) können von anderen Anbietern oder Ihrem Broker abweichen. Daten von Yahoo Finance (US-Notierung).',
 
     // Portfolio Card
     pc_market_value: 'Marktwert',
@@ -459,6 +477,12 @@ export const translations = {
     pc_realized: 'Realisierter G/V',
     pc_avg_cost: 'Ø Einstandspreis',
     pc_current: 'Aktueller Kurs',
+    pc_quote_session_pre: 'Vorbörse',
+    pc_quote_session_after: 'Nachbörse',
+    pc_quote_session_regular: 'Haupthandel',
+    pc_quote_session_closed: 'Börse geschlossen',
+    pc_us_quote_prefix: 'US',
+    pc_regular_reference: 'Letzter RTH-Kurs',
     pc_shares: 'Anteile',
     pc_ask_ai: 'KI fragen',
     pc_analyze: 'Analysieren',

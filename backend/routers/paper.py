@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from database import get_connection, is_postgres
 from middleware.auth import get_current_user
 from services.market_data import fetch_quote, get_usd_to_eur_rate
+from services.user_prefs import get_user_market_region
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper"])
 
@@ -68,6 +69,7 @@ def get_account(
     currency: str = Query("EUR", pattern="^(USD|EUR)$"),
 ):
     user_id = user["user_id"]
+    display_region = get_user_market_region(user_id)
     with get_connection() as conn:
         balance_eur = _ensure_account(user_id, conn, currency=currency)
         holdings_raw = _calc_holdings(user_id, conn)
@@ -78,7 +80,7 @@ def get_account(
     holdings = []
     portfolio_value_eur = 0.0
     for ticker, h in holdings_raw.items():
-        quote = fetch_quote(ticker)
+        quote = fetch_quote(ticker, display_region=display_region)
         price_eur = quote.get("current_price", 0.0) or 0.0
         price_usd = quote.get("current_price_usd", 0.0) or 0.0
         shares = h["shares"]
@@ -105,6 +107,7 @@ def get_account(
                 "pnl_usd": pnl_usd,
                 "pnl_pct": pnl_pct,
                 "day_change_pct": quote.get("day_change_pct", 0),
+                "us_listing": quote.get("us_listing"),
                 "realized_pnl": round(h.get("realized_pnl", 0), 2),
             }
         )
@@ -139,7 +142,7 @@ def paper_trade(body: PaperTradeBody, user=Depends(get_current_user)):
     if body.shares <= 0:
         raise HTTPException(400, "shares must be positive")
 
-    quote = fetch_quote(ticker)
+    quote = fetch_quote(ticker, display_region=get_user_market_region(user_id))
     price_eur = quote["current_price"]
     if price_eur <= 0:
         raise HTTPException(400, f"Could not get price for {ticker}")

@@ -3,6 +3,22 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { getToken, API_URL } from '@/lib/api'
 
+export type QuoteSession =
+  | 'pre_market'
+  | 'after_hours'
+  | 'regular'
+  | 'closed'
+  | 'unknown'
+
+/** US parent line when DE mode uses a German Yahoo symbol (finanzen.net-style). */
+export interface UsListingQuote {
+  ticker: string
+  current_price_usd: number
+  day_change_pct: number
+  quote_session?: QuoteSession | string | null
+  market_state?: string | null
+}
+
 export interface LiveQuote {
   ticker: string
   current_price: number
@@ -10,6 +26,15 @@ export interface LiveQuote {
   day_change_pct: number
   eur_rate: number
   ts: number
+  quote_session?: QuoteSession | string
+  market_state?: string | null
+  pre_market_price?: number | null
+  pre_market_price_usd?: number | null
+  post_market_price?: number | null
+  post_market_price_usd?: number | null
+  regular_market_price?: number | null
+  regular_market_price_usd?: number | null
+  us_listing?: UsListingQuote | null
 }
 
 type Listener = () => void
@@ -99,13 +124,22 @@ class PriceStream {
       try {
         const data = JSON.parse(event.data) as
           | { type: 'connected' }
-          | { type: 'prices'; quotes: Omit<LiveQuote, 'ts'>[] }
+          | { type: 'prices'; quotes: (Omit<LiveQuote, 'ts'> & { us_listing?: UsListingQuote | null })[] }
         if (data.type !== 'prices') return
         const ts = Date.now()
         for (const q of data.quotes) {
           const ticker = q.ticker.toUpperCase()
           const prev = this.quotes.get(ticker)
-          if (prev && prev.current_price === q.current_price && prev.day_change_pct === q.day_change_pct) {
+          const usEq =
+            JSON.stringify(prev?.us_listing ?? null) === JSON.stringify(q.us_listing ?? null)
+          if (
+            prev &&
+            prev.current_price === q.current_price &&
+            prev.day_change_pct === q.day_change_pct &&
+            prev.quote_session === q.quote_session &&
+            prev.regular_market_price === q.regular_market_price &&
+            usEq
+          ) {
             continue
           }
           this.quotes.set(ticker, { ...q, ticker, ts })

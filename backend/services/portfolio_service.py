@@ -5,6 +5,7 @@ from threading import Lock
 from database import get_connection
 from services.market_data import fetch_quote
 from services.technical import run_swing_analysis
+from services.user_prefs import get_user_market_region
 
 # In-memory cache for swing-setup signals.
 #
@@ -149,11 +150,14 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
             for tk, sig in zip(tickers, pool.map(_signal_for, tickers)):
                 signals[tk] = sig
 
+    display_region = get_user_market_region(user_id)
     result = []
     for ticker, h in holdings.items():
-        quote = fetch_quote(ticker)
+        quote = fetch_quote(ticker, display_region=display_region)
         # current_price from fetch_quote is already in EUR
         current_price_eur = quote["current_price"]
+        current_price_usd = float(quote.get("current_price_usd") or 0.0)
+        eur_rate = float(quote.get("eur_rate") or 0.91)  # EUR per 1 USD (same as quote payload)
         shares_held = h["shares_held"]
         avg_cost_eur = h["avg_cost"]  # user enters price in EUR (Scalable Capital shows EUR)
         market_value = shares_held * current_price_eur
@@ -163,6 +167,12 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
             if avg_cost_eur and shares_held
             else 0.0
         )
+        # USD columns for UI currency toggle (avg_cost / realized P&L are stored in EUR)
+        avg_cost_usd = (avg_cost_eur / eur_rate) if eur_rate else 0.0
+        market_value_usd = shares_held * current_price_usd
+        unrealized_pnl_usd = (current_price_usd - avg_cost_usd) * shares_held
+        realized_pnl_eur = float(h["realized_pnl"])
+        realized_pnl_usd = (realized_pnl_eur / eur_rate) if eur_rate else 0.0
 
         result.append(
             {
@@ -170,14 +180,26 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
                 "shares_held": round(shares_held, 6),
                 "avg_cost": round(avg_cost_eur, 4),  # EUR
                 "current_price": current_price_eur,  # EUR
-                "current_price_usd": quote.get("current_price_usd", 0),
+                "current_price_usd": current_price_usd,
                 "market_value": round(market_value, 2),  # EUR
+                "market_value_usd": round(market_value_usd, 2),
                 "unrealized_pnl": round(unrealized_pnl, 2),
+                "unrealized_pnl_usd": round(unrealized_pnl_usd, 2),
                 "unrealized_pnl_pct": round(unrealized_pnl_pct, 2),
-                "realized_pnl": round(h["realized_pnl"], 2),
+                "realized_pnl": round(realized_pnl_eur, 2),
+                "realized_pnl_usd": round(realized_pnl_usd, 2),
                 "day_change_pct": quote["day_change_pct"],
                 "currency": "EUR",
                 "eur_rate": quote.get("eur_rate", 0.92),
+                "quote_session": quote.get("quote_session"),
+                "market_state": quote.get("market_state"),
+                "pre_market_price": quote.get("pre_market_price"),
+                "pre_market_price_usd": quote.get("pre_market_price_usd"),
+                "post_market_price": quote.get("post_market_price"),
+                "post_market_price_usd": quote.get("post_market_price_usd"),
+                "regular_market_price": quote.get("regular_market_price"),
+                "regular_market_price_usd": quote.get("regular_market_price_usd"),
+                "us_listing": quote.get("us_listing"),
                 "signal": signals.get(ticker),
             }
         )

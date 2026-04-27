@@ -1,8 +1,9 @@
 'use client'
 
 import { memo, useEffect, useRef, useState } from 'react'
-import { useApp } from '@/contexts/AppContext'
-import { useLiveQuote } from '@/hooks/usePriceStream'
+import { useApp, priceDecimalsForValue } from '@/contexts/AppContext'
+import type { TranslationKey } from '@/lib/i18n'
+import { useLiveQuote, type UsListingQuote } from '@/hooks/usePriceStream'
 
 const num = (v: unknown): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : 0
@@ -70,6 +71,7 @@ function LivePriceImpl({
     return <span style={style}>—</span>
   }
 
+  const dec = decimals ?? priceDecimalsForValue(price)
   const baseColor = (style?.color as string | undefined) ?? '#f1f5f9'
   return (
     <span
@@ -80,14 +82,125 @@ function LivePriceImpl({
       }}
     >
       {currencySymbol}{price.toLocaleString(undefined, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
+        minimumFractionDigits: dec,
+        maximumFractionDigits: dec,
       })}
     </span>
   )
 }
 
 export const LivePrice = memo(LivePriceImpl)
+
+const SESSION_LABEL: Partial<Record<string, TranslationKey>> = {
+  pre_market: 'pc_quote_session_pre',
+  after_hours: 'pc_quote_session_after',
+  regular: 'pc_quote_session_regular',
+  closed: 'pc_quote_session_closed',
+}
+
+/** Second row: US Yahoo USD price + % (pre/RTH/after) when DE mode uses a German listing. */
+export const LiveUsListingRow = memo(function LiveUsListingRow({
+  ticker,
+  fallback,
+}: {
+  ticker: string
+  fallback?: UsListingQuote | null
+}) {
+  const { t, marketRegion } = useApp()
+  const quote = useLiveQuote(ticker)
+  const us = quote?.us_listing ?? fallback ?? null
+  if (marketRegion !== 'DE' || !us || !Number.isFinite(us.current_price_usd)) return null
+
+  const dec = priceDecimalsForValue(us.current_price_usd)
+  const pct = Number(us.day_change_pct)
+  const pctOk = Number.isFinite(pct)
+  const sess = typeof us.quote_session === 'string' ? SESSION_LABEL[us.quote_session] : undefined
+
+  return (
+    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, lineHeight: 1.4 }}>
+      <span style={{ color: '#64748b', fontWeight: 600 }}>{t('pc_us_quote_prefix')}</span>
+      <span style={{ color: '#64748b' }}>{' · '}</span>
+      <span style={{ color: '#e2e8f0' }}>
+        $
+        {us.current_price_usd.toLocaleString(undefined, {
+          minimumFractionDigits: dec,
+          maximumFractionDigits: dec,
+        })}
+      </span>
+      {pctOk && (
+        <>
+          <span style={{ color: '#64748b' }}>{' · '}</span>
+          <span style={{ color: pct >= 0 ? '#22c55e' : '#ef4444' }}>
+            {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
+          </span>
+        </>
+      )}
+      {sess && (
+        <>
+          <span style={{ color: '#64748b' }}>{' · '}</span>
+          <span style={{ color: '#a78bfa' }}>{t(sess)}</span>
+        </>
+      )}
+    </div>
+  )
+})
+
+/** Pre-market / after-hours / closed badge + optional regular-session reference price (from Yahoo). */
+export const LiveQuoteExtendedHint = memo(function LiveQuoteExtendedHint({
+  ticker,
+}: {
+  ticker: string
+}) {
+  const { t, formatPrice, marketRegion } = useApp()
+  const quote = useLiveQuote(ticker)
+
+  const session = quote?.quote_session
+  if (marketRegion === 'DE' && session === 'pre_market') {
+    return null
+  }
+
+  const labelKey = typeof session === 'string' ? SESSION_LABEL[session] : undefined
+
+  const regEur = quote?.regular_market_price
+  const regUsd = quote?.regular_market_price_usd
+  const showRef =
+    (session === 'pre_market' || session === 'after_hours') &&
+    typeof regEur === 'number' &&
+    Number.isFinite(regEur) &&
+    regEur > 0
+
+  if (!labelKey && !showRef) return null
+
+  return (
+    <div style={{ marginTop: 4 }}>
+      {labelKey && (
+        <span
+          style={{
+            display: 'inline-block',
+            fontSize: 10,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            color: '#a78bfa',
+            background: 'rgba(139, 92, 246, 0.12)',
+            borderRadius: 4,
+            padding: '2px 6px',
+          }}
+        >
+          {t(labelKey)}
+        </span>
+      )}
+      {showRef && (
+        <div style={{ fontSize: 10, color: '#64748b', marginTop: labelKey ? 4 : 0, lineHeight: 1.35 }}>
+          {t('pc_regular_reference')}:{' '}
+          <span style={{ color: '#94a3b8' }}>
+            {formatPrice(regEur, typeof regUsd === 'number' ? regUsd : undefined)}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+})
 
 interface LiveDayChangeProps {
   ticker: string
