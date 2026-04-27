@@ -4,9 +4,10 @@ from email.mime.text import MIMEText
 
 import config
 from database import get_connection
-from services.market_data import get_usd_to_eur_rate
+from services.market_data import fetch_quote, get_usd_to_eur_rate
 from services.portfolio_service import get_portfolio_for_user, invalidate_swing_signal_cache
 from services.technical import run_swing_analysis
+from services.user_prefs import get_user_market_region
 
 SIGNAL_LABELS = {
     "strong_buy": "STRONG BUY",
@@ -140,6 +141,22 @@ def check_all_portfolios():
                 analysis = run_swing_analysis(ticker)
                 if "error" in analysis:
                     continue
+
+                # Guard: concurrent yfinance bugs used to mix symbols; swing close vs live quote should agree.
+                try:
+                    region = get_user_market_region(user_id)
+                    q = fetch_quote(ticker, display_region=region)
+                    q_usd = float(q.get("current_price_usd") or 0)
+                    a_usd = float(analysis.get("current_price") or 0)
+                    if q_usd > 0.05 and a_usd > 0.05:
+                        lo, hi = (q_usd, a_usd) if q_usd <= a_usd else (a_usd, q_usd)
+                        if hi / lo > 4.0:
+                            print(
+                                f"[alert] skip {ticker} user {user_id}: swing price {a_usd} vs quote {q_usd} (likely bad data)"
+                            )
+                            continue
+                except Exception as e:
+                    print(f"[alert] quote sanity check error {ticker} user {user_id}: {e}")
 
                 new_signal = analysis["swing_setup_quality"]
                 old_signal = get_last_signal(user_id, ticker)

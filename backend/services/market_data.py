@@ -150,7 +150,14 @@ def fetch_ohlcv(
     mult = get_usd_to_eur_rate() if tcy == "EUR" else 1.0
 
     with _suppress_yfinance_stderr():
-        df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
+        df = yf.download(
+            ticker,
+            period=period,
+            interval=interval,
+            progress=False,
+            auto_adjust=True,
+            threads=False,
+        )
     if df.empty:
         return []
     if isinstance(df.columns, pd.MultiIndex):
