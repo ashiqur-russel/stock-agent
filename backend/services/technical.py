@@ -139,95 +139,118 @@ def compute_indicators(ticker: str) -> dict:
 
 
 def run_swing_analysis(ticker: str) -> dict:
-    from services.market_data import fetch_news
+    """
+    Signal scoring based on RSI + Bollinger Bands + EMA trend + MACD (crossover only).
 
+    Scoring weights (max +7 / min -7):
+      RSI-14         — primary   ±3  (oversold = buy zone, overbought = take-profit zone)
+      Bollinger %B   — secondary ±2  (at lower band = support, at upper band = resistance)
+      EMA trend      — context   ±1  (above both EMAs = uptrend, below = downtrend)
+      MACD crossover — confirm   ±1  (crossover only; sustained direction ignored to avoid lag)
+
+    Thresholds:
+      ≥ 5 → strong_buy   |  ≤ -5 → strong_sell
+      ≥ 3 → potential_buy |  ≤ -3 → potential_sell
+      otherwise → hold
+    """
     indicators = compute_indicators(ticker)
     if "error" in indicators:
         return indicators
-
-    news = fetch_news(ticker)
-    news_titles = " ".join(n["title"].lower() for n in news)
-    positive_words = [
-        "surge",
-        "beat",
-        "record",
-        "rally",
-        "upgrade",
-        "buy",
-        "strong",
-        "gain",
-        "profit",
-    ]
-    negative_words = [
-        "fall",
-        "drop",
-        "miss",
-        "downgrade",
-        "sell",
-        "weak",
-        "loss",
-        "decline",
-        "risk",
-        "concern",
-    ]
-    pos_score = sum(1 for w in positive_words if w in news_titles)
-    neg_score = sum(1 for w in negative_words if w in news_titles)
-    news_sentiment = (
-        "positive"
-        if pos_score > neg_score
-        else ("negative" if neg_score > pos_score else "neutral")
-    )
 
     rsi = indicators.get("rsi_14")
     trend = indicators.get("trend")
     macd_signal = indicators.get("macd_signal")
     bb_position = indicators.get("bb_position")
+    bb_pct = indicators["bollinger"].get("percent_b")
     ema20 = indicators.get("ema_20")
     ema50 = indicators.get("ema_50")
     bb_lower = indicators["bollinger"].get("lower")
     bb_upper = indicators["bollinger"].get("upper")
 
     score = 0
-    if rsi and rsi < 35:
-        score += 2
-    elif rsi and rsi < 45:
-        score += 1
-    elif rsi and rsi > 70:
-        score -= 2
-    elif rsi and rsi > 60:
-        score -= 1
+    reasons: list[str] = []
 
+    # ── RSI-14 — primary weight ±3 ────────────────────────────────────────────
+    if rsi is not None:
+        if rsi < 30:
+            score += 3
+            reasons.append(f"RSI {rsi:.1f} — deeply oversold (strong buy zone)")
+        elif rsi < 40:
+            score += 2
+            reasons.append(f"RSI {rsi:.1f} — oversold")
+        elif rsi < 50:
+            score += 1
+            reasons.append(f"RSI {rsi:.1f} — below midline (mild buy bias)")
+        elif rsi > 70:
+            score -= 3
+            reasons.append(f"RSI {rsi:.1f} — deeply overbought (consider taking profit)")
+        elif rsi > 60:
+            score -= 2
+            reasons.append(f"RSI {rsi:.1f} — overbought")
+        elif rsi > 55:
+            score -= 1
+            reasons.append(f"RSI {rsi:.1f} — above midline (mild sell bias)")
+
+    # ── Bollinger Bands %B — secondary weight ±2 ─────────────────────────────
+    # %B = 0 → price at lower band (support), %B = 1 → price at upper band (resistance)
+    if bb_pct is not None:
+        if bb_pct <= 0.05:
+            score += 2
+            reasons.append(
+                f"Price at/below lower Bollinger Band (%B={bb_pct:.2f}) — strong support"
+            )
+        elif bb_pct <= 0.2:
+            score += 1
+            reasons.append(f"Price near lower Bollinger Band (%B={bb_pct:.2f})")
+        elif bb_pct >= 0.95:
+            score -= 2
+            reasons.append(
+                f"Price at/above upper Bollinger Band (%B={bb_pct:.2f}) — strong resistance"
+            )
+        elif bb_pct >= 0.8:
+            score -= 1
+            reasons.append(f"Price near upper Bollinger Band (%B={bb_pct:.2f})")
+    elif bb_position not in ("unknown", "middle"):
+        # Fallback when percent_b column is missing
+        if bb_position == "near_lower_band":
+            score += 1
+            reasons.append("Price near lower Bollinger Band")
+        elif bb_position == "near_upper_band":
+            score -= 1
+            reasons.append("Price near upper Bollinger Band")
+
+    # ── EMA trend — context weight ±1 ────────────────────────────────────────
     if trend == "above_both_emas":
         score += 1
+        ema_txt = f"EMA20={ema20:.2f}, EMA50={ema50:.2f}" if ema20 and ema50 else "both EMAs"
+        reasons.append(f"Uptrend: price above {ema_txt}")
     elif trend == "below_both_emas":
         score -= 1
+        ema_txt = f"EMA20={ema20:.2f}, EMA50={ema50:.2f}" if ema20 and ema50 else "both EMAs"
+        reasons.append(f"Downtrend: price below {ema_txt}")
+    elif trend == "between_emas":
+        reasons.append("Mixed trend: price between EMA20 and EMA50")
 
+    # ── MACD — crossover-only confirmation ±1 ────────────────────────────────
+    # Sustained bullish/bearish MACD is intentionally ignored: it lags price and
+    # would make signals look momentum-based (buy after rise, sell after fall).
     if macd_signal == "bullish_crossover":
-        score += 2
-    elif macd_signal == "bullish":
         score += 1
+        reasons.append("MACD bullish crossover — momentum turning up")
     elif macd_signal == "bearish_crossover":
-        score -= 2
-    elif macd_signal == "bearish":
         score -= 1
+        reasons.append("MACD bearish crossover — momentum turning down")
+    elif macd_signal in ("bullish", "bearish"):
+        reasons.append(f"MACD: {macd_signal} (sustained, not scored)")
 
-    if bb_position == "near_lower_band":
-        score += 1
-    elif bb_position == "near_upper_band":
-        score -= 1
-
-    if news_sentiment == "positive":
-        score += 1
-    elif news_sentiment == "negative":
-        score -= 1
-
-    if score >= 4:
+    # ── Signal quality ────────────────────────────────────────────────────────
+    if score >= 5:
         quality = "strong_buy"
-    elif score >= 2:
+    elif score >= 3:
         quality = "potential_buy"
-    elif score <= -4:
+    elif score <= -5:
         quality = "strong_sell"
-    elif score <= -2:
+    elif score <= -3:
         quality = "potential_sell"
     else:
         quality = "hold"
@@ -242,11 +265,12 @@ def run_swing_analysis(ticker: str) -> dict:
         "trend": trend,
         "macd_signal": macd_signal,
         "bb_position": bb_position,
+        "bb_pct_b": bb_pct,
         "ema_20": ema20,
         "ema_50": ema50,
         "key_support": round(key_support, 4) if key_support else None,
         "key_resistance": round(key_resistance, 4) if key_resistance else None,
-        "news_sentiment": news_sentiment,
         "swing_setup_quality": quality,
         "score": score,
+        "signal_reasons": reasons,
     }
