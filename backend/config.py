@@ -75,6 +75,10 @@ def smtp_from_header() -> str:
 # How often the background scanner runs (minutes)
 ALERT_INTERVAL_MINUTES: int = int(os.getenv("ALERT_INTERVAL_MINUTES", "30"))
 
+# Optional DB retention (0 = disable). Pruner runs once per day via APScheduler.
+DATA_RETENTION_DAYS_SIGNAL_HISTORY: int = int(os.getenv("DATA_RETENTION_DAYS_SIGNAL_HISTORY", "90"))
+DATA_RETENTION_DAYS_ALERTS: int = int(os.getenv("DATA_RETENTION_DAYS_ALERTS", "365"))
+
 # Web Push / VAPID — generate once with backend/tools/generate_vapid_keys.py
 # Leave blank to disable browser push (email + WS toasts still work)
 VAPID_PRIVATE_KEY: str = os.getenv("VAPID_PRIVATE_KEY", "")

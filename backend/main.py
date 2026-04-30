@@ -56,6 +56,7 @@ def startup():
         )
     init_db()
     from services.alert_service import check_all_portfolios
+    from services.data_retention import prune_alert_tables
 
     _scheduler.add_job(
         check_all_portfolios,
@@ -64,8 +65,21 @@ def startup():
         id="portfolio_scan",
         replace_existing=True,
     )
+    _scheduler.add_job(
+        prune_alert_tables,
+        "interval",
+        hours=24,
+        id="data_retention",
+        replace_existing=True,
+    )
     _scheduler.start()
     print(f"[scheduler] Signal scanner started — runs every {config.ALERT_INTERVAL_MINUTES} min")
+    if config.DATA_RETENTION_DAYS_SIGNAL_HISTORY > 0 or config.DATA_RETENTION_DAYS_ALERTS > 0:
+        print(
+            "[scheduler] Data retention: daily prune — "
+            f"signal_history {config.DATA_RETENTION_DAYS_SIGNAL_HISTORY}d, "
+            f"alerts {config.DATA_RETENTION_DAYS_ALERTS}d (0 disables)"
+        )
 
 
 @app.on_event("shutdown")

@@ -12,6 +12,7 @@ This guide is for anyone who wants to **run the project locally**, **hack on fea
 - [Database: SQLite vs PostgreSQL](#database-sqlite-vs-postgresql)
 - [Authentication and email in development](#authentication-and-email-in-development)
 - [Developer tooling (lint, hooks)](#developer-tooling-lint-hooks)
+- [Git branching model](#git-branching-model)
 - [Branches and commit messages](#branches-and-commit-messages)
 - [Tests](#tests)
 - [Pull requests](#pull-requests)
@@ -137,6 +138,26 @@ cd frontend && npm run lint
 
 The repo documents skips in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) (for example `SKIP=…`). Prefer fixing branch/message format instead of skipping, so CI and other contributors stay aligned.
 
+## Git branching model
+
+We use an **integration branch** so feature work lands on **`development`** first; **`main`** is for **releases**.
+
+| Branch | Role |
+|--------|------|
+| **`main`** | Production / release line. **Do not** land feature PRs here directly. Merges from **`development`** when you cut a release. Pushes to `main` run the **automated patch version bump** (see [`.github/workflows/version-bump.yml`](.github/workflows/version-bump.yml)). |
+| **`development`** | Default target for **feature**, **fix**, and other topic PRs. Keep it green with **CI** (same workflow as `main`). |
+| **`feature/SA-*`**, **`fix/SA-*`**, … | Short-lived branches; see [Branch names](#branch-names). |
+
+**Typical flow**
+
+1. `git fetch origin && git checkout development && git pull origin development`
+2. `git checkout -b feature/SA-42-short-description`
+3. Open a **pull request: base `development`**, compare your branch.
+4. After review, merge into **`development`**.
+5. When maintainers release: open **pull request `development` → `main`**, merge, deploy.
+
+**Protections:** local hooks block commits on **`main`**, **`master`**, and **`development`**, and block **`git push`** to those branches from your machine — use **GitHub PRs** instead. Emergency bypass for push: `ALLOW_PUSH_TO_MAIN=1 git push` (documented in [`scripts/pre_push_block_main.py`](scripts/pre_push_block_main.py)).
+
 ## Branches and commit messages
 
 This repository uses a **ticket-style** prefix **`SA-<number>`** in branch names and commit subjects.
@@ -148,7 +169,7 @@ Use a topic prefix and **`SA-<digits>`** right after it, for example:
 - `feature/SA-12-add-export`
 - `fix/SA-7-auth-timeout`
 
-Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `release/`. Exact exceptions such as `develop` are listed in [`scripts/verify_branch_name.py`](scripts/verify_branch_name.py).
+Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `release/`. Exact exceptions such as `develop` are listed in [`scripts/verify_branch_name.py`](scripts/verify_branch_name.py). **`development`** is the integration branch and is **not** a valid topic-branch name — treat it like `main` for commits (hooks block it).
 
 **Open source workflow:** use the **GitHub issue number** as the number in `SA-<n>` when you work from an issue (e.g. issue **#24** → `feature/SA-24-short-description`). If maintainers use another tracker, match the id they specify.
 
@@ -165,7 +186,7 @@ Allowed prefixes include `feature/`, `fix/`, `hotfix/`, `chore/`, `docs/`, `rele
    git branch -a | grep -oE 'SA-[0-9]+' | sed 's/SA-//' | sort -n | uniq
    ```
 
-Do not commit directly on `main` / `master`; hooks and project practice expect **pull requests**.
+Do not commit directly on **`main`**, **`master`**, or **`development`**; hooks expect **topic branches** and **pull requests** (see [Git branching model](#git-branching-model)).
 
 ### Commit messages
 
@@ -195,42 +216,39 @@ If the project adds pytest to a dev requirements file later, prefer that over ad
 ## Pull requests
 
 1. Open or pick an issue; use **`SA-<issue number>`** in the branch name when it fits.
-2. One logical change per PR when possible.
-3. Run **pre-commit** and **frontend lint** before pushing; run **pytest** when you change backend behavior.
-4. Note any **env** or **schema** changes and update **`.env.example`** or docs when you add variables.
+2. **Base branch:** open PRs against **`development`** (not `main`). Only **release** PRs merge `development` → `main`.
+3. One logical change per PR when possible.
+4. Run **pre-commit** and **frontend lint** before pushing; run **pytest** when you change backend behavior.
+5. Note any **env** or **schema** changes and update **`.env.example`** or docs when you add variables.
 
-### PR title (match your branch)
+### PR title (match ticket + conventional type)
 
-Use the **same ticket id** as in the branch (`SA-<number>`), then a short human-readable title derived from the branch slug.
+Use the **same** `SA-<n>` as in your branch. Align with **commit-message style**: lowercase **type**, colon, then a short **description** (spaces allowed; usually **lowercase** or light sentence case — stay consistent).
 
-**Pattern:** `[SA-<n>] <Kind>/<Short description in Title Case>`
+**Pattern:** `[SA-<n>] <type>: <description>`
 
-- **`<Kind>/`** comes from the branch prefix:
-
-  | Branch starts with | Use in title |
-  |--------------------|--------------|
-  | `fix/SA-…`         | `Fix/`       |
-  | `feature/SA-…`     | `Feature/`   |
-  | `chore/SA-…`      | `Chore/`     |
-  | `docs/SA-…`       | `Docs/`      |
-  | `hotfix/SA-…`     | `Hotfix/`    |
-  | `release/SA-…`    | `Release/`   |
-
-- **Short description:** take the part of the branch name **after** `SA-<n>-`, replace `-` with spaces, and use **Title Case** (keep acronyms such as **API**, **JWT**, **UX** in upper case where appropriate).
+| Branch starts with | Typical `<type>` in PR title |
+|--------------------|------------------------------|
+| `feature/SA-…`     | `feature`                    |
+| `fix/SA-…`         | `fix`                        |
+| `docs/SA-…`        | `docs`                       |
+| `chore/SA-…`       | `chore`                      |
+| `hotfix/SA-…`      | `hotfix`                     |
+| `release/SA-…`     | `release`                    |
 
 **Examples**
 
 | Branch name | Suggested PR title |
 |-------------|-------------------|
-| `fix/SA-7-auth-password-reset-ux` | `[SA-7] Fix/Auth Password Reset UX` |
-| `feature/SA-12-csv-portfolio-export` | `[SA-12] Feature/Csv Portfolio Export` or `[SA-12] Feature/CSV Portfolio Export` |
-| `docs/SA-3-update-contributing` | `[SA-3] Docs/Update Contributing` |
+| `feature/SA-36-development-branch-workflow` | `[SA-36] feature: development branch workflow` |
+| `fix/SA-7-auth-password-reset-ux` | `[SA-7] fix: auth password reset UX` |
+| `docs/SA-3-update-contributing` | `[SA-3] docs: update contributing guide` |
 
-GitHub may auto-fill the PR title from the latest commit; **edit it** to follow the table above so it matches the branch and is easy to scan.
+GitHub may auto-fill the PR title from the latest commit; **edit it** to match the pattern above so tickets and types are easy to scan.
 
 ### PR description (what reviewers need)
 
-Open the PR against the default branch (not `main`/`master` via direct push). In the description, include:
+Open the PR against **`development`** (merge via GitHub; do not push to protected branches from your laptop). In the description, include:
 
 1. **Summary** — What you changed and **why** (problem, approach, trade-offs). Link the issue: `Closes #123` or `Refs #123` when relevant.
 2. **Screenshots or screen recording** — For any **UI** change, add before/after images or a short video/GIF. For **API-only** or **docs-only** work, write **N/A** and paste sample request/response or a log snippet if it helps.

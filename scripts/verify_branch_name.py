@@ -188,16 +188,16 @@ def main() -> None:
             file=sys.stderr,
         )
         return
-    if branch in ("main", "master"):
+    if branch in ("main", "master", "development"):
         print(
-            "Do not make commits while checked out on the default branch (main or master).\n"
+            "Do not make commits while checked out on main, master, or development.\n"
             f"  Current branch: {branch!r}\n"
-            "  Create a topic branch and open a pull request, for example:\n"
+            "  Use a topic branch and open a pull request, for example:\n"
             "    git checkout -b feature/SA-1-short-description\n"
             "    # also: fix/SA-2-…, hotfix/SA-3-…, chore/SA-4-…\n"
-            "  (Ticket id is SA-<number> right after the prefix.)\n"
-            "  Merges on GitHub are fine; a local `git merge` on main is blocked by this hook.\n"
-            "  Rare exception:  git commit --no-verify  (e.g. emergency merge on main)\n",
+            "  Merge feature branches into development first; merge development into main for releases.\n"
+            "  Merges on GitHub are fine; this hook only blocks local commits on integration branches.\n"
+            "  Rare exception:  git commit --no-verify\n",
             file=sys.stderr,
         )
         raise SystemExit(1)
