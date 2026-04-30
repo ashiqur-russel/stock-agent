@@ -1,43 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { openCookieSettings } from '@/components/CookieBanner'
 import ContactSection from '@/components/ContactSection'
 import { useApp } from '@/contexts/AppContext'
-import { fetchPublicLandingQuotes } from '@/lib/api'
-import { usePublicAuth } from '@/hooks/usePublicAuth'
-import Toggle from '@/components/ui/Toggle'
-import GitHubIcon from '@/components/ui/GitHubIcon'
+import { useLandingQuotes } from '@/hooks/useLandingQuotes'
+import LandingNav from '@/components/landing/LandingNav'
+import LandingSurface from '@/components/landing/LandingSurface'
+import LandingTicker from '@/components/landing/LandingTicker'
 import BackgroundBeams from '@/components/ui/BackgroundBeams'
 import { HoverEffect, type HoverEffectItem } from '@/components/ui/card-hover-effect'
 import { SpotlightCard } from '@/components/ui/Spotlight'
-
-// Keep in sync with backend LANDING_TICKERS in `routers/public_landing.py`
-const LANDING_ORDER = [
-  'AAPL',
-  'TSLA',
-  'NVDA',
-  'MSFT',
-  'GOOGL',
-  'AMZN',
-  'META',
-  'BTC-USD',
-  'ETH-USD',
-  'SPY',
-  'QQQ',
-  'AMD',
-] as const
-
-type LandingRow = {
-  sym: string
-  eur: number
-  usd: number
-  chgPct: number
-  up: boolean
-  ok: boolean
-}
 
 // ── fake SVG path data for MacBook charts ─────────────────────────────────
 const PATH1 = 'M0,80 L20,72 L40,68 L60,75 L80,58 L100,50 L120,55 L140,42 L160,35 L180,38 L200,28 L220,20 L240,25 L260,15 L280,10'
@@ -60,77 +35,9 @@ const fadeUp = {
 }
 
 export default function Home() {
-  const { t, lang, setLang, currency, setCurrency, currencySymbol } = useApp()
-  const { user: authUser, logout: publicLogout, mounted: authMounted } = usePublicAuth()
-  const [tickerRows, setTickerRows] = useState<LandingRow[] | null>(null)
+  const { t } = useApp()
+  const { tickerRows, scrollRows, loadingTickers, formatPair } = useLandingQuotes()
 
-  const loadQuotes = useCallback(() => {
-    fetchPublicLandingQuotes()
-      .then((data) => {
-        setTickerRows(
-          data.quotes.map((q) => {
-            const chg = typeof q.day_change_pct === 'number' ? q.day_change_pct : 0
-            const ok = q.ok === true
-            return {
-              sym: (q.ticker || '').toUpperCase(),
-              eur: q.current_price ?? 0,
-              usd: q.current_price_usd ?? 0,
-              chgPct: chg,
-              up: chg >= 0,
-              ok,
-            }
-          })
-        )
-      })
-      .catch(() => {
-        setTickerRows(
-          LANDING_ORDER.map((sym) => ({
-            sym,
-            eur: 0,
-            usd: 0,
-            chgPct: 0,
-            up: true,
-            ok: false,
-          }))
-        )
-      })
-  }, [])
-
-  useEffect(() => {
-    loadQuotes()
-    const id = setInterval(loadQuotes, 60_000)
-    return () => clearInterval(id)
-  }, [loadQuotes])
-
-  // When language changes, auto-switch currency to match region expectation
-  const handleLangChange = (v: string) => {
-    const l = v.toLowerCase() as 'en' | 'de'
-    setLang(l)
-    setCurrency(l === 'de' ? 'EUR' : 'USD')
-  }
-
-  const formatPair = (eur: number, usd: number) => {
-    const val = currency === 'USD' ? usd : eur
-    if (val >= 10000) return `${currencySymbol}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-    if (val >= 1000) return `${currencySymbol}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-    return `${currencySymbol}${val.toFixed(2)}`
-  }
-
-  const loadingTickers = tickerRows === null
-  const scrollRows = useMemo(() => {
-    const base: LandingRow[] =
-      tickerRows && tickerRows.length > 0
-        ? tickerRows
-        : LANDING_ORDER.map((sym) => ({
-            sym,
-            eur: 0,
-            usd: 0,
-            chgPct: 0,
-            up: true,
-            ok: false,
-          }))
-    return [...base, ...base]
-  }, [tickerRows])
   const qAapl = tickerRows?.find((r) => r.sym === 'AAPL')
   const qNvda = tickerRows?.find((r) => r.sym === 'NVDA')
 
@@ -197,118 +104,18 @@ export default function Home() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060e20', color: '#f1f5f9', fontFamily: 'var(--font-geist-sans)', overflowX: 'hidden' }}>
-
-      {/* ── CSS animations ── */}
+    <LandingSurface>
+      {/* ── CSS animations (home-only) ── */}
       <style>{`
-        @keyframes ticker-scroll {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .ticker-track {
-          display: flex;
-          width: max-content;
-          animation: ticker-scroll 45s linear infinite;
-        }
-        .ticker-track:hover { animation-play-state: paused; }
-
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50%       { transform: translateY(-10px); }
         }
         .macbook-float { animation: float 6s ease-in-out infinite; }
-
-        @keyframes pulse-dot {
-          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
-          50%       { opacity: 0.6; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
-        }
-        .live-dot { animation: pulse-dot 2s ease-in-out infinite; }
-
       `}</style>
 
-      {/* ── Navbar ── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(6,14,32,0.9)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(34,197,94,0.1)',
-        padding: '0 32px', height: 60,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>📈</span>
-          <span style={{ fontSize: 17, fontWeight: 800, background: 'linear-gradient(90deg,#22c55e,#4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            StockAgent
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Toggle options={['EN', 'DE']} value={lang.toUpperCase()} onChange={handleLangChange} activeColor='#3b82f6' />
-          {authMounted && authUser ? (
-            <>
-              <Link href='/user/dashboard' style={{ color: '#22c55e', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>
-                Dashboard →
-              </Link>
-              <button
-                onClick={publicLogout}
-                style={{ background: 'transparent', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 14px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8', fontSize: 13, textDecoration: 'none', border: '1px solid #1e3050', borderRadius: 7, padding: '5px 11px', background: 'rgba(255,255,255,0.03)' }}>
-                <GitHubIcon size={14} />
-                ★ Star
-              </a>
-              <Link href='/docs' style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>{t('land_docs')}</Link>
-              <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>{t('land_signin')}</Link>
-              <Link href='/register' className='shimmer-btn' style={{ padding: '8px 20px', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
-                {t('land_get_started')}
-              </Link>
-            </>
-          )}
-        </div>
-      </nav>
-
-      {/* ── Ticker Strip (live quotes via public API) ── */}
-      <div style={{
-        background: 'rgba(4,10,24,0.95)',
-        borderBottom: '1px solid rgba(34,197,94,0.08)',
-        overflow: 'hidden',
-        display: 'flex', flexDirection: 'column', alignItems: 'stretch',
-      }}>
-        <div style={{ height: 38, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-          <div className='ticker-track'>
-            {scrollRows.map((tk, i) => (
-              <div key={`${tk.sym}-${i}`} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0 24px',
-                borderRight: '1px solid rgba(255,255,255,0.04)',
-                whiteSpace: 'nowrap',
-              }}>
-                <span style={{ fontWeight: 700, fontSize: 12, color: '#e2e8f0', letterSpacing: '0.05em' }}>{tk.sym}</span>
-                <span style={{ fontSize: 12, color: '#64748b' }}>
-                  {loadingTickers
-                    ? '…'
-                    : tk.ok
-                      ? formatPair(tk.eur, tk.usd)
-                      : '—'}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: tk.ok ? (tk.up ? '#22c55e' : '#ef4444') : '#334155' }}>
-                  {loadingTickers
-                    ? '…'
-                    : tk.ok
-                      ? `${tk.up ? '▲' : '▼'} ${tk.chgPct.toFixed(2)}%`
-                      : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ fontSize: 9, color: '#334155', textAlign: 'center', padding: '0 8px 4px' }}>
-          {t('land_ticker_source')}
-        </div>
-      </div>
+      <LandingNav />
+      <LandingTicker scrollRows={scrollRows} loadingTickers={loadingTickers} formatPair={formatPair} />
 
       {/* ── Hero ── */}
       <section style={{ position: 'relative', textAlign: 'center', padding: '90px 32px 60px', overflow: 'hidden' }}>
@@ -599,6 +406,8 @@ export default function Home() {
         <span className='text-xs text-text-dim'>{t('land_disclaimer')}</span>
         <nav className='flex items-center gap-6 flex-wrap'>
           {[
+            { href: '/',          label: t('land_nav_home') },
+            { href: '/whats-new', label: t('land_nav_whats_new') },
             { href: '/docs',      label: t('land_docs') },
             { href: '/#contact',  label: t('contact_title') },
             { href: '/privacy',   label: t('cookie_privacy_link') },
@@ -617,6 +426,6 @@ export default function Home() {
           </button>
         </nav>
       </footer>
-    </div>
+    </LandingSurface>
   )
 }

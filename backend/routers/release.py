@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app_version import get_app_version
 from database import get_connection
 from middleware.auth import get_current_user
-from services.release_notes import notes_for_version, should_show_whats_new
+from services.release_notes import (
+    notes_for_version,
+    preview_notes_for_version,
+    should_show_whats_new,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["release"])
 
@@ -14,6 +18,14 @@ router = APIRouter(prefix="/api/v1", tags=["release"])
 def public_version():
     """Public app version (matches frontend package.json when synced)."""
     return {"version": get_app_version()}
+
+
+@router.get("/release/preview")
+def get_release_preview(lang: str = Query("en", pattern="^(en|de)$")):
+    """Public teaser for the current app version (no auth)."""
+    v = get_app_version()
+    teaser = preview_notes_for_version(v, lang=lang)
+    return {"app_version": v, "release": teaser}
 
 
 @router.get("/release/whats-new")

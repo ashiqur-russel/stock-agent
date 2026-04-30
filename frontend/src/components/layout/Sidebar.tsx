@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import Toggle from '@/components/ui/Toggle'
-import { useAuth } from '@/hooks/useAuth'
+import { getToken, useAuth } from '@/hooks/useAuth'
 import { useState, useEffect } from 'react'
 import { alerts as alertsApi } from '@/lib/api'
 
@@ -26,11 +26,15 @@ export default function Sidebar() {
 
   useEffect(() => {
     const fetchUnread = async () => {
+      if (!getToken()) {
+        setUnread(0)
+        return
+      }
       try {
         const data = await alertsApi.unreadCount()
         setUnread(data.count ?? 0)
       } catch {
-        // ignore
+        setUnread(0)
       }
     }
     fetchUnread()

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { getToken } from '@/hooks/useAuth'
 import { portfolio } from '@/lib/api'
 import type { UsListingQuote } from '@/hooks/usePriceStream'
 
@@ -52,6 +53,13 @@ export function usePortfolio() {
       setRefreshing(true)
     }
     setError(null)
+    if (!getToken()) {
+      setHoldings([])
+      setLoading(false)
+      setRefreshing(false)
+      initialized.current = false
+      return
+    }
     try {
       const data = await portfolio.get()
       setHoldings(data as Holding[])

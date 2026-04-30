@@ -4,7 +4,7 @@
 
 ## Contributing
 
-For **open source developers** — local setup, env vars, database modes, Git hooks, branch/commit conventions, and PR workflow — see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+For **open source developers** — local setup, env vars, database modes, Git hooks, branch/commit conventions, **PR workflow** (`development` → `main`), and **PR titles** like `[SA-36] feature: short description` — see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ## Documentation
 

@@ -155,6 +155,10 @@ def _migrate_postgres_ai_quota() -> None:
         cur.execute(
             "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS whats_new_read_version TEXT"
         )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_signal_history_checked_at ON signal_history (checked_at)"
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts (created_at)")
         conn.commit()
     finally:
         conn.close()
@@ -175,6 +179,8 @@ def init_db() -> None:
             "ALTER TABLE user_settings ADD COLUMN ai_chat_enabled INTEGER NOT NULL DEFAULT 1",
             "ALTER TABLE user_settings ADD COLUMN whats_new_cleared_version TEXT",
             "ALTER TABLE user_settings ADD COLUMN whats_new_read_version TEXT",
+            "CREATE INDEX IF NOT EXISTS idx_signal_history_checked_at ON signal_history(checked_at)",
+            "CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at)",
         ]:
             try:
                 c.execute(migration)

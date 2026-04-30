@@ -18,6 +18,52 @@ export const translations = {
     whats_new_not_now: 'Remind me later',
     whats_new_dont_show: "Don't show this release again until the next version",
 
+    land_whats_new_kicker: "What's new",
+    land_whats_new_cta: 'Create free account to read full notes',
+    land_whats_new_more: 'Plus fixes and more — sign up to see everything.',
+    land_whats_new_dashboard: 'Open dashboard',
+
+    dash_whats_new_row: "See what's new in this version",
+    dash_whats_new_sub: 'Open the full release notes.',
+    dash_whats_new_badge: 'New',
+
+    land_nav_home: 'Home',
+    land_nav_whats_new: "What's New",
+    page_whats_new_hero_kicker: "What's New",
+    page_whats_new_hero_line1: 'What we ship',
+    page_whats_new_hero_line2: 'and why it matters',
+    page_whats_new_hero_sub:
+      'Release highlights, full notes in the app, and the portfolio problems we focus on — without spreadsheet chaos or impulse-first trading.',
+    page_whats_new_release_section_kicker: 'Shipping now',
+    page_whats_new_release_section_title: 'Teaser for the current version',
+    page_whats_new_release_visual_label: 'Live version',
+    page_whats_new_purpose_kicker: 'Purpose',
+    page_whats_new_purpose_title: 'Clarity for your portfolio — without spreadsheet chaos or impulse trades',
+    page_whats_new_mission_1_title: 'Real trades, live P&L, AI that knows your book',
+    page_whats_new_mission_1_body:
+      'StockAgent helps you record real trades, see live value and P&L in the currencies you use, and chat with an AI that understands your holdings — so you spend less time in tabs, exports, and generic tools.',
+    page_whats_new_mission_2_title: 'Watch what you own — not a “buy now” lane',
+    page_whats_new_mission_2_body:
+      'Broker apps and price alerts are built for speed. It is easy to log in, feel you are missing a rally, and buy on impulse. StockAgent is different: it is where you watch the positions you already own and plan with — not a one-tap “buy now” lane — so you get room to think and avoid emotional trades that often lead to losses.',
+    page_whats_new_mission_3_title: 'Ideas by email or notification — research first',
+    page_whats_new_mission_3_body:
+      'When AI or swing workflows surface ideas, you can receive them by email or notification. The point is to give you a moment to research on your own before you act — not to pressure you in the heat of the moment.',
+    page_whats_new_mission_4_title: 'FIFO, recovery, and planning — not tax advice',
+    page_whats_new_mission_4_body:
+      'Your real profit and loss depends on how buys and sells line up (FIFO and lot matching is easy to get wrong). StockAgent tracks your transactions so you can see total P&L, how much you still need to recover after a drawdown, and a clearer picture for planning. For taxes and lots, always confirm details with a qualified professional for your situation.',
+    page_whats_new_release_kicker: 'Latest release',
+    page_whats_new_inapp_kicker: 'In the app',
+    page_whats_new_inapp_title: 'Full release notes after you sign in',
+    page_whats_new_inapp_body:
+      'This page only shows a short teaser. With a free account, the dashboard opens the complete What’s New dialog — features, fixes, and options to dismiss or hide a release until the next version.',
+    page_whats_new_inapp_cta: 'Create free account',
+    page_whats_new_os_kicker: 'Open source',
+    page_whats_new_os_title: 'Code, issues, and developer docs',
+    page_whats_new_os_body:
+      'See how live quotes, swing alerts, and AI chat fit together. Star the repo for releases or use the in-app docs for setup and architecture.',
+    page_whats_new_os_cta_repo: 'GitHub repository',
+    page_whats_new_os_cta_docs: 'Developer docs',
+
     settings_title: 'Settings',
     settings_subtitle: 'Email notifications, AI chat (Groq), and related account options.',
     settings_alerts_footer:
@@ -461,6 +507,52 @@ export const translations = {
     whats_new_done: 'Loslegen',
     whats_new_not_now: 'Später erinnern',
     whats_new_dont_show: 'Diese Version nicht mehr anzeigen (bis zum nächsten Update)',
+
+    land_whats_new_kicker: 'Was ist neu',
+    land_whats_new_cta: 'Kostenloses Konto — vollständige Release-Notes',
+    land_whats_new_more: 'Plus Fehlerbehebungen und mehr — nach der Registrierung alles lesen.',
+    land_whats_new_dashboard: 'Zum Dashboard',
+
+    dash_whats_new_row: 'Neuigkeiten in dieser Version',
+    dash_whats_new_sub: 'Vollständige Release-Notes öffnen.',
+    dash_whats_new_badge: 'Neu',
+
+    land_nav_home: 'Start',
+    land_nav_whats_new: 'Was ist neu',
+    page_whats_new_hero_kicker: 'Was ist neu',
+    page_whats_new_hero_line1: 'Was wir liefern',
+    page_whats_new_hero_line2: 'und warum es zählt',
+    page_whats_new_hero_sub:
+      'Release-Highlights, vollständige Notes in der App, und die Portfolio-Themen, die uns wichtig sind — ohne Tabellen-Chaos und ohne impulsives „sofort kaufen“.',
+    page_whats_new_release_section_kicker: 'Aktuell ausgeliefert',
+    page_whats_new_release_section_title: 'Teaser zur aktuellen Version',
+    page_whats_new_release_visual_label: 'Live-Version',
+    page_whats_new_purpose_kicker: 'Ziel',
+    page_whats_new_purpose_title: 'Klarheit im Portfolio — ohne Tabellen-Chaos und Impulskäufe',
+    page_whats_new_mission_1_title: 'Echte Trades, Live-P&L, KI mit Kontext zu Ihrem Depot',
+    page_whats_new_mission_1_body:
+      'Mit StockAgent erfassen Sie echte Trades, sehen Live-Wert und Gewinn/Verlust in Ihrer Währung und chatten mit einer KI, die Ihre Positionen kennt — weniger Tab-Wechsel, Exporte und generische Tools.',
+    page_whats_new_mission_2_title: 'Bestand im Blick — kein Ein-Klick-„Jetzt kaufen“',
+    page_whats_new_mission_2_body:
+      'Broker-Apps und Kursalarme sind auf Schnelligkeit ausgelegt. Schnell ist man angemeldet, hat das Gefühl, eine Rallye zu verpassen, und kauft impulsiv. StockAgent ist anders: Hier behalten Sie die Titel im Blick, die Sie bereits besitzen und geplant haben — kein Ein-Klick-„Jetzt kaufen“-Kanal — damit Sie Zeit zum Nachdenken haben und emotional getriebene Trades vermeiden, die oft Verluste bedeuten.',
+    page_whats_new_mission_3_title: 'Impulse per E-Mail oder Push — erst recherchieren',
+    page_whats_new_mission_3_body:
+      'Wenn KI- oder Swing-Workflows Impulse liefern, können Sie diese per E-Mail oder Benachrichtigung erhalten. Ziel ist ein Anstoß zur eigenen Recherche vor dem Handeln — nicht der Druck in der heißen Phase.',
+    page_whats_new_mission_4_title: 'FIFO, Erholung, Planung — keine Steuerberatung',
+    page_whats_new_mission_4_body:
+      'Ihr realer Gewinn und Verlust hängt davon ab, wie Käufe und Verkäufe zusammenpassen (FIFO und Los-Zuordnung vergisst man schnell). StockAgent protokolliert Ihre Transaktionen, damit Sie Gesamt-P&L sehen, wie viel Sie nach einem Drawdown noch aufholen müssen, und eine klarere Grundlage für die Planung haben. Für Steuern und konkrete Posten immer Fachleute für Ihre Situation einbeziehen.',
+    page_whats_new_release_kicker: 'Aktuelles Release',
+    page_whats_new_inapp_kicker: 'In der App',
+    page_whats_new_inapp_title: 'Vollständige Release-Notes nach der Anmeldung',
+    page_whats_new_inapp_body:
+      'Diese Seite zeigt nur einen Teaser. Mit kostenlosem Konto öffnet das Dashboard den vollständigen „Was ist neu“-Dialog — Funktionen, Fixes und Optionen zum Schließen oder Ausblenden bis zur nächsten Version.',
+    page_whats_new_inapp_cta: 'Kostenloses Konto erstellen',
+    page_whats_new_os_kicker: 'Open Source',
+    page_whats_new_os_title: 'Code, Issues und Entwickler-Dokumentation',
+    page_whats_new_os_body:
+      'Sehen Sie, wie Live-Kurse, Swing-Alerts und KI-Chat zusammenspielen. Stern für Releases oder nutzen Sie die In-App-Doku für Setup und Architektur.',
+    page_whats_new_os_cta_repo: 'GitHub-Repository',
+    page_whats_new_os_cta_docs: 'Entwickler-Dokumentation',
 
     // Auth
     auth_login: 'Anmelden',

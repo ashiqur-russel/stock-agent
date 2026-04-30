@@ -56,7 +56,7 @@ function LivePriceImpl({
     ? livePrice
     : (typeof initialPrice === 'number' && Number.isFinite(initialPrice) && initialPrice > 0
         ? initialPrice
-        : (typeof initialPrice === 'number' && Number.isFinite(initialPrice) ? initialPrice : null))
+        : null)
 
   const prevPriceRef = useRef<number | null>(null)
   const [flashColor, setFlashColor] = useState<string | null>(null)
@@ -216,10 +216,13 @@ interface LiveDayChangeProps {
 
 function LiveDayChangeImpl({ ticker, initialPct, style }: LiveDayChangeProps) {
   const quote = useLiveQuote(ticker)
+  const hasLive = quote && liveQuoteHasValidPrices(quote)
   const pct =
-    quote && liveQuoteHasValidPrices(quote) && typeof quote.day_change_pct === 'number'
+    hasLive && typeof quote.day_change_pct === 'number'
       ? quote.day_change_pct
-      : (typeof initialPct === 'number' && Number.isFinite(initialPct) ? initialPct : null)
+      : (typeof initialPct === 'number' && Number.isFinite(initialPct) && initialPct !== 0
+          ? initialPct
+          : (hasLive ? 0 : null))
   if (pct === null) return <span style={style}>—</span>
   const color = pct >= 0 ? '#22c55e' : '#ef4444'
   return (
@@ -258,10 +261,14 @@ export const LiveMarketValue = memo(function LiveMarketValue({
   const spots = quote ? quoteSpotPrices(quote) : null
   const livePrice = spots ? (currency === 'USD' ? spots.usd : spots.eur) : null
   const fallback = currency === 'USD' ? fallbackUsd : fallbackEur
+  const fallbackNum = num(fallback)
   const value =
     livePrice !== null && Number.isFinite(livePrice) && livePrice > 0
       ? livePrice * num(shares)
-      : num(fallback)
+      : fallbackNum > 0
+        ? fallbackNum
+        : null
+  if (value === null) return <span style={{ color: '#64748b', ...style }}>—</span>
   return (
     <span style={{ color: '#f1f5f9', ...style }}>
       {currencySymbol}{fmtMoney(value, decimals)}
