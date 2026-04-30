@@ -1,33 +1,56 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Rocket } from 'lucide-react'
+import BackgroundBeams from '@/components/ui/BackgroundBeams'
+import { Card, CardDescription, CardTitle, HoverEffect, type HoverEffectItem } from '@/components/ui/card-hover-effect'
+import { cn } from '@/lib/utils'
 import { openCookieSettings } from '@/components/CookieBanner'
 import { useApp } from '@/contexts/AppContext'
 import { release, type ReleasePreviewPayload } from '@/lib/api'
 import { setWhatsNewIntent } from '@/lib/whatsNewFunnel'
 import { usePublicAuth } from '@/hooks/usePublicAuth'
-import Toggle from '@/components/ui/Toggle'
+import { useLandingQuotes } from '@/hooks/useLandingQuotes'
+import LandingNav from '@/components/landing/LandingNav'
+import LandingSurface from '@/components/landing/LandingSurface'
+import LandingTicker from '@/components/landing/LandingTicker'
 import GitHubIcon from '@/components/ui/GitHubIcon'
-import { SpotlightCard } from '@/components/ui/Spotlight'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0 },
 }
 
+/** Parent must define both keys when children use `variants`; avoids Framer Motion orchestration glitches. */
+const staggerHero = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1 } },
+}
+
+const staggerSection = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+}
+
+const shell = 'mx-auto max-w-[1100px] px-8'
+
+const btnSky =
+  'inline-block rounded-lg border border-sky-400/35 bg-sky-400/15 px-4 py-2 text-[13px] font-semibold text-sky-200 no-underline transition-colors hover:bg-sky-400/20'
+
+const btnEmeraldGhost =
+  'inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-2 text-[13px] font-semibold text-emerald-200 no-underline transition-colors hover:bg-emerald-500/15'
+
+const btnMutedOutline =
+  'inline-flex items-center rounded-lg border border-slate-600 px-4 py-2 text-[13px] font-semibold text-slate-400 no-underline transition-colors hover:border-slate-500 hover:text-slate-300'
+
 export default function WhatsNewPage() {
-  const { t, lang, setLang, currency, setCurrency } = useApp()
-  const { user: authUser, logout: publicLogout, mounted: authMounted } = usePublicAuth()
+  const { t, lang } = useApp()
+  const { scrollRows, loadingTickers, formatPair } = useLandingQuotes()
+  const { user: authUser, mounted: authMounted } = usePublicAuth()
   const [preview, setPreview] = useState<ReleasePreviewPayload | null>(null)
   const [previewVer, setPreviewVer] = useState('')
-
-  const handleLangChange = (v: string) => {
-    const l = v.toLowerCase() as 'en' | 'de'
-    setLang(l)
-    setCurrency(l === 'de' ? 'EUR' : 'USD')
-  }
 
   const loadPreview = useCallback(() => {
     release
@@ -46,418 +69,267 @@ export default function WhatsNewPage() {
     loadPreview()
   }, [loadPreview])
 
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#060e20',
-        color: '#f1f5f9',
-        fontFamily: 'var(--font-geist-sans)',
-        overflowX: 'hidden',
-      }}
-    >
-      <nav
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          background: 'rgba(6,14,32,0.9)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(34,197,94,0.1)',
-          padding: '0 32px',
-          height: 60,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Link href='/' style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <span style={{ fontSize: 20 }}>📈</span>
-          <span
-            style={{
-              fontSize: 17,
-              fontWeight: 800,
-              background: 'linear-gradient(90deg,#22c55e,#4ade80)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            StockAgent
-          </span>
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Toggle options={['EN', 'DE']} value={lang.toUpperCase()} onChange={handleLangChange} activeColor='#3b82f6' />
-          {authMounted && authUser ? (
-            <>
-              <Link href='/' style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>
-                {t('land_nav_home')}
-              </Link>
-              <span style={{ color: '#22c55e', fontSize: 14, fontWeight: 600 }}>{t('land_nav_whats_new')}</span>
-              <Link href='/docs' style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>
-                {t('land_docs')}
-              </Link>
-              <Link href='/user/dashboard' style={{ color: '#22c55e', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>
-                Dashboard →
-              </Link>
-              <button
-                type='button'
-                onClick={publicLogout}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #1e3050',
-                  borderRadius: 7,
-                  padding: '5px 14px',
-                  color: '#94a3b8',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <a
-                href='https://github.com/ashiqur-russel/stock-agent'
-                target='_blank'
-                rel='noopener noreferrer'
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  color: '#94a3b8',
-                  fontSize: 13,
-                  textDecoration: 'none',
-                  border: '1px solid #1e3050',
-                  borderRadius: 7,
-                  padding: '5px 11px',
-                  background: 'rgba(255,255,255,0.03)',
-                }}
-              >
-                <GitHubIcon size={14} />
-                ★ Star
-              </a>
-              <Link href='/' style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>
-                {t('land_nav_home')}
-              </Link>
-              <span style={{ color: '#22c55e', fontSize: 14, fontWeight: 600 }}>{t('land_nav_whats_new')}</span>
-              <Link href='/docs' style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>
-                {t('land_docs')}
-              </Link>
-              <Link href='/login' style={{ color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}>
-                {t('land_signin')}
-              </Link>
-              <Link
-                href='/register'
-                className='shimmer-btn'
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: 8,
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  display: 'inline-block',
-                }}
-              >
-                {t('land_get_started')}
-              </Link>
-            </>
-          )}
-        </div>
-      </nav>
+  const missionHoverItems: HoverEffectItem[] = useMemo(
+    () => [
+      {
+        id: 'wn-mission-1',
+        icon: '✨',
+        title: t('page_whats_new_mission_1_title'),
+        description: t('page_whats_new_mission_1_body'),
+        link: '/register?from=whats_new',
+        onClick: () => setWhatsNewIntent(),
+      },
+      {
+        id: 'wn-mission-2',
+        icon: '🧘',
+        title: t('page_whats_new_mission_2_title'),
+        description: t('page_whats_new_mission_2_body'),
+        link: '/register?from=whats_new',
+        onClick: () => setWhatsNewIntent(),
+      },
+      {
+        id: 'wn-mission-3',
+        icon: '✉️',
+        title: t('page_whats_new_mission_3_title'),
+        description: t('page_whats_new_mission_3_body'),
+        link: '/register?from=whats_new',
+        onClick: () => setWhatsNewIntent(),
+      },
+      {
+        id: 'wn-mission-4',
+        icon: '⚖️',
+        title: t('page_whats_new_mission_4_title'),
+        description: t('page_whats_new_mission_4_body'),
+        link: '/docs',
+      },
+    ],
+    [t]
+  )
 
-      <section style={{ padding: '56px 32px 40px', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-        <motion.div initial='hidden' animate='show' variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
+  return (
+    <LandingSurface>
+      <LandingNav activePage='whats-new' />
+      <LandingTicker scrollRows={scrollRows} loadingTickers={loadingTickers} formatPair={formatPair} />
+
+      <section className='relative overflow-hidden px-8 pb-14 pt-[5.5rem] text-center'>
+        <BackgroundBeams />
+        <motion.div initial='hidden' animate='show' variants={staggerHero} className='relative z-10'>
           <motion.div variants={fadeUp}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.12em',
-                color: '#4ade80',
-                textTransform: 'uppercase',
-                marginBottom: 16,
-              }}
-            >
+            <div className='mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-500'>
+              <span className='live-dot size-[7px] shrink-0 rounded-full bg-emerald-500' />
               {t('page_whats_new_hero_kicker')}
             </div>
           </motion.div>
           <motion.h1
             variants={fadeUp}
-            style={{
-              fontSize: 'clamp(28px, 4vw, 40px)',
-              fontWeight: 800,
-              margin: '0 0 18px',
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-            }}
+            className='mb-6 text-[clamp(2rem,5.5vw,3.5rem)] font-black leading-[1.08] tracking-tight'
           >
-            {t('page_whats_new_hero_title')}
+            <span className='block bg-gradient-to-br from-slate-100 to-slate-500 bg-clip-text text-transparent'>
+              {t('page_whats_new_hero_line1')}
+            </span>
+            <span className='mt-1 block bg-gradient-to-br from-emerald-500 via-emerald-400 to-emerald-600 bg-clip-text text-transparent'>
+              {t('page_whats_new_hero_line2')}
+            </span>
           </motion.h1>
-          <motion.p variants={fadeUp} style={{ fontSize: 17, color: '#64748b', margin: 0, lineHeight: 1.7 }}>
+          <motion.p
+            variants={fadeUp}
+            className='mx-auto mb-9 max-w-xl text-lg leading-relaxed text-slate-500'
+          >
             {t('page_whats_new_hero_sub')}
           </motion.p>
+          <motion.div variants={fadeUp} className='flex flex-wrap items-center justify-center gap-3.5'>
+            <Link
+              href='/register?from=whats_new'
+              onClick={() => setWhatsNewIntent()}
+              className='shimmer-btn inline-block rounded-lg px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_0_32px_rgba(34,197,94,0.35)] no-underline'
+            >
+              {t('land_cta_start')}
+            </Link>
+            <Link
+              href='/docs'
+              className='inline-block rounded-lg border border-white/10 bg-white/[0.04] px-8 py-3.5 text-[15px] text-slate-400 backdrop-blur-sm no-underline transition-colors hover:border-white/15 hover:text-slate-300'
+            >
+              {t('land_cta_docs')}
+            </Link>
+          </motion.div>
         </motion.div>
       </section>
 
-      <section style={{ padding: '0 32px 56px', maxWidth: 800, margin: '0 auto' }}>
+      {/* Full-width mission grid (2×2) — not squeezed beside sidebar */}
+      <section className={cn(shell, 'pb-10 pt-6')}>
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          initial='hidden'
+          whileInView='show'
+          variants={staggerSection}
+          viewport={{ once: true, margin: '-60px' }}
         >
-          <SpotlightCard
-            style={{
-              background: 'rgba(15,23,42,0.75)',
-              border: '1px solid rgba(34,197,94,0.18)',
-              borderRadius: 16,
-              padding: '28px 32px',
-              textAlign: 'left',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.12em',
-                color: '#4ade80',
-                textTransform: 'uppercase',
-                marginBottom: 12,
-              }}
-            >
+          <motion.div variants={fadeUp} className='mb-8 text-center'>
+            <p className='mb-2.5 text-xs font-bold uppercase tracking-[0.12em] text-emerald-500'>
               {t('page_whats_new_purpose_kicker')}
-            </div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 14px', color: '#f8fafc' }}>
+            </p>
+            <h2 className='mx-auto max-w-3xl text-[clamp(1.35rem,3.2vw,2.1rem)] font-extrabold leading-snug tracking-tight text-slate-100'>
               {t('page_whats_new_purpose_title')}
             </h2>
-            <p style={{ margin: 0, fontSize: 16, color: '#94a3b8', lineHeight: 1.75 }}>{t('page_whats_new_purpose_body')}</p>
-          </SpotlightCard>
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <HoverEffect items={missionHoverItems} variant='balanced4' />
+          </motion.div>
         </motion.div>
-      </section>
 
-      <section style={{ padding: '0 32px 64px', maxWidth: 960, margin: '0 auto', width: '100%' }}>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.45 }}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 20,
-          }}
-        >
-          <SpotlightCard
-            style={{
-              background: 'rgba(15,23,42,0.75)',
-              border: '1px solid rgba(56,189,248,0.2)',
-              borderRadius: 16,
-              padding: '24px 26px',
-              textAlign: 'left',
-              margin: 0,
-            }}
+        <div className='mt-10 grid gap-5 md:grid-cols-2'>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.04 }}
           >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.12em',
-                color: '#38bdf8',
-                textTransform: 'uppercase',
-                marginBottom: 10,
-              }}
-            >
-              {t('page_whats_new_inapp_kicker')}
-            </div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 12px', color: '#f8fafc' }}>
-              {t('page_whats_new_inapp_title')}
-            </h2>
-            <p style={{ margin: '0 0 18px', fontSize: 15, color: '#94a3b8', lineHeight: 1.65 }}>{t('page_whats_new_inapp_body')}</p>
-            {!authMounted || !authUser ? (
-              <Link
-                href='/register?from=whats_new'
-                onClick={() => setWhatsNewIntent()}
-                style={{ color: '#38bdf8', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
-              >
-                {t('page_whats_new_inapp_cta')} →
-              </Link>
-            ) : (
-              <Link href='/user/dashboard?show_whats_new=1' style={{ color: '#38bdf8', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-                {t('land_whats_new_dashboard')} →
-              </Link>
-            )}
-          </SpotlightCard>
+            <Card className='h-full rounded-[20px]'>
+              <div className='text-2xl' aria-hidden>
+                📊
+              </div>
+              <p className='mb-0 mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-sky-400'>
+                {t('page_whats_new_inapp_kicker')}
+              </p>
+              <CardTitle className='!mt-1 text-[17px]'>{t('page_whats_new_inapp_title')}</CardTitle>
+              <CardDescription className='!mt-3'>{t('page_whats_new_inapp_body')}</CardDescription>
+              <div className='mt-5'>
+                {!authMounted || !authUser ? (
+                  <Link href='/register?from=whats_new' onClick={() => setWhatsNewIntent()} className={btnSky}>
+                    {t('page_whats_new_inapp_cta')}
+                  </Link>
+                ) : (
+                  <Link href='/user/dashboard?show_whats_new=1' className={btnSky}>
+                    {t('land_whats_new_dashboard')}
+                  </Link>
+                )}
+              </div>
+            </Card>
+          </motion.div>
 
-          <SpotlightCard
-            style={{
-              background: 'rgba(15,23,42,0.75)',
-              border: '1px solid rgba(34,197,94,0.2)',
-              borderRadius: 16,
-              padding: '24px 26px',
-              textAlign: 'left',
-              margin: 0,
-            }}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.08 }}
           >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.12em',
-                color: '#4ade80',
-                textTransform: 'uppercase',
-                marginBottom: 10,
-              }}
-            >
-              {t('page_whats_new_os_kicker')}
-            </div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 12px', color: '#f8faffc' }}>
-              {t('page_whats_new_os_title')}
-            </h2>
-            <p style={{ margin: '0 0 18px', fontSize: 15, color: '#94a3b8', lineHeight: 1.65 }}>{t('page_whats_new_os_body')}</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-              <a
-                href='https://github.com/ashiqur-russel/stock-agent'
-                target='_blank'
-                rel='noopener noreferrer'
-                style={{ color: '#4ade80', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <GitHubIcon size={16} />
-                {t('page_whats_new_os_cta_repo')} →
-              </a>
-              <Link href='/docs' style={{ color: '#94a3b8', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-                {t('page_whats_new_os_cta_docs')} →
-              </Link>
-            </div>
-          </SpotlightCard>
-        </motion.div>
+            <Card className='h-full rounded-[20px]'>
+              <div className='text-2xl' aria-hidden>
+                📖
+              </div>
+              <p className='mb-0 mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-400'>
+                {t('page_whats_new_os_kicker')}
+              </p>
+              <CardTitle className='!mt-1 text-[17px]'>{t('page_whats_new_os_title')}</CardTitle>
+              <CardDescription className='!mt-3'>{t('page_whats_new_os_body')}</CardDescription>
+              <div className='mt-5 flex flex-wrap gap-3'>
+                <a href='https://github.com/ashiqur-russel/stock-agent' target='_blank' rel='noopener noreferrer' className={btnEmeraldGhost}>
+                  <GitHubIcon size={15} />
+                  {t('page_whats_new_os_cta_repo')}
+                </a>
+                <Link href='/docs' className={btnMutedOutline}>
+                  {t('page_whats_new_os_cta_docs')}
+                </Link>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
       </section>
 
       {preview ? (
-        <section style={{ padding: '0 32px 80px', maxWidth: 944, margin: '0 auto', width: '100%' }}>
+        <section className={cn(shell, 'pb-16')}>
+          <p className='mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500'>
+            {t('page_whats_new_release_section_kicker')}
+          </p>
+          <h2 className='mb-5 text-[clamp(1.25rem,3vw,1.85rem)] font-extrabold tracking-tight text-slate-100'>
+            {t('page_whats_new_release_section_title')}
+          </h2>
+
           <motion.div
-            initial={{ opacity: 0, y: 22 }}
+            initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
-            style={{
-              position: 'relative',
-              borderRadius: 18,
-              border: '1px solid rgba(34,197,94,0.22)',
-              background: 'linear-gradient(165deg, rgba(15,23,42,0.96) 0%, rgba(2,6,23,0.99) 100%)',
-              overflow: 'hidden',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.35)',
-            }}
+            className='grid overflow-hidden rounded-[20px] border border-emerald-500/20 bg-slate-950/40 shadow-[0_24px_50px_rgba(0,0,0,0.35)] md:grid-cols-[1.12fr_0.88fr]'
           >
-            <div style={{ padding: '28px 28px 112px', position: 'relative', zIndex: 1 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  color: '#4ade80',
-                  textTransform: 'uppercase',
-                  marginBottom: 10,
-                }}
-              >
-                {t('page_whats_new_release_kicker')}
-                {previewVer ? ` · v${previewVer}` : ''}
+            <div className='border-b border-white/5 bg-[#0a1020] p-7 pb-8 md:border-b-0 md:border-r md:border-white/5'>
+              <div className='mb-4 flex items-center gap-3'>
+                <div className='flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]'>
+                  <Rocket className='size-[22px] text-slate-200' strokeWidth={2} aria-hidden />
+                </div>
+                <div>
+                  <p className='text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-300'>
+                    {t('page_whats_new_release_kicker')}
+                    {previewVer ? ` · v${previewVer}` : ''}
+                  </p>
+                  <p className='mt-1 text-lg font-bold text-slate-50'>{preview.title}</p>
+                </div>
               </div>
-              <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, margin: '0 0 18px', color: '#f8fafc', lineHeight: 1.25 }}>
-                {preview.title}
-              </h2>
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <ul className='flex flex-col gap-2.5'>
                 {preview.features_teaser.map((line, i) => (
                   <li
-                    key={`${i}-${line.slice(0, 24)}`}
-                    style={{
-                      fontSize: 15,
-                      color: '#cbd5e1',
-                      lineHeight: 1.55,
-                      paddingLeft: 16,
-                      borderLeft: '3px solid rgba(34,197,94,0.45)',
-                    }}
+                    key={`${i}-${line.slice(0, 20)}`}
+                    className='rounded-xl border border-slate-700/55 bg-slate-800/50 py-3 pl-3.5 pr-3 text-sm leading-snug text-slate-300 border-l-[3px] border-l-emerald-500/50'
                   >
                     {line}
                   </li>
                 ))}
               </ul>
               {preview.has_more ? (
-                <p style={{ margin: '18px 0 0', fontSize: 14, color: '#64748b', lineHeight: 1.5 }}>{t('land_whats_new_more')}</p>
+                <p className='mt-3.5 text-[13px] text-slate-500'>{t('land_whats_new_more')}</p>
               ) : null}
+              <div className='mt-5 flex flex-wrap gap-3'>
+                {authMounted && authUser ? (
+                  <Link href='/user/dashboard?show_whats_new=1' className='shimmer-btn inline-block rounded-lg px-5 py-2.5 text-sm font-bold text-white no-underline'>
+                    {t('land_whats_new_dashboard')}
+                  </Link>
+                ) : (
+                  <Link
+                    href='/register?from=whats_new'
+                    onClick={() => setWhatsNewIntent()}
+                    className='shimmer-btn inline-block rounded-lg px-5 py-2.5 text-sm font-bold text-white no-underline'
+                  >
+                    {t('land_whats_new_cta')}
+                  </Link>
+                )}
+              </div>
             </div>
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: '52%',
-                background: 'linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.55) 38%, rgba(2,6,23,0.94) 100%)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                pointerEvents: 'none',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                padding: '22px 24px 26px',
-                zIndex: 2,
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
-              {authMounted && authUser ? (
-                <Link
-                  href='/user/dashboard?show_whats_new=1'
-                  className='shimmer-btn'
-                  style={{
-                    padding: '12px 28px',
-                    borderRadius: 10,
-                    color: '#fff',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    display: 'inline-block',
-                  }}
-                >
-                  {t('land_whats_new_dashboard')}
-                </Link>
-              ) : (
-                <Link
-                  href='/register?from=whats_new'
-                  onClick={() => setWhatsNewIntent()}
-                  className='shimmer-btn'
-                  style={{
-                    padding: '12px 28px',
-                    borderRadius: 10,
-                    color: '#fff',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    display: 'inline-block',
-                  }}
-                >
-                  {t('land_whats_new_cta')}
-                </Link>
-              )}
+
+            <div className='relative flex min-h-[260px] flex-col items-center justify-center border-t border-white/5 bg-gradient-to-br from-sky-950 via-slate-950 to-emerald-950 p-8 md:border-t-0 md:border-l md:border-white/5'>
+              <div className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(34,197,94,0.2),transparent_55%)]' />
+              <span className='relative mb-4 rounded-full border border-emerald-500/40 px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-emerald-200'>
+                {t('page_whats_new_release_visual_label')}
+              </span>
+              <span className='relative select-none text-[clamp(2.5rem,8vw,4rem)] font-black leading-none tracking-tighter text-slate-50/[0.12]' aria-hidden>
+                {previewVer ? `v${previewVer}` : 'v·'}
+              </span>
             </div>
           </motion.div>
         </section>
       ) : null}
 
-      <footer className='border-t border-white/[0.04] bg-[#040a18] px-8 py-5 flex justify-between items-center flex-wrap gap-4'>
+      <section className='relative overflow-hidden px-8 py-[4.5rem] text-center'>
+        <div className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.07),transparent_65%)]' />
+        <div className='relative z-10 mx-auto max-w-xl'>
+          <h2 className='mb-3 text-[clamp(1.75rem,4vw,2.35rem)] font-black tracking-tight text-slate-100'>
+            {t('land_ready')}
+          </h2>
+          <p className='mb-7 text-base text-slate-600'>{t('land_free')}</p>
+          <div className='flex flex-wrap items-center justify-center gap-3.5'>
+            <Link href='/register' className='shimmer-btn inline-block rounded-xl px-7 py-3.5 text-[15px] font-bold text-white no-underline'>
+              {t('land_cta_start')}
+            </Link>
+            <Link
+              href='/docs'
+              className='inline-block rounded-xl border border-white/10 bg-white/[0.03] px-7 py-3.5 text-[15px] text-slate-400 no-underline transition-colors hover:text-slate-300'
+            >
+              {t('land_cta_docs')}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className='flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.04] bg-[#040a18] px-8 py-5'>
         <span className='text-xs text-text-dim'>{t('land_disclaimer')}</span>
-        <nav className='flex items-center gap-6 flex-wrap'>
+        <nav className='flex flex-wrap items-center gap-6'>
           {[
             { href: '/', label: t('land_nav_home') },
             { href: '/whats-new', label: t('land_nav_whats_new') },
@@ -467,19 +339,19 @@ export default function WhatsNewPage() {
             { href: '/login', label: t('land_signin') },
             { href: '/register', label: t('land_register') },
           ].map((l) => (
-            <Link key={l.href} href={l.href} className='text-xs text-text-dim hover:text-text-muted transition-colors no-underline'>
+            <Link key={l.href} href={l.href} className='text-xs text-text-dim no-underline transition-colors hover:text-text-muted'>
               {l.label}
             </Link>
           ))}
           <button
             type='button'
             onClick={openCookieSettings}
-            className='text-xs text-text-dim hover:text-text-muted transition-colors bg-transparent border-none cursor-pointer p-0'
+            className='cursor-pointer border-none bg-transparent p-0 text-xs text-text-dim transition-colors hover:text-text-muted'
           >
             🍪 {t('cookie_open_settings')}
           </button>
         </nav>
       </footer>
-    </div>
+    </LandingSurface>
   )
 }

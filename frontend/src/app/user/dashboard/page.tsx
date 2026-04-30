@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
 import { useApp } from '@/contexts/AppContext'
 import { usePortfolio, type Holding } from '@/hooks/usePortfolio'
+import { useLivePortfolioTotals } from '@/hooks/usePriceStream'
 import PortfolioCard from '@/components/dashboard/PortfolioCard'
 import MarketStatus from '@/components/ui/MarketStatus'
 import { release } from '@/lib/api'
@@ -39,13 +40,9 @@ function DashboardContent() {
     return () => window.removeEventListener('stock-agent-whats-new-updated', onUpd)
   }, [refreshWhatsNew])
 
-  const totalValueEur = holdings.reduce((s, h) => s + num(h.market_value), 0)
-  const totalUnrealizedEur = holdings.reduce((s, h) => s + num(h.unrealized_pnl), 0)
-  const totalValueUsd = holdings.reduce((s, h) => s + num(h.market_value_usd), 0)
-  const totalUnrealizedUsd = holdings.reduce((s, h) => s + num(h.unrealized_pnl_usd), 0)
-
-  const totalValue = currency === 'USD' ? totalValueUsd : totalValueEur
-  const totalUnrealized = currency === 'USD' ? totalUnrealizedUsd : totalUnrealizedEur
+  const liveTotals = useLivePortfolioTotals(holdings)
+  const totalValue = currency === 'USD' ? liveTotals.totalValueUsd : liveTotals.totalValueEur
+  const totalUnrealized = currency === 'USD' ? liveTotals.totalUnrealizedUsd : liveTotals.totalUnrealizedEur
 
   return (
     <div>
@@ -170,8 +167,10 @@ function DashboardContent() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
           <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '16px 20px' }}>
             <div style={{ fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('db_total_label')}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginTop: 4 }}>
-              {currencySymbol}{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div style={{ fontSize: 22, fontWeight: 700, color: totalValue > 0 ? '#f1f5f9' : '#64748b', marginTop: 4 }}>
+              {totalValue > 0
+                ? `${currencySymbol}${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : '—'}
             </div>
           </div>
           <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '16px 20px' }}>

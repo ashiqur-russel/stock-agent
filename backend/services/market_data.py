@@ -37,6 +37,12 @@ _eur_lock = threading.Lock()
 _prev_eur_cache: dict = {"rate": None, "fetched_at": 0}
 _prev_eur_lock = threading.Lock()
 
+# Last-known-good quote cache: serves stale prices when Yahoo rate-limits the server
+_quote_cache: dict[str, dict] = {}
+_quote_cache_ts: dict[str, float] = {}
+_quote_cache_lock = threading.Lock()
+_QUOTE_STALE_TTL = 900  # serve cached price for up to 15 min when fresh fetch fails
+
 
 def get_usd_to_eur_rate() -> float:
     """Returns how many EUR you get for 1 USD (e.g. 0.91 if 1 USD = 0.91 EUR)."""
@@ -589,6 +595,20 @@ def fetch_quote(ticker: str, display_region: str = "US", *, nest_us_overlay: boo
                 }
             except Exception:
                 pass
+
+    cache_key = f"{ticker_u}:{region}"
+    if out.get("current_price_usd", 0) > 0 or out.get("current_price", 0) > 0:
+        with _quote_cache_lock:
+            _quote_cache[cache_key] = out
+            _quote_cache_ts[cache_key] = time.time()
+    else:
+        with _quote_cache_lock:
+            cached = _quote_cache.get(cache_key)
+            cached_at = _quote_cache_ts.get(cache_key, 0)
+        if cached and (time.time() - cached_at) < _QUOTE_STALE_TTL:
+            stale = dict(cached)
+            stale["data_stale"] = True
+            return stale
 
     return out
 

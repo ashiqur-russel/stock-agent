@@ -192,9 +192,20 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
                 signals[tk] = sig
 
     display_region = get_user_market_region(user_id)
+
+    # Fetch all quotes in parallel (mirrors what the WebSocket does via asyncio.gather).
+    # Sequential fetching was causing rate-limit cascades in DE mode (5-6 Yahoo
+    # requests per ticker × N tickers back-to-back) that made every ticker return 0.
+    quotes: dict[str, dict] = {}
+    if tickers:
+        _qfn = partial(fetch_quote, display_region=display_region)
+        with ThreadPoolExecutor(max_workers=min(8, len(tickers))) as pool:
+            for tk, q in zip(tickers, pool.map(_qfn, tickers)):
+                quotes[tk] = q
+
     result = []
     for ticker, h in holdings.items():
-        quote = fetch_quote(ticker, display_region=display_region)
+        quote = quotes.get(ticker, {})
         # current_price from fetch_quote is already in EUR
         current_price_eur = quote["current_price"]
         current_price_usd = float(quote.get("current_price_usd") or 0.0)
