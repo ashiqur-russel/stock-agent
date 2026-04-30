@@ -1,10 +1,12 @@
-# After each push to main, bump patch version and sync VERSION ↔ backend ↔ frontend.
-# The bump commit message contains [automated version bump] so this workflow does not loop.
+# After each push to development, bump patch version and sync VERSION ↔ backend ↔ frontend.
+# Runs on development (not main) so the bot never pushes to the protected main branch.
+# The bump is included the next time development is merged to main via PR.
+# The [automated version bump] tag in the commit message prevents infinite loops.
 name: Version bump
 
 on:
   push:
-    branches: [main]
+    branches: [development]
 
 permissions:
   contents: write
@@ -17,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: development
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -34,4 +37,4 @@ jobs:
             exit 0
           fi
           git commit -m "chore: [automated version bump] sync VERSION and frontend package"
-          git push
+          git push origin development
