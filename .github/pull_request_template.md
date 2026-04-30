@@ -1,9 +1,10 @@
 <!--
-Title format: [SA-<n>] <Kind>/<Short Description>
-Example branch: fix/SA-7-auth-password-reset-ux
-Example title:  [SA-7] Fix/Auth Password Reset UX
-Base branch:    development (feature/fix PRs — not main)
-See CONTRIBUTING.md → Pull requests for the full convention.
+PR title format:  [SA-<n>] <type>: <short description>
+Examples:
+  [SA-36] feature: development branch workflow
+  [SA-7] fix: auth password reset UX
+Base branch: development (merge feature/fix PRs here). Release: development → main.
+See CONTRIBUTING.md → Git branching model & Pull requests.
 -->
 
 ## Summary

@@ -198,15 +198,13 @@ def main() -> None:
         return
     if branch in _NO_DIRECT_COMMIT:
         print(
-            "Do not make commits while checked out on an integration branch "
-            "(main, master, development, or develop).\n"
+            "Do not make commits while checked out on main, master, development, or develop.\n"
             f"  Current branch: {branch!r}\n"
-            "  Create a topic branch and open a pull request **into `development`**, for example:\n"
+            "  Use a topic branch and open a pull request, for example:\n"
             "    git fetch origin && git checkout -b feature/SA-1-short-description origin/development\n"
             "    # also: fix/SA-2-…, hotfix/SA-3-…, chore/SA-4-…\n"
-            "  (Ticket id is SA-<number> right after the prefix.)\n"
-            "  Feature and fix PRs target **development**, not **main**.\n"
-            "  Merges on GitHub are fine; this hook only blocks local commits on protected branches.\n"
+            "  Merge feature branches into development first; merge development into main for releases.\n"
+            "  Merges on GitHub are fine; this hook only blocks local commits on integration branches.\n"
             "  Rare exception:  git commit --no-verify\n",
             file=sys.stderr,
         )

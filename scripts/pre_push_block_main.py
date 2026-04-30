@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Block `git push` that updates protected remote branches from your machine.
+Block `git push` that updates protected integration branches from your machine
+(main / master / development).
 
 Protected: main, master, development, develop — use a topic branch + PR into **development**
 (feature/fix work) or follow maintainer process for **main**.
@@ -42,7 +43,7 @@ def main() -> None:
         _lr, _ls, remote_ref, _rs = parts
         if remote_ref in _PROTECTED:
             print(
-                "Pushing directly to a protected remote branch is not allowed from this hook.\n"
+                "Pushing directly to a protected branch (main / master / development) is not allowed from this hook.\n"
                 f"  Blocked: {remote_ref}\n"
                 "  Use a topic branch and open a pull request into **development** "
                 "(feature/fix PRs must not target **main**).\n"

@@ -1,5 +1,6 @@
-# Run on PRs and pushes to main and development (integration branch for feature work).
-# Merging should be blocked until this workflow passes (GitHub: branch protection → require status checks).
+# Run on PRs and pushes to main (releases) and development (integration).
+# Workflow: feature/* → development → main. Version bump only runs on main (see version-bump.yml).
+# Use branch protection on GitHub: require CI on both branches before merge.
 name: CI
 
 on:
