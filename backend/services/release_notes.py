@@ -71,6 +71,33 @@ def notes_for_version(version: str, lang: str = "en") -> dict[str, Any] | None:
     return {"title": title, "features": features, "fixes": fixes}
 
 
+def preview_notes_for_version(version: str, lang: str = "en") -> dict[str, Any] | None:
+    """Public teaser: truncated feature lines; omits full fixes list."""
+    notes = notes_for_version(version, lang=lang)
+    if not notes:
+        return None
+
+    def trunc_line(s: str, max_len: int = 96) -> str:
+        s = (s or "").strip()
+        if len(s) <= max_len:
+            return s
+        return s[: max_len - 1].rstrip() + "…"
+
+    raw_features = notes.get("features") or []
+    if not isinstance(raw_features, list):
+        raw_features = []
+    teaser_lines = [trunc_line(str(x)) for x in raw_features[:2]]
+    raw_fixes = notes.get("fixes") or []
+    n_fix = len(raw_fixes) if isinstance(raw_fixes, list) else 0
+    n_feat = len(raw_features)
+    has_more = n_feat > 2 or n_fix > 0
+    return {
+        "title": notes["title"],
+        "features_teaser": teaser_lines,
+        "has_more": has_more,
+    }
+
+
 def should_show_whats_new(
     app_version: str,
     cleared_version: str | None,

@@ -251,7 +251,17 @@ export type WhatsNewPayload = {
   fixes: string[]
 }
 
+export type ReleasePreviewPayload = {
+  title: string
+  features_teaser: string[]
+  has_more: boolean
+}
+
 export const release = {
+  getPreview: (lang: 'en' | 'de') =>
+    apiFetch<{ app_version: string; release: ReleasePreviewPayload | null }>(
+      `/api/v1/release/preview?lang=${lang}`,
+    ),
   getWhatsNew: (lang: 'en' | 'de') =>
     apiFetch<{
       app_version: string

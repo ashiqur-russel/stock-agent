@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { cn } from '@/lib/utils'
@@ -11,6 +11,8 @@ export type HoverEffectItem = {
   description: string
   link: string
   icon?: string
+  /** Optional handler (e.g. funnel intent) — runs on card click in addition to navigation */
+  onClick?: () => void
 }
 
 function itemCellClass(idx: number, total: number, breakpoint: 'md' | 'lg'): string {
@@ -34,43 +36,60 @@ function itemCellClass(idx: number, total: number, breakpoint: 'md' | 'lg'): str
   return ''
 }
 
+export type HoverEffectVariant = 'default' | 'balanced4'
+
 export function HoverEffect({
   items,
   className,
+  variant = 'default',
 }: {
   items: HoverEffectItem[]
   className?: string
+  /** `balanced4`: 2×2 grid for exactly four items (wider cells, less “tall narrow” columns). */
+  variant?: HoverEffectVariant
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  /** Unique per mount so `layoutId` never collides across pages / HMR (avoids FM runtime issues). */
+  const hoverLayoutScope = useId().replace(/:/g, '')
   const n = items.length
+  const balanced = variant === 'balanced4' && n === 4
 
   return (
     <div
       className={cn(
-        'grid grid-cols-1 py-10 md:grid-cols-2 lg:grid-cols-6',
+        balanced
+          ? 'grid grid-cols-1 gap-3 py-4 sm:grid-cols-2 sm:gap-4'
+          : 'grid grid-cols-1 py-10 md:grid-cols-2 lg:grid-cols-6',
         className
       )}
     >
       {items.map((item, idx) => {
-        const isLgSingleOrphan = n % 3 === 1 && idx === n - 1
-        const isMdSingleOrphan = n % 2 === 1 && idx === n - 1
+        const isLgSingleOrphan = !balanced && n % 3 === 1 && idx === n - 1
+        const isMdSingleOrphan = !balanced && n % 2 === 1 && idx === n - 1
         return (
           <a
             href={item.link}
             key={item.id}
             className={cn(
               'group relative block h-full w-full p-2',
-              itemCellClass(idx, n, 'md'),
-              itemCellClass(idx, n, 'lg')
+              !balanced && itemCellClass(idx, n, 'md'),
+              !balanced && itemCellClass(idx, n, 'lg')
             )}
             onMouseEnter={() => setHoveredIndex(idx)}
             onMouseLeave={() => setHoveredIndex(null)}
+            onClick={() => {
+              try {
+                item.onClick?.()
+              } catch (err) {
+                console.error('[HoverEffect] onClick', err)
+              }
+            }}
           >
             <AnimatePresence>
               {hoveredIndex === idx && (
                 <motion.span
                   className='absolute inset-0 block h-full w-full rounded-3xl bg-emerald-500/[0.12]'
-                  layoutId='hoverBackground'
+                  layoutId={`${hoverLayoutScope}-hover-bg`}
                   initial={{ opacity: 0 }}
                   animate={{
                     opacity: 1,
@@ -85,6 +104,7 @@ export function HoverEffect({
             </AnimatePresence>
             <Card
               className={cn(
+                balanced && 'h-full',
                 isLgSingleOrphan && 'w-full max-w-xl',
                 isMdSingleOrphan &&
                   !isLgSingleOrphan &&
@@ -96,8 +116,10 @@ export function HoverEffect({
                   {item.icon}
                 </div>
               ) : null}
-              <CardTitle className={item.icon ? '!mt-2' : undefined}>{item.title}</CardTitle>
-              <CardDescription>{item.description}</CardDescription>
+              <CardTitle className={cn(item.icon && '!mt-2', balanced && '!mt-2 text-base leading-snug')}>{item.title}</CardTitle>
+              <CardDescription className={balanced ? '!mt-3 text-sm leading-relaxed' : undefined}>
+                {item.description}
+              </CardDescription>
             </Card>
           </a>
         )

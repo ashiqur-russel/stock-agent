@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-
 export default function BackgroundBeams({ className = '' }: { className?: string }) {
   return (
     <div

@@ -5,19 +5,17 @@
 # Subject line rule: the first line must be  [SA-<number>] <type>: <summary>
 # (Merge / Revert / fixup! / squash!  are exempt).
 #
-# Branch names (on commit): develop/gh-pages, or
+# Branch names (on commit): gh-pages (rare), or
 #   feature/SA-<n>-slug, fix/SA-<n>-…, hotfix/SA-<n>, chore/SA-<n>, etc.
+# Commits on main/master/development/develop: rejected — use a topic branch; PR base = development.
 # Same SA-<n> must not be used on two different branches in this clone (use a new
 # id or delete the other ref after merge; hook only sees local + fetched remotes).
 # Prefer GitHub issue # as n; else use lowest unused SA-n or max(n)+1 — not random
 # high ids (see CONTRIBUTING.md → Branches and commit messages).
-# (Commits on main/master: rejected.)
-# pre-push: blocks `git push` to remote main/master; also runs [SA-n] on pushes.
+# pre-push: blocks `git push` to remote main/master/development/develop; also runs [SA-n] on pushes.
 #
-# If you can still push to main: (1) run `pre-commit install` in this clone after
-# pull, (2) do not use `git push --no-verify` or an IDE that skips Git hooks, (3)
-# enforce the same on GitHub: Settings → Branches → lock main (no direct push).
-# Bypass: `git push --no-verify` or `ALLOW_PUSH_TO_MAIN=1 git push` (emergency)
+# Enforce on GitHub: branch protection — no direct push to main or development.
+# Bypass (emergency): `git push --no-verify` or `ALLOW_PUSH_PROTECTED=1 git push` (legacy: ALLOW_PUSH_TO_MAIN=1).
 #
 # Skip on commit:  SKIP=sa-commit-msg,branch-name git commit
 # Skip a hook:     SKIP=sa-pre-push-commits,block-push-to-main git push
@@ -62,7 +60,7 @@ repos:
         stages: [commit-msg]
 
       - id: block-push-to-main
-        name: block direct push to main/master
+        name: block direct push to protected branches (main, development, …)
         entry: python3 scripts/pre_push_block_main.py
         language: system
         pass_filenames: false

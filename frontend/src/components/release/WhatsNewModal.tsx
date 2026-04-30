@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Bug, Check, Rocket, Sparkles, X } from 'lucide-react'
 import { useApp } from '@/contexts/AppContext'
 import { release } from '@/lib/api'
@@ -23,8 +24,12 @@ function parseLine(line: string): { head: string; rest: string | null } {
 /**
  * Fetches /api/v1/release/whats-new and shows release notes until the user
  * dismisses (Done / suppress) or chooses Remind me later (no API — shows again next visit).
+ * `?show_whats_new=1` re-opens when notes are still eligible; the query is then stripped.
  */
-export default function WhatsNewModal() {
+function WhatsNewModalInner() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { lang, t } = useApp()
   const [open, setOpen] = useState(false)
   const [appVersion, setAppVersion] = useState('')
@@ -35,10 +40,15 @@ export default function WhatsNewModal() {
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
+    const forceWhatsNew = searchParams.get('show_whats_new') === '1'
+    const stripParam = () => {
+      if (forceWhatsNew) router.replace(pathname)
+    }
     try {
       const data = await release.getWhatsNew(lang === 'de' ? 'de' : 'en')
       if (!data.should_show || !data.release) {
         setOpen(false)
+        stripParam()
         return
       }
       setAppVersion(data.app_version ?? '')
@@ -46,10 +56,12 @@ export default function WhatsNewModal() {
       setFeatures(data.release.features ?? [])
       setFixes(data.release.fixes ?? [])
       setOpen(true)
+      stripParam()
     } catch {
       setOpen(false)
+      stripParam()
     }
-  }, [lang])
+  }, [lang, searchParams, pathname, router])
 
   useEffect(() => {
     load()
@@ -77,6 +89,7 @@ export default function WhatsNewModal() {
     try {
       await release.dismissWhatsNew({ action: 'done' })
       closeOverlay()
+      window.dispatchEvent(new Event('stock-agent-whats-new-updated'))
     } catch {
       /* keep open */
     } finally {
@@ -90,6 +103,7 @@ export default function WhatsNewModal() {
       try {
         await release.dismissWhatsNew({ action: 'suppress' })
         closeOverlay()
+        window.dispatchEvent(new Event('stock-agent-whats-new-updated'))
       } catch {
         /* keep open */
       } finally {
@@ -509,5 +523,13 @@ export default function WhatsNewModal() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function WhatsNewModal() {
+  return (
+    <Suspense fallback={null}>
+      <WhatsNewModalInner />
+    </Suspense>
   )
 }

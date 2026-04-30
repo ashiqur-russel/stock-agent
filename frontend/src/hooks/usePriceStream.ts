@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { getToken, API_URL } from '@/lib/api'
 
 export type QuoteSession =
@@ -35,6 +35,8 @@ export interface LiveQuote {
   regular_market_price?: number | null
   regular_market_price_usd?: number | null
   us_listing?: UsListingQuote | null
+  /** True when the backend returned a cached price because the live fetch failed (e.g. rate-limited). */
+  data_stale?: boolean
 }
 
 /** True when at least one of EUR / USD spot prices is a positive finite number. */
@@ -256,4 +258,66 @@ export function usePriceStreamTickers(tickers: string[]): void {
       for (const u of unsubscribers) u()
     }
   }, [tickers.join('|')]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+interface PortfolioHoldingLike {
+  ticker: string
+  shares_held: number
+  avg_cost: number
+  market_value: number
+  market_value_usd: number
+  unrealized_pnl: number
+  unrealized_pnl_usd: number
+}
+
+export interface LivePortfolioTotals {
+  totalValueEur: number
+  totalValueUsd: number
+  totalUnrealizedEur: number
+  totalUnrealizedUsd: number
+}
+
+/**
+ * Aggregates portfolio totals using live WebSocket prices when available,
+ * falling back to the server-provided snapshot values per holding.
+ * Re-renders whenever any subscribed ticker's price changes.
+ */
+export function useLivePortfolioTotals(holdings: PortfolioHoldingLike[]): LivePortfolioTotals {
+  const stream = getStream()
+  const tickerStr = holdings.map((h) => h.ticker).join('|')
+
+  const compute = useCallback((): LivePortfolioTotals => {
+    let totalValueEur = 0
+    let totalValueUsd = 0
+    let totalUnrealizedEur = 0
+    let totalUnrealizedUsd = 0
+    for (const h of holdings) {
+      const quote = stream.getSnapshot(h.ticker)
+      const spots = quote ? quoteSpotPrices(quote) : null
+      if (spots && spots.eur > 0 && spots.usd > 0) {
+        const rate = (quote as LiveQuote).eur_rate || 0.91
+        const avgCostUsd = h.avg_cost / rate
+        totalValueEur += spots.eur * h.shares_held
+        totalValueUsd += spots.usd * h.shares_held
+        totalUnrealizedEur += (spots.eur - h.avg_cost) * h.shares_held
+        totalUnrealizedUsd += (spots.usd - avgCostUsd) * h.shares_held
+      } else {
+        totalValueEur += h.market_value
+        totalValueUsd += h.market_value_usd
+        totalUnrealizedEur += h.unrealized_pnl
+        totalUnrealizedUsd += h.unrealized_pnl_usd
+      }
+    }
+    return { totalValueEur, totalValueUsd, totalUnrealizedEur, totalUnrealizedUsd }
+  }, [tickerStr, holdings]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [totals, setTotals] = useState<LivePortfolioTotals>(compute)
+
+  useEffect(() => {
+    setTotals(compute())
+    const unsubs = holdings.map((h) => stream.subscribe(h.ticker, () => setTotals(compute())))
+    return () => { for (const u of unsubs) u() }
+  }, [tickerStr, compute]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return totals
 }

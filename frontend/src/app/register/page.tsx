@@ -1,16 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import { useAuth } from '@/hooks/useAuth'
 import FormInput from '@/components/ui/FormInput'
 import { auth as authApi } from '@/lib/api'
+import { consumeWhatsNewIntentPath, setWhatsNewIntent } from '@/lib/whatsNewFunnel'
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const { t } = useApp()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('from') === 'whats_new') {
+      setWhatsNewIntent()
+    }
+  }, [searchParams])
   const { register, loading, error, setError } = useAuth()
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -32,7 +40,7 @@ export default function RegisterPage() {
     if (result.pending) {
       setPending(true)
     } else if (result.token) {
-      router.push('/user/dashboard')
+      router.push(consumeWhatsNewIntentPath())
     }
   }
 
@@ -128,5 +136,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '100vh', background: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: '#94a3b8' }}>Loading…</p>
+        </div>
+      }
+    >
+      <RegisterPageInner />
+    </Suspense>
   )
 }
