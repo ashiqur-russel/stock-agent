@@ -176,6 +176,7 @@ def check_all_portfolios():
 
                 price_usd = analysis.get("current_price")
                 price_eur = round(price_usd * eur_rate, 4) if price_usd else None
+                price_str = f"€{price_eur:.4f}" if price_eur else "N/A"
                 support_usd = analysis.get("key_support")
                 resistance_usd = analysis.get("key_resistance")
                 support_eur = f"€{round(support_usd * eur_rate, 2)}" if support_usd else "N/A"
@@ -190,16 +191,34 @@ def check_all_portfolios():
                 )
                 new_label = f"{SIGNAL_EMOJI.get(new_signal, '')} {SIGNAL_LABELS.get(new_signal, new_signal)}"
 
+                # Signal reasons from RSI + Bollinger + EMA scoring
+                reasons = analysis.get("signal_reasons") or []
+                reasons_block = "\n".join(f"  • {r}" for r in reasons) if reasons else "  N/A"
+
+                # Take-profit hint: only shown on sell signals when the user has unrealized gains
+                profit_hint = ""
+                holding = next((h for h in portfolio if h["ticker"] == ticker), None)
+                if holding and new_signal in ("potential_sell", "strong_sell"):
+                    unrealized_pct = holding.get("unrealized_pnl_pct") or 0
+                    unrealized_eur = holding.get("unrealized_pnl") or 0
+                    if unrealized_pct > 5:
+                        profit_hint = (
+                            f"\n💰 Unrealized gain: {unrealized_pct:+.1f}% "
+                            f"(€{unrealized_eur:+.2f}) — consider locking in profit.\n"
+                        )
+
                 message = (
-                    f"Signal changed: {old_label} → {new_label}\n\n"
+                    f"Signal: {old_label} → {new_label}\n\n"
+                    f"Why:\n{reasons_block}\n"
+                    f"{profit_hint}\n"
+                    f"Price:      {price_str}\n"
                     f"RSI-14:     {analysis.get('rsi_14', 'N/A')}\n"
-                    f"MACD:       {analysis.get('macd_signal', 'N/A')}\n"
-                    f"Bollinger:  {analysis.get('bb_position', 'N/A')}\n"
+                    f"BB %B:      {analysis.get('bb_pct_b', 'N/A')}\n"
                     f"Trend:      {analysis.get('trend', 'N/A')}\n"
-                    f"News:       {analysis.get('news_sentiment', 'N/A')}\n\n"
+                    f"MACD:       {analysis.get('macd_signal', 'N/A')}\n\n"
                     f"Support:    {support_eur}\n"
                     f"Resistance: {resistance_eur}\n"
-                    f"Stop-loss:  Below support\n\n"
+                    f"Stop-loss:  Below {support_eur}\n\n"
                     f"Not financial advice."
                 )
 
@@ -215,10 +234,15 @@ def check_all_portfolios():
 
                     emoji = SIGNAL_EMOJI.get(new_signal, "")
                     label = SIGNAL_LABELS.get(new_signal, new_signal)
-                    push_body = (
-                        f"RSI {analysis.get('rsi_14', '—')} · {analysis.get('macd_signal', '')} · "
-                        f"Support {support_eur}"
-                    )
+                    rsi_val = analysis.get("rsi_14")
+                    bb_pct_val = analysis.get("bb_pct_b")
+                    push_parts = []
+                    if rsi_val is not None:
+                        push_parts.append(f"RSI {rsi_val:.1f}")
+                    if bb_pct_val is not None:
+                        push_parts.append(f"BB%B {bb_pct_val:.2f}")
+                    push_parts.append(f"Support {support_eur}")
+                    push_body = " · ".join(push_parts)
                     send_push_to_user(
                         user_id,
                         title=f"{emoji} {ticker} — {label}",

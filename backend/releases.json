@@ -1,4 +1,38 @@
 {
+  "0.2.1": {
+    "title": {
+      "en": "Smarter alerts & live dashboard",
+      "de": "Bessere Alerts & Live-Dashboard"
+    },
+    "features": {
+      "en": [
+        "Alert signals now use RSI + Bollinger Bands + EMA — buy alerts fire when RSI is oversold and price is at the lower band, sell/take-profit alerts fire when RSI is overbought and price hits the upper band.",
+        "Every alert now includes a \"Why\" breakdown: each triggered condition (e.g. RSI 28 — deeply oversold, Price at lower Bollinger Band) is listed so you know exactly what drove the signal.",
+        "Take-profit hint on sell signals — if your unrealized gain is above 5 %, the alert shows your open profit and prompts you to consider locking it in.",
+        "Portfolio value and unrealized P&L in the dashboard header now update in real time from the live price stream, not only on the 30-second REST refresh."
+      ],
+      "de": [
+        "Alert-Signale basieren jetzt auf RSI + Bollinger Bands + EMA — Kauf-Alerts erscheinen bei überkauftem RSI und Preis an der unteren Band, Verkauf-Alerts bei überhitztem RSI an der oberen Band.",
+        "Jeder Alert enthält jetzt eine „Warum“-Erklärung: jede ausgelöste Bedingung (z. B. RSI 28 — stark überverkauft) wird aufgelistet.",
+        "Gewinnmitnahme-Hinweis bei Verkauf-Signals — liegt der unrealisierte Gewinn über 5 %, zeigt der Alert den offenen Gewinn und empfiehlt, ihn zu sichern.",
+        "Portfolio-Wert und unrealisiertes P&L im Dashboard-Header aktualisieren sich jetzt in Echtzeit über den Live-Preis-Stream."
+      ]
+    },
+    "fixes": {
+      "en": [
+        "Live prices no longer show €0.00 when Yahoo Finance rate-limits the server — the backend now caches the last known-good quote for up to 15 minutes and serves it as a fallback.",
+        "Portfolio REST API now fetches all ticker quotes in parallel (mirrors WebSocket behavior), eliminating the sequential Yahoo request cascade that triggered rate-limits in DE mode.",
+        "Dashboard cards show \"—\" instead of €0.00 / +0.00% when no valid price is available, making data outages visually distinct from real zero values.",
+        "MACD is no longer the primary alert driver — its sustained bullish/bearish state was causing momentum-lagging signals (buy after price rises, sell after price falls). Only MACD crossovers are now scored, and at reduced weight."
+      ],
+      "de": [
+        "Live-Kurse zeigen kein €0,00 mehr, wenn Yahoo Finance den Server drosselt — das Backend cached den letzten bekannten Kurs bis zu 15 Minuten als Fallback.",
+        "Portfolio-REST-API lädt jetzt alle Ticker-Kurse parallel (wie der WebSocket), und vermeidet so die sequenzielle Yahoo-Anfragekette, die im DE-Modus Rate-Limits auslöste.",
+        "Dashboard-Karten zeigen „—“ statt €0,00 / +0,00%, wenn kein gültiger Kurs verfügbar ist.",
+        "MACD ist nicht mehr der primäre Alert-Treiber — nur noch Kreuzungssignale (Crossover) werden bewertet, mit reduziertem Gewicht."
+      ]
+    }
+  },
   "0.2.0": {
     "title": {
       "en": "What's new in Stock Agent",
