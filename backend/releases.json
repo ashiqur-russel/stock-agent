@@ -13,7 +13,7 @@
       ],
       "de": [
         "Alert-Signale basieren jetzt auf RSI + Bollinger Bands + EMA — Kauf-Alerts erscheinen bei überkauftem RSI und Preis an der unteren Band, Verkauf-Alerts bei überhitztem RSI an der oberen Band.",
-        "Jeder Alert enthält jetzt eine „Warum"-Erklärung: jede ausgelöste Bedingung (z. B. RSI 28 — stark überverkauft) wird aufgelistet.",
+        "Jeder Alert enthält jetzt eine „Warum“-Erklärung: jede ausgelöste Bedingung (z. B. RSI 28 — stark überverkauft) wird aufgelistet.",
         "Gewinnmitnahme-Hinweis bei Verkauf-Signals — liegt der unrealisierte Gewinn über 5 %, zeigt der Alert den offenen Gewinn und empfiehlt, ihn zu sichern.",
         "Portfolio-Wert und unrealisiertes P&L im Dashboard-Header aktualisieren sich jetzt in Echtzeit über den Live-Preis-Stream."
       ]
@@ -28,7 +28,7 @@
       "de": [
         "Live-Kurse zeigen kein €0,00 mehr, wenn Yahoo Finance den Server drosselt — das Backend cached den letzten bekannten Kurs bis zu 15 Minuten als Fallback.",
         "Portfolio-REST-API lädt jetzt alle Ticker-Kurse parallel (wie der WebSocket), und vermeidet so die sequenzielle Yahoo-Anfragekette, die im DE-Modus Rate-Limits auslöste.",
-        "Dashboard-Karten zeigen „—" statt €0,00 / +0,00%, wenn kein gültiger Kurs verfügbar ist.",
+        "Dashboard-Karten zeigen „—“ statt €0,00 / +0,00%, wenn kein gültiger Kurs verfügbar ist.",
         "MACD ist nicht mehr der primäre Alert-Treiber — nur noch Kreuzungssignale (Crossover) werden bewertet, mit reduziertem Gewicht."
       ]
     }
@@ -45,7 +45,7 @@
       ],
       "de": [
         "App-Version in der Seitenleiste und im API-Health-Check.",
-        "„Was ist neu"-Dialog bei Releases mit Notizen — schließen oder bis zur nächsten Version ausblenden."
+        "„Was ist neu“-Dialog bei Releases mit Notizen — schließen oder bis zur nächsten Version ausblenden."
       ]
     },
     "fixes": {
