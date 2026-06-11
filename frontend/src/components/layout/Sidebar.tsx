@@ -18,7 +18,13 @@ const links = [
   { href: '/docs', labelKey: 'nav_docs' as const, icon: '📚' },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  /** Mobile drawer state — ignored on desktop where the sidebar is always visible. */
+  open?: boolean
+  onClose?: () => void
+}
+
+export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { t, lang, setLang, currency, setCurrency, marketRegion, setMarketRegion } = useApp()
   const { logout } = useAuth()
@@ -42,114 +48,120 @@ export default function Sidebar() {
     return () => clearInterval(interval)
   }, [])
 
+  // Close the mobile drawer after navigation.
+  useEffect(() => {
+    onClose?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+
   return (
-    <nav style={{
-      width: 220,
-      minHeight: '100vh',
-      background: '#0f172a',
-      borderRight: '1px solid #1e293b',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '24px 0',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-    }}>
-      <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #1e293b' }}>
-        <img src='/logo.svg' alt='StockAgent' style={{ height: 32, display: 'block' }} />
-      </div>
-
-      <div style={{ flex: 1, padding: '12px 0' }}>
-        {links.map(({ href, labelKey, icon }) => {
-          const isActive =
-            href === '/user/dashboard'
-              ? pathname === '/user/dashboard'
-              : pathname === href || pathname.startsWith(`${href}/`)
-          const isAlerts = href === '/user/alerts'
-          return (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 20px',
-                fontSize: 14,
-                fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#22c55e' : '#94a3b8',
-                background: isActive ? '#0d1f17' : 'transparent',
-                textDecoration: 'none',
-                borderLeft: isActive ? '3px solid #22c55e' : '3px solid transparent',
-                transition: 'all 0.15s',
-                position: 'relative',
-              }}
-            >
-              <span>{icon}</span>
-              <span>{t(labelKey)}</span>
-              {isAlerts && unread > 0 && (
-                <span style={{
-                  marginLeft: 'auto',
-                  background: '#ef4444',
-                  color: '#fff',
-                  borderRadius: 10,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '1px 7px',
-                  minWidth: 20,
-                  textAlign: 'center',
-                }}>
-                  {unread}
-                </span>
-              )}
-            </Link>
-          )
-        })}
-      </div>
-
-      <div style={{ padding: '16px 20px', borderTop: '1px solid #1e293b', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <Toggle
-          options={['EN', 'DE']}
-          value={lang.toUpperCase()}
-          onChange={(v) => setLang(v.toLowerCase() as 'en' | 'de')}
-          activeColor='#3b82f6'
-        />
-        <Toggle
-          options={['EUR', 'USD']}
-          value={currency}
-          onChange={(v) => setCurrency(v as 'EUR' | 'USD')}
-          activeColor='#22c55e'
-        />
-        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{t('pt_hours_label')}</div>
-        <Toggle
-          options={['DE', 'US']}
-          value={marketRegion}
-          onChange={(v) => setMarketRegion(v as 'DE' | 'US')}
-          activeColor='#0ea5e9'
-        />
-        <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
-          {t('sidebar_app_version')}{' '}
-          <span style={{ color: '#64748b', fontFamily: 'ui-monospace, monospace' }}>
-            v{process.env.NEXT_PUBLIC_APP_VERSION ?? '—'}
-          </span>
+    <>
+      {open && <div className="sa-sidebar-backdrop" onClick={onClose} aria-hidden />}
+      <nav
+        className={`sa-sidebar${open ? ' sa-sidebar-open' : ''}`}
+        aria-label={t('nav_dashboard')}
+      >
+        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid var(--color-border)' }}>
+          <img src='/logo.svg' alt='StockAgent' style={{ height: 32, display: 'block' }} />
         </div>
-        <button
-          onClick={logout}
-          style={{
-            marginTop: 4,
-            padding: '8px 12px',
-            background: 'transparent',
-            border: '1px solid #334155',
-            borderRadius: 8,
-            color: '#94a3b8',
-            fontSize: 13,
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          🚪 {t('nav_logout')}
-        </button>
-      </div>
-    </nav>
+
+        <div style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
+          {links.map(({ href, labelKey, icon }) => {
+            const isActive =
+              href === '/user/dashboard'
+                ? pathname === '/user/dashboard'
+                : pathname === href || pathname.startsWith(`${href}/`)
+            const isAlerts = href === '/user/alerts'
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="sa-focusable"
+                aria-current={isActive ? 'page' : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 20px',
+                  fontSize: 14,
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? 'var(--color-brand)' : 'var(--color-text-muted)',
+                  background: isActive ? 'var(--color-surface-active)' : 'transparent',
+                  textDecoration: 'none',
+                  borderLeft: isActive
+                    ? '3px solid var(--color-brand)'
+                    : '3px solid transparent',
+                  transition: 'all 0.15s',
+                  position: 'relative',
+                }}
+              >
+                <span aria-hidden>{icon}</span>
+                <span>{t(labelKey)}</span>
+                {isAlerts && unread > 0 && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    background: 'var(--color-accent-red)',
+                    color: '#fff',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '1px 7px',
+                    minWidth: 20,
+                    textAlign: 'center',
+                  }}>
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+
+        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Toggle
+            options={['EN', 'DE']}
+            value={lang.toUpperCase()}
+            onChange={(v) => setLang(v.toLowerCase() as 'en' | 'de')}
+            activeColor='var(--color-accent-blue)'
+          />
+          <Toggle
+            options={['EUR', 'USD']}
+            value={currency}
+            onChange={(v) => setCurrency(v as 'EUR' | 'USD')}
+            activeColor='var(--color-brand)'
+          />
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 2 }}>{t('pt_hours_label')}</div>
+          <Toggle
+            options={['DE', 'US']}
+            value={marketRegion}
+            onChange={(v) => setMarketRegion(v as 'DE' | 'US')}
+            activeColor='var(--color-accent-sky)'
+          />
+          <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+            {t('sidebar_app_version')}{' '}
+            <span style={{ color: 'var(--color-text-dim)', fontFamily: 'ui-monospace, monospace' }}>
+              v{process.env.NEXT_PUBLIC_APP_VERSION ?? '—'}
+            </span>
+          </div>
+          <button
+            onClick={logout}
+            className="sa-focusable"
+            style={{
+              marginTop: 4,
+              padding: '8px 12px',
+              background: 'transparent',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: 8,
+              color: 'var(--color-text-muted)',
+              fontSize: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            🚪 {t('nav_logout')}
+          </button>
+        </div>
+      </nav>
+    </>
   )
 }

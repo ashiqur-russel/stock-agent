@@ -8,10 +8,20 @@ import { useApp } from '@/contexts/AppContext'
 import { usePortfolio, type Holding } from '@/hooks/usePortfolio'
 import { useLivePortfolioTotals } from '@/hooks/usePriceStream'
 import PortfolioCard from '@/components/dashboard/PortfolioCard'
+import PortfolioCardSkeleton from '@/components/dashboard/PortfolioCardSkeleton'
 import MarketStatus from '@/components/ui/MarketStatus'
+import { StatCell } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { release } from '@/lib/api'
 
-const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+const CARD_GRID: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))',
+  gap: 20,
+}
+
+const fmtMoney = (v: number) =>
+  v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 function DashboardContent() {
   const { t, currency, currencySymbol, lang } = useApp()
@@ -44,58 +54,43 @@ function DashboardContent() {
   const totalValue = currency === 'USD' ? liveTotals.totalValueUsd : liveTotals.totalValueEur
   const totalUnrealized = currency === 'USD' ? liveTotals.totalUnrealizedUsd : liveTotals.totalUnrealizedEur
 
+  const initialLoading = loading && holdings.length === 0
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{t('nav_dashboard')}</h1>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <MarketStatus type='stock' />
-          <span style={{ fontSize: 12, color: '#22c55e', background: '#0d2d0d', border: '1px solid #166534', borderRadius: 10, padding: '2px 10px' }}>
-            {t('db_live')}
-          </span>
-          <button
-            type="button"
-            onClick={refresh}
+          <span
             style={{
-              padding: '6px 14px',
-              background: '#1e293b',
-              border: '1px solid #334155',
-              borderRadius: 8,
-              color: '#94a3b8',
-              cursor: 'pointer',
-              fontSize: 13,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
+              fontSize: 12,
+              color: 'var(--color-brand)',
+              background: 'var(--color-surface-active)',
+              border: '1px solid var(--color-brand-dark)',
+              borderRadius: 10,
+              padding: '2px 10px',
             }}
           >
-            <span
-              aria-hidden
-              style={{
-                width: 10,
-                height: 10,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {refreshing ? (
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    border: '2px solid #334155',
-                    borderTopColor: '#22c55e',
-                    animation: 'spin 0.7s linear infinite',
-                  }}
-                />
-              ) : null}
-            </span>
+            {t('db_live')}
+          </span>
+          <Button variant="outline" onClick={refresh} disabled={refreshing}>
+            {refreshing && (
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  border: '2px solid var(--color-border-strong)',
+                  borderTopColor: 'var(--color-brand)',
+                  animation: 'spin 0.7s linear infinite',
+                }}
+              />
+            )}
             {t('db_refresh')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -103,6 +98,7 @@ function DashboardContent() {
         <button
           type="button"
           onClick={() => router.push('/user/dashboard?show_whats_new=1')}
+          className="sa-focusable"
           style={{
             width: '100%',
             marginBottom: 24,
@@ -131,7 +127,7 @@ function DashboardContent() {
               flexShrink: 0,
             }}
           >
-            <Sparkles size={22} color="#4ade80" aria-hidden />
+            <Sparkles size={22} color="var(--color-brand-light)" aria-hidden />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -150,13 +146,13 @@ function DashboardContent() {
               >
                 {t('dash_whats_new_badge')}
               </span>
-              <span style={{ fontSize: 15, fontWeight: 600, color: '#f8fafc' }}>{t('dash_whats_new_row')}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>{t('dash_whats_new_row')}</span>
             </div>
-            <span style={{ fontSize: 13, color: '#94a3b8' }}>
+            <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
               {t('whats_new_heading')} — {t('dash_whats_new_sub')}
             </span>
           </div>
-          <span style={{ fontSize: 18, color: '#64748b', flexShrink: 0 }} aria-hidden>
+          <span style={{ fontSize: 18, color: 'var(--color-text-dim)', flexShrink: 0 }} aria-hidden>
             →
           </span>
         </button>
@@ -165,50 +161,59 @@ function DashboardContent() {
       {/* Summary bar */}
       {holdings.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
-          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '16px 20px' }}>
-            <div style={{ fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('db_total_label')}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: totalValue > 0 ? '#f1f5f9' : '#64748b', marginTop: 4 }}>
-              {totalValue > 0
-                ? `${currencySymbol}${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : '—'}
-            </div>
-          </div>
-          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '16px 20px' }}>
-            <div style={{ fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('db_unrealized_lbl')}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: totalUnrealized >= 0 ? '#22c55e' : '#ef4444', marginTop: 4 }}>
-              {totalUnrealized >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(totalUnrealized).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
+          <StatCell
+            label={t('db_total_label')}
+            variant="raised"
+            valueStyle={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: totalValue > 0 ? 'var(--color-text)' : 'var(--color-text-dim)',
+            }}
+          >
+            {totalValue > 0 ? `${currencySymbol}${fmtMoney(totalValue)}` : '—'}
+          </StatCell>
+          <StatCell
+            label={t('db_unrealized_lbl')}
+            variant="raised"
+            valueStyle={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: totalUnrealized >= 0 ? 'var(--color-brand)' : 'var(--color-accent-red)',
+            }}
+          >
+            {totalUnrealized >= 0 ? '+' : '-'}{currencySymbol}{fmtMoney(Math.abs(totalUnrealized))}
+          </StatCell>
         </div>
       )}
 
-      {loading && holdings.length === 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b', padding: '24px 0' }}>
-          <span style={{
-            display: 'inline-block', width: 16, height: 16, borderRadius: '50%',
-            border: '2px solid #1e293b', borderTopColor: '#22c55e',
-            animation: 'spin 0.7s linear infinite',
-          }} />
-          {t('db_loading')}
-        </div>
-      )}
-      {error && <p style={{ color: '#ef4444' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--color-accent-red)' }}>{error}</p>}
 
-      {!loading && holdings.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8', marginBottom: 8 }}>{t('db_no_positions')}</div>
+      {!loading && holdings.length === 0 && !error && (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }} aria-hidden>📭</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 8 }}>{t('db_no_positions')}</div>
           <p style={{ marginBottom: 20 }}>{t('db_add_first')}</p>
-          <Link href='/user/transactions' style={{ padding: '10px 22px', background: '#22c55e', borderRadius: 8, color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
+          <Link
+            href='/user/transactions'
+            className="sa-focusable"
+            style={{
+              padding: '10px 22px',
+              background: 'var(--color-brand)',
+              borderRadius: 8,
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
             {t('db_go_transactions')}
           </Link>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
-        {holdings.map((h: Holding) => (
-          <PortfolioCard key={h.ticker} holding={h} />
-        ))}
+      <div style={CARD_GRID}>
+        {initialLoading
+          ? Array.from({ length: 6 }, (_, i) => <PortfolioCardSkeleton key={i} />)
+          : holdings.map((h: Holding) => <PortfolioCard key={h.ticker} holding={h} />)}
       </div>
     </div>
   )

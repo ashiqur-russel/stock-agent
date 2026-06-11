@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/LivePrice'
 import SignalBadge from '@/components/ui/SignalBadge'
 import StockDetailModal from '@/components/stock/StockDetailModal'
+import { Card, StatCell } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Props {
   holding: Holding
@@ -30,38 +32,38 @@ function PortfolioCardImpl({ holding }: Props) {
   const shares = num(holding.shares_held)
   const marketValueEur = num(holding.market_value)
   const marketValueUsd = num(holding.market_value_usd)
+  // Convert the EUR cost basis with the same FX rate the quote shipped with,
+  // so the USD figure matches the USD price/value columns.
+  const eurRate = num(holding.eur_rate) || 0.91
+  const realizedPnl = num(currency === 'USD' ? holding.realized_pnl_usd : holding.realized_pnl)
 
   return (
-    <div style={{
-      background: '#0f172a',
-      border: '1px solid #1e293b',
-      borderRadius: 12,
-      padding: 20,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-    }}>
+    <Card style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           onClick={() => setDetailOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              setDetailOpen(true)
-            }
+          className="sa-focusable"
+          aria-label={`${holding.ticker} — ${t('pc_chart_details')}`}
+          style={{
+            cursor: 'pointer',
+            minWidth: 0,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            textAlign: 'left',
+            font: 'inherit',
+            color: 'inherit',
           }}
-          style={{ cursor: 'pointer', minWidth: 0 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{holding.ticker}</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text)' }}>{holding.ticker}</span>
             <SignalBadge signal={holding.signal} />
           </div>
-          <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
+          <div style={{ fontSize: 13, color: 'var(--color-text-dim)', marginTop: 2 }}>
             {shares.toFixed(4)} {t('pc_shares')}
           </div>
-        </div>
+        </button>
         <div style={{ textAlign: 'right' }}>
           {/* Market value uses the latest live price × shares so it ticks with
               the price stream rather than only updating on the slow 30s portfolio
@@ -76,76 +78,75 @@ function PortfolioCardImpl({ holding }: Props) {
           </div>
           <div style={{ fontSize: 13, marginTop: 2 }}>
             <LiveDayChange ticker={holding.ticker} initialPct={num(holding.day_change_pct)} />
-            <span style={{ color: '#64748b', marginLeft: 4 }}>today</span>
+            <span style={{ color: 'var(--color-text-dim)', marginLeft: 4 }}>today</span>
           </div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_avg_cost')}</div>
-          <div style={{ fontSize: 14, color: '#f1f5f9', fontWeight: 500, marginTop: 2 }}>{formatPrice(holding.avg_cost, holding.avg_cost / 0.91)}</div>
-        </div>
-        <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_current')}</div>
-          <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>
-            <LivePrice
-              ticker={holding.ticker}
-              initialPriceEur={holding.current_price}
-              initialPriceUsd={holding.current_price_usd}
-            />
-            <LiveQuoteExtendedHint ticker={holding.ticker} />
-            <LiveUsListingRow ticker={holding.ticker} fallback={holding.us_listing} />
-          </div>
-        </div>
-        <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_unrealized')}</div>
-          <div style={{ marginTop: 2, fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'baseline' }}>
-            <LivePnL
-              ticker={holding.ticker}
-              shares={shares}
-              avgCostEur={num(holding.avg_cost)}
-              fallbackEur={num(holding.unrealized_pnl)}
-              fallbackUsd={num(holding.unrealized_pnl_usd)}
-            />
-            <LivePnLPct
-              ticker={holding.ticker}
-              avgCostEur={num(holding.avg_cost)}
-              fallbackPct={num(holding.unrealized_pnl_pct)}
-              parens
-              muted
-              style={{ fontSize: 12 }}
-            />
-          </div>
-        </div>
-        <div style={{ background: '#020617', borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('pc_realized')}</div>
-          <div style={{ fontSize: 14, color: num(holding.realized_pnl) >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600, marginTop: 2 }}>
-            {num(holding.realized_pnl) >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(num(currency === 'USD' ? holding.realized_pnl_usd : holding.realized_pnl)).toFixed(2)}
-          </div>
-        </div>
+        <StatCell
+          label={t('pc_avg_cost')}
+          valueStyle={{ fontSize: 14, color: 'var(--color-text)', fontWeight: 500 }}
+        >
+          {formatPrice(holding.avg_cost, holding.avg_cost / eurRate)}
+        </StatCell>
+        <StatCell label={t('pc_current')} valueStyle={{ fontSize: 14, fontWeight: 500 }}>
+          <LivePrice
+            ticker={holding.ticker}
+            initialPriceEur={holding.current_price}
+            initialPriceUsd={holding.current_price_usd}
+          />
+          <LiveQuoteExtendedHint ticker={holding.ticker} />
+          <LiveUsListingRow ticker={holding.ticker} fallback={holding.us_listing} />
+        </StatCell>
+        <StatCell
+          label={t('pc_unrealized')}
+          valueStyle={{ fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'baseline' }}
+        >
+          <LivePnL
+            ticker={holding.ticker}
+            shares={shares}
+            avgCostEur={num(holding.avg_cost)}
+            fallbackEur={num(holding.unrealized_pnl)}
+            fallbackUsd={num(holding.unrealized_pnl_usd)}
+          />
+          <LivePnLPct
+            ticker={holding.ticker}
+            avgCostEur={num(holding.avg_cost)}
+            fallbackPct={num(holding.unrealized_pnl_pct)}
+            parens
+            muted
+            style={{ fontSize: 12 }}
+          />
+        </StatCell>
+        <StatCell
+          label={t('pc_realized')}
+          valueStyle={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: realizedPnl >= 0 ? 'var(--color-brand)' : 'var(--color-accent-red)',
+          }}
+        >
+          {realizedPnl >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(realizedPnl).toFixed(2)}
+        </StatCell>
       </div>
 
       <div style={{ display: 'flex', gap: 8 }}>
-        <button
+        <Button
+          variant="outline"
           onClick={() => router.push(`/user/agent?ticker=${holding.ticker}`)}
-          style={{
-            flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid #334155',
-            borderRadius: 8, color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontWeight: 500,
-          }}
+          style={{ flex: 1 }}
         >
           🤖 {t('pc_ask_ai')}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
           onClick={() => setDetailOpen(true)}
-          style={{
-            padding: '8px 14px', background: '#1e293b', border: '1px solid #334155',
-            borderRadius: 8, color: '#94a3b8', fontSize: 13, cursor: 'pointer',
-          }}
-          title="Chart & details"
+          title={t('pc_chart_details')}
+          aria-label={t('pc_chart_details')}
         >
           📈
-        </button>
+        </Button>
       </div>
 
       {detailOpen && (
@@ -155,7 +156,7 @@ function PortfolioCardImpl({ holding }: Props) {
           usListingFallback={holding.us_listing}
         />
       )}
-    </div>
+    </Card>
   )
 }
 
