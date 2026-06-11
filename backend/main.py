@@ -1,3 +1,4 @@
+import logging
 import os
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,6 +20,11 @@ from routers.public_landing import router as public_landing_router
 from routers.push import router as push_router
 from routers.release import router as release_router
 from routers.ws import router as ws_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 app = FastAPI(title="Stock Agent API", version=get_app_version())
 
@@ -65,6 +71,8 @@ def startup():
         minutes=config.ALERT_INTERVAL_MINUTES,
         id="portfolio_scan",
         replace_existing=True,
+        max_instances=1,  # a slow scan must never overlap the next one
+        coalesce=True,  # collapse missed runs into a single catch-up run
     )
     _scheduler.add_job(
         prune_alert_tables,

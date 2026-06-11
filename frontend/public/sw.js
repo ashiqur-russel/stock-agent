@@ -10,7 +10,10 @@ self.addEventListener('push', (event) => {
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     vibrate: [200, 100, 200],
-    tag: data.tag ?? 'stockagent',    // replace earlier notification with same tag
+    // Same tag replaces, different tags stack. The backend sends a per-ticker
+    // tag so an AAPL alert never overwrites a GOOGL alert; the timestamp
+    // fallback keeps untagged pushes from replacing each other.
+    tag: data.tag ?? `stockagent-${Date.now()}`,
     renotify: true,
     data: { url: data.url ?? '/user/alerts' },
   }

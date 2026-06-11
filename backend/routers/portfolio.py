@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -18,8 +20,10 @@ class TransactionRequest(BaseModel):
 
 
 @router.get("")
-def get_portfolio(user=Depends(get_current_user)):
-    return portfolio_service.get_portfolio_for_user(user["user_id"])
+async def get_portfolio(user=Depends(get_current_user)):
+    # Heaviest endpoint in the app (quote fetches + swing analysis per holding);
+    # run on the default executor so it never starves the sync-endpoint pool.
+    return await asyncio.to_thread(portfolio_service.get_portfolio_for_user, user["user_id"])
 
 
 @router.get("/transactions")
