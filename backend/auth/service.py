@@ -1,5 +1,6 @@
 import secrets
 import smtplib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -9,6 +10,11 @@ from fastapi import HTTPException, status
 from jose import JWTError, jwt
 
 import config
+
+# Auth emails go out on a background pool: an SMTP send takes seconds (or
+# hangs on bad credentials), and register/resend must not block on it —
+# users were retrying "stuck" registrations and burning their rate limit.
+_email_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="auth-email")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = config.JWT_EXPIRE_DAYS
@@ -48,6 +54,14 @@ def decode_jwt(token: str) -> dict:
 
 def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
+
+
+def send_verification_email_async(to_email: str, name: str, token: str) -> None:
+    _email_pool.submit(send_verification_email, to_email, name, token)
+
+
+def send_password_reset_email_async(to_email: str, name: str, token: str) -> None:
+    _email_pool.submit(send_password_reset_email, to_email, name, token)
 
 
 def send_verification_email(to_email: str, name: str, token: str):

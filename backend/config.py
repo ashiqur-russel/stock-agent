@@ -45,6 +45,14 @@ JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
 # keep it as short as the login UX tolerates.
 JWT_EXPIRE_DAYS: int = int(os.getenv("JWT_EXPIRE_DAYS", "7"))
 
+# Emergency kill switch for the in-memory rate limiter (RATE_LIMIT_ENABLED=0).
+# Use only to unblock production while tuning limits — never leave disabled.
+RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
 _INSECURE_JWT_SECRETS = ("", "change-me-in-production")
 
 
