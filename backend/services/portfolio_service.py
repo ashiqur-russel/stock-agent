@@ -4,9 +4,43 @@ from functools import partial
 from threading import Lock
 
 from database import get_connection
-from services.market_data import fetch_quote
+from services.market_data import FALLBACK_EUR_PER_USD, fetch_quote
 from services.technical import run_swing_analysis
 from services.user_prefs import get_user_market_region
+
+# Tolerance for float share arithmetic (e.g. fractional shares from savings plans).
+_SHARE_EPSILON = 1e-9
+
+
+class OversellError(ValueError):
+    """A SELL transaction exceeds the shares held at its execution time."""
+
+    def __init__(self, ticker: str, held: float, requested: float):
+        self.ticker = ticker
+        self.held = held
+        self.requested = requested
+        super().__init__(
+            f"Cannot sell {requested:g} shares of {ticker} — only {held:g} held at that time"
+        )
+
+
+def validate_transaction_sequence(transactions: list[dict]) -> None:
+    """Replay transactions in execution order and reject any oversell.
+
+    Without this, an oversell silently records realized P&L for shares that
+    were never owned and corrupts the cost basis.
+    """
+    held: dict[str, float] = {}
+    for tx in sorted(transactions, key=lambda t: t["executed_at"]):
+        ticker = tx["ticker"]
+        if tx["type"] == "BUY":
+            held[ticker] = held.get(ticker, 0.0) + tx["shares"]
+        elif tx["type"] == "SELL":
+            available = held.get(ticker, 0.0)
+            if tx["shares"] > available + _SHARE_EPSILON:
+                raise OversellError(ticker, available, tx["shares"])
+            held[ticker] = available - tx["shares"]
+
 
 # In-memory cache for swing-setup signals.
 #
@@ -84,6 +118,12 @@ def add_transaction(
     notes: str = None,
 ) -> dict:
     ticker = ticker.upper()
+    if tx_type == "SELL":
+        existing = get_transactions(user_id)
+        existing.append(
+            {"ticker": ticker, "type": tx_type, "shares": shares, "executed_at": executed_at}
+        )
+        validate_transaction_sequence(existing)
     with get_connection() as conn:
         cur = conn.execute(
             "INSERT INTO transactions (user_id, ticker, type, shares, price, executed_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
@@ -103,6 +143,10 @@ def delete_transaction(tx_id: int, user_id: int) -> bool:
         ).fetchone()
         if not row:
             return False
+    # Removing a BUY that backs a later SELL would corrupt the history.
+    remaining = [tx for tx in get_transactions(user_id) if tx["id"] != tx_id]
+    validate_transaction_sequence(remaining)
+    with get_connection() as conn:
         conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
         conn.commit()
         return True
@@ -120,6 +164,11 @@ def update_transaction(
 ) -> bool:
     """Update an existing transaction. Returns False if it doesn't belong to user."""
     ticker = ticker.upper()
+    updated_seq = [tx for tx in get_transactions(user_id) if tx["id"] != tx_id]
+    updated_seq.append(
+        {"ticker": ticker, "type": tx_type, "shares": shares, "executed_at": executed_at}
+    )
+    validate_transaction_sequence(updated_seq)
     with get_connection() as conn:
         row = conn.execute(
             "SELECT id FROM transactions WHERE id = ? AND user_id = ?",
@@ -163,10 +212,11 @@ def _calculate_holdings(transactions: list[dict]) -> dict:
             h["shares_held"] += tx["shares"]
             h["avg_cost"] = total_cost / h["shares_held"] if h["shares_held"] else 0.0
         elif tx["type"] == "SELL":
-            h["realized_pnl"] += (tx["price"] - h["avg_cost"]) * tx["shares"]
-            h["shares_held"] -= tx["shares"]
-            if h["shares_held"] < 0:
-                h["shares_held"] = 0.0
+            # New oversells are rejected up front; min() keeps any legacy bad
+            # rows from fabricating P&L for shares that were never owned.
+            sold = min(tx["shares"], h["shares_held"])
+            h["realized_pnl"] += (tx["price"] - h["avg_cost"]) * sold
+            h["shares_held"] -= sold
 
     return {k: v for k, v in holdings.items() if v["shares_held"] > 0.0001}
 
@@ -209,7 +259,8 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
         # current_price from fetch_quote is already in EUR
         current_price_eur = quote["current_price"]
         current_price_usd = float(quote.get("current_price_usd") or 0.0)
-        eur_rate = float(quote.get("eur_rate") or 0.91)  # EUR per 1 USD (same as quote payload)
+        # EUR per 1 USD from this quote's tick — same rate for every USD column below
+        eur_rate = float(quote.get("eur_rate") or FALLBACK_EUR_PER_USD)
         shares_held = h["shares_held"]
         avg_cost_eur = h["avg_cost"]  # user enters price in EUR (Scalable Capital shows EUR)
         market_value = shares_held * current_price_eur
@@ -242,7 +293,7 @@ def get_portfolio_for_user(user_id: int) -> list[dict]:
                 "realized_pnl_usd": round(realized_pnl_usd, 2),
                 "day_change_pct": quote["day_change_pct"],
                 "currency": "EUR",
-                "eur_rate": quote.get("eur_rate", 0.92),
+                "eur_rate": eur_rate,
                 "quote_session": quote.get("quote_session"),
                 "market_state": quote.get("market_state"),
                 "pre_market_price": quote.get("pre_market_price"),

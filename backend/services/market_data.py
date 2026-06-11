@@ -29,6 +29,11 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import yfinance as yf
 
+# Last-resort EUR-per-USD rate when the FX fetch fails and nothing is cached.
+# Single source of truth — every EUR/USD fallback in the backend must use this
+# so one portfolio response never mixes different fallback rates.
+FALLBACK_EUR_PER_USD = 0.91
+
 # Cache the EUR rate for 5 minutes to avoid fetching on every request
 _eur_cache: dict = {"rate": None, "fetched_at": 0}
 _eur_lock = threading.Lock()
@@ -56,12 +61,12 @@ def get_usd_to_eur_rate() -> float:
             t = yf.Ticker("EURUSD=X")
             with _suppress_yfinance_stderr():
                 eurusd = float(t.fast_info.last_price)
-            rate = 1.0 / eurusd if eurusd else 0.91
+            rate = 1.0 / eurusd if eurusd else FALLBACK_EUR_PER_USD
             _eur_cache["rate"] = rate
             _eur_cache["fetched_at"] = now
             return rate
         except Exception:
-            return _eur_cache["rate"] or 0.91  # fallback
+            return _eur_cache["rate"] or FALLBACK_EUR_PER_USD
 
 
 def usd_to_eur(usd: float) -> float:
