@@ -23,9 +23,10 @@ jobs:
   backend-lint:
     name: Backend - Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -40,13 +41,16 @@ jobs:
   backend-unit-tests:
     name: Backend - Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: "pip"
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -61,9 +65,10 @@ jobs:
   frontend-lint:
     name: Frontend - Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -78,10 +83,11 @@ jobs:
   backend-build:
     name: Backend - Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [backend-lint, backend-unit-tests]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -100,14 +106,24 @@ jobs:
   frontend-build:
     name: Frontend - Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [frontend-lint]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
+      # Next.js incremental build cache — keyed on lockfile + sources so a
+      # source-only change still restores the previous compilation cache.
+      - name: Restore Next.js cache
+        uses: actions/cache@v5
+        with:
+          path: frontend/.next/cache
+          key: nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**/*.ts', 'frontend/src/**/*.tsx') }}
+          restore-keys: |
+            nextjs-${{ hashFiles('frontend/package-lock.json') }}-
       - name: Install
         run: npm ci
         working-directory: frontend
@@ -121,13 +137,14 @@ jobs:
   docker:
     name: Docker - Build images
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: [backend-build, frontend-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           file: ./backend/Dockerfile
@@ -136,7 +153,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           file: ./frontend/Dockerfile

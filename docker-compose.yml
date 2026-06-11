@@ -12,10 +12,19 @@ services:
       - CORS_ORIGINS=http://localhost:3000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      # python:3.13-slim has no curl — probe with the stdlib instead, otherwise
+      # the container stays "unhealthy" forever and the frontend never starts.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=4)",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 15s
 
   frontend:
     build: ./frontend
