@@ -16,6 +16,8 @@ from collections import defaultdict, deque
 
 from fastapi import HTTPException, Request, status
 
+import config
+
 # Prune idle client entries once the registry grows past this many keys.
 _PRUNE_THRESHOLD = 10_000
 
@@ -39,6 +41,8 @@ class RateLimiter:
         self._lock = threading.Lock()
 
     def __call__(self, request: Request) -> None:
+        if not config.RATE_LIMIT_ENABLED:
+            return
         now = time.monotonic()
         key = _client_ip(request)
         with self._lock:
