@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 import config
 from auth import service
@@ -14,6 +14,7 @@ from auth.models import (
     VerificationPending,
 )
 from database import get_connection
+from middleware.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -23,12 +24,17 @@ _MSG_EMAIL_EXISTS = (
     "An account with this email already exists. Try signing in or use Forgot password "
     "if you need to reset your password."
 )
-_MSG_NO_ACCOUNT = "No account found for this email. Please register first."
-_MSG_BAD_PASSWORD = "Incorrect password."
-_MSG_NO_ACCOUNT_RESET = "No account is registered with this email. Please register first."
+# One message for unknown email and wrong password — anything more specific
+# lets attackers enumerate registered accounts.
+_MSG_INVALID_CREDENTIALS = "Invalid email or password."
+_MSG_RESET_SENT = "If an account exists for this email, a password reset link has been sent."
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RateLimiter(5, hours=1))],
+)
 def register(body: RegisterRequest):
     with get_connection() as conn:
         if conn.execute("SELECT id FROM users WHERE email=?", (body.email,)).fetchone():
@@ -105,7 +111,7 @@ def verify_email(token: str):
     )
 
 
-@router.post("/resend-verification")
+@router.post("/resend-verification", dependencies=[Depends(RateLimiter(3, hours=1))])
 def resend_verification(body: ResendRequest):
     with get_connection() as conn:
         user = conn.execute(
@@ -133,7 +139,11 @@ def resend_verification(body: ResendRequest):
     return {"message": "Verification email sent"}
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    dependencies=[Depends(RateLimiter(5, minutes=15))],
+)
 def login(body: LoginRequest):
     with get_connection() as conn:
         row = conn.execute(
@@ -142,10 +152,11 @@ def login(body: LoginRequest):
         ).fetchone()
 
     if not row:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _MSG_NO_ACCOUNT)
+        service.verify_password(body.password, service.DUMMY_PASSWORD_HASH)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _MSG_INVALID_CREDENTIALS)
 
     if not service.verify_password(body.password, row["password_hash"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _MSG_BAD_PASSWORD)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _MSG_INVALID_CREDENTIALS)
 
     if not row["is_verified"]:
         raise HTTPException(403, "Please verify your email before logging in")
@@ -156,7 +167,7 @@ def login(body: LoginRequest):
     )
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(RateLimiter(3, hours=1))])
 def forgot_password(body: ForgotPasswordRequest):
     with get_connection() as conn:
         user = conn.execute(
@@ -164,7 +175,9 @@ def forgot_password(body: ForgotPasswordRequest):
         ).fetchone()
 
     if not user:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, _MSG_NO_ACCOUNT_RESET)
+        # Same response as the success path so the endpoint can't be used
+        # to probe which emails are registered.
+        return {"message": _MSG_RESET_SENT}
 
     token = service.generate_verification_token()
     expires = (
@@ -183,14 +196,11 @@ def forgot_password(body: ForgotPasswordRequest):
         reset_url = f"{config.FRONTEND_URL}/reset-password?token={token}"
         print(f"[auth] SMTP not configured — password reset link: {reset_url}")
 
-    return {"message": "Check your email for a link to reset your password."}
+    return {"message": _MSG_RESET_SENT}
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[Depends(RateLimiter(5, minutes=15))])
 def reset_password(body: ResetPasswordRequest):
-    if len(body.password) < 8:
-        raise HTTPException(400, "Password must be at least 8 characters")
-
     with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM password_resets WHERE token=? AND used=0",

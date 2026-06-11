@@ -57,6 +57,7 @@ export function useAlertWS(onAlert?: (alert: LiveAlert) => void) {
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>
     let cancelled = false
+    let attempt = 0
 
     const connect = () => {
       const token = getToken()
@@ -65,10 +66,19 @@ export function useAlertWS(onAlert?: (alert: LiveAlert) => void) {
       const ws = new WebSocket(`${WS_URL}/api/v1/ws/alerts?token=${encodeURIComponent(token)}`)
       wsRef.current = ws
 
-      ws.onopen = () => setConnected(true)
+      ws.onopen = () => {
+        attempt = 0
+        setConnected(true)
+      }
       ws.onclose = () => {
         setConnected(false)
-        if (!cancelled) reconnectTimer = setTimeout(connect, 10_000)
+        if (!cancelled) {
+          // Exponential backoff with jitter: fast recovery from blips without
+          // hammering the server in a reconnect storm when it's down.
+          const delay = Math.min(1_000 * 2 ** attempt, 30_000) + Math.random() * 1_000
+          attempt += 1
+          reconnectTimer = setTimeout(connect, delay)
+        }
       }
       ws.onerror = () => ws.close()
       ws.onmessage = (e) => {

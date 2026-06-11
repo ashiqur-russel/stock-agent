@@ -11,16 +11,23 @@ on:
 permissions:
   contents: write
 
+# Serialize bumps: two quick merges to development must not race each other's
+# push (the loser would fail with a non-fast-forward error).
+concurrency:
+  group: version-bump-development
+  cancel-in-progress: false
+
 jobs:
   bump:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ !contains(github.event.head_commit.message, '[automated version bump]') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: development
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: Bump patch version

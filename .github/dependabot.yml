@@ -1,0 +1,31 @@
+# Weekly dependency PRs. Actions updates keep CI off deprecated runtimes
+# (e.g. the Node 20 → 24 forced migration); pip/npm groups cut PR noise by
+# batching minor/patch bumps into one PR per ecosystem.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[SA-0] chore(ci)"
+
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "[SA-0] chore(deps)"
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "[SA-0] chore(deps)"

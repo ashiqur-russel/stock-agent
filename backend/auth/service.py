@@ -11,9 +11,13 @@ from jose import JWTError, jwt
 import config
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 30
+ACCESS_TOKEN_EXPIRE_DAYS = config.JWT_EXPIRE_DAYS
 VERIFY_TOKEN_EXPIRE_HOURS = 24
 RESET_TOKEN_EXPIRE_HOURS = 2
+
+# Hashing this when login hits an unknown email keeps response timing identical
+# to the known-email path, so attackers can't enumerate accounts via latency.
+DUMMY_PASSWORD_HASH = bcrypt.hashpw(b"timing-equalizer", bcrypt.gensalt()).decode()
 
 
 def hash_password(password: str) -> str:

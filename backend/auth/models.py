@@ -1,10 +1,20 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+MIN_PASSWORD_LENGTH = 8
+
+
+def _check_password_strength(password: str) -> str:
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+    return password
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     password: str
+
+    _password_strength = field_validator("password")(_check_password_strength)
 
 
 class LoginRequest(BaseModel):
@@ -37,3 +47,5 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     password: str
+
+    _password_strength = field_validator("password")(_check_password_strength)

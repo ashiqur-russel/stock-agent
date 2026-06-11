@@ -12,6 +12,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [checked, setChecked] = useState(false)
   const [toasts, setToasts] = useState<LiveAlert[]>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const token = getToken()
@@ -35,11 +36,32 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!checked) return null
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#020617' }}>
-      <Sidebar />
-      <main style={{ flex: 1, marginLeft: 220, padding: '32px', minHeight: '100vh', color: '#f1f5f9' }}>
-        {children}
-      </main>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg)' }}>
+      {/* Mobile-only top bar with the drawer trigger (hidden ≥768px via CSS) */}
+      <header className="sa-mobile-topbar">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation"
+          className="sa-focusable"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: 8,
+            color: 'var(--color-text)',
+            fontSize: 18,
+            lineHeight: 1,
+            padding: '6px 10px',
+            cursor: 'pointer',
+          }}
+        >
+          ☰
+        </button>
+        <img src='/logo.svg' alt='StockAgent' style={{ height: 24 }} />
+      </header>
+
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <main className="sa-main">{children}</main>
       <LiveAlertToast toasts={toasts} onDismiss={dismissToast} />
       <WhatsNewModal />
     </div>
