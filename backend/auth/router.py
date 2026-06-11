@@ -30,10 +30,13 @@ _MSG_INVALID_CREDENTIALS = "Invalid email or password."
 _MSG_RESET_SENT = "If an account exists for this email, a password reset link has been sent."
 
 
+# Limits balance abuse protection against shared IPs (office/university NAT)
+# and the legitimate retry behavior of confused users. Email sends run on a
+# background pool so these endpoints respond instantly.
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RateLimiter(5, hours=1))],
+    dependencies=[Depends(RateLimiter(20, hours=1))],
 )
 def register(body: RegisterRequest):
     with get_connection() as conn:
@@ -63,7 +66,7 @@ def register(body: RegisterRequest):
         conn.commit()
 
     if SMTP_CONFIGURED:
-        service.send_verification_email(body.email, body.name, token)
+        service.send_verification_email_async(body.email, body.name, token)
     else:
         verify_url = f"{config.FRONTEND_URL}/verify?token={token}"
         print(f"[auth] SMTP not configured — visit this link to verify: {verify_url}")
@@ -111,7 +114,7 @@ def verify_email(token: str):
     )
 
 
-@router.post("/resend-verification", dependencies=[Depends(RateLimiter(3, hours=1))])
+@router.post("/resend-verification", dependencies=[Depends(RateLimiter(6, hours=1))])
 def resend_verification(body: ResendRequest):
     with get_connection() as conn:
         user = conn.execute(
@@ -135,14 +138,14 @@ def resend_verification(body: ResendRequest):
         )
         conn.commit()
 
-    service.send_verification_email(body.email, user["name"], token)
+    service.send_verification_email_async(body.email, user["name"], token)
     return {"message": "Verification email sent"}
 
 
 @router.post(
     "/login",
     response_model=TokenResponse,
-    dependencies=[Depends(RateLimiter(5, minutes=15))],
+    dependencies=[Depends(RateLimiter(10, minutes=15))],
 )
 def login(body: LoginRequest):
     with get_connection() as conn:
@@ -167,7 +170,7 @@ def login(body: LoginRequest):
     )
 
 
-@router.post("/forgot-password", dependencies=[Depends(RateLimiter(3, hours=1))])
+@router.post("/forgot-password", dependencies=[Depends(RateLimiter(6, hours=1))])
 def forgot_password(body: ForgotPasswordRequest):
     with get_connection() as conn:
         user = conn.execute(
@@ -191,7 +194,7 @@ def forgot_password(body: ForgotPasswordRequest):
         conn.commit()
 
     if SMTP_CONFIGURED:
-        service.send_password_reset_email(user["email"], user["name"], token)
+        service.send_password_reset_email_async(user["email"], user["name"], token)
     else:
         reset_url = f"{config.FRONTEND_URL}/reset-password?token={token}"
         print(f"[auth] SMTP not configured — password reset link: {reset_url}")
@@ -199,7 +202,7 @@ def forgot_password(body: ForgotPasswordRequest):
     return {"message": _MSG_RESET_SENT}
 
 
-@router.post("/reset-password", dependencies=[Depends(RateLimiter(5, minutes=15))])
+@router.post("/reset-password", dependencies=[Depends(RateLimiter(10, minutes=15))])
 def reset_password(body: ResetPasswordRequest):
     with get_connection() as conn:
         row = conn.execute(
