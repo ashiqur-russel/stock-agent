@@ -46,7 +46,10 @@ _prev_eur_lock = threading.Lock()
 _quote_cache: dict[str, dict] = {}
 _quote_cache_ts: dict[str, float] = {}
 _quote_cache_lock = threading.Lock()
-_QUOTE_STALE_TTL = 900  # serve cached price for up to 15 min when fresh fetch fails
+# Serve the last good price for up to 1h when a fresh fetch fails (flagged
+# data_stale). During Yahoo rate-limit storms a stale-but-real price beats the
+# €0.00 rows users saw with the previous 15-min window.
+_QUOTE_STALE_TTL = 3600
 
 
 def get_usd_to_eur_rate() -> float:
