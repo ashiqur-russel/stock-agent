@@ -6,9 +6,12 @@ Run tools/generate_vapid_keys.py once to produce them.
 """
 
 import json
+import logging
 
 import config
 from database import get_connection
+
+logger = logging.getLogger("stockagent.push")
 
 
 def _push_enabled() -> bool:
@@ -71,8 +74,19 @@ def _purge_dead(endpoints: list[str]) -> None:
         conn.commit()
 
 
-def send_push_to_user(user_id: int, title: str, body: str, url: str = "/user/alerts") -> None:
-    """Send a Web Push notification to all registered browsers for a user."""
+def send_push_to_user(
+    user_id: int,
+    title: str,
+    body: str,
+    url: str = "/user/alerts",
+    tag: str | None = None,
+) -> None:
+    """Send a Web Push notification to all registered browsers for a user.
+
+    ``tag`` groups notifications in the browser: pushes with the same tag
+    replace each other, different tags stack. Pass a per-ticker tag so an
+    AAPL alert never overwrites a GOOGL alert.
+    """
     if not _push_enabled():
         return
 
@@ -83,11 +97,12 @@ def send_push_to_user(user_id: int, title: str, body: str, url: str = "/user/ale
     try:
         from pywebpush import WebPushException, webpush  # lazy import — optional dep
     except ImportError:
-        print("[push] pywebpush not installed — skipping browser push")
+        logger.warning("pywebpush not installed — skipping browser push")
         return
 
-    payload = json.dumps({"title": title, "body": body, "url": url})
+    payload = json.dumps({"title": title, "body": body, "url": url, "tag": tag})
     dead: list[str] = []
+    failed = 0
 
     for sub in subs:
         info = {
@@ -103,12 +118,23 @@ def send_push_to_user(user_id: int, title: str, body: str, url: str = "/user/ale
             )
         except WebPushException as exc:
             resp = exc.response
-            if resp is not None and resp.status_code in (404, 410):
+            status = resp.status_code if resp is not None else None
+            if status in (404, 410):
                 # Subscription expired / user unsubscribed in browser
                 dead.append(sub["endpoint"])
+                logger.info("removing expired subscription %s…", sub["endpoint"][:40])
             else:
-                print(f"[push] send failed ({sub['endpoint'][:40]}…): {exc}")
-        except Exception as exc:
-            print(f"[push] unexpected error: {exc}")
+                failed += 1
+                logger.error(
+                    "send failed (status=%s, endpoint=%s…): %s",
+                    status,
+                    sub["endpoint"][:40],
+                    exc,
+                )
+        except Exception:
+            failed += 1
+            logger.exception("unexpected push error (endpoint=%s…)", sub["endpoint"][:40])
 
     _purge_dead(dead)
+    if failed:
+        logger.warning("push to user %s: %d/%d sends failed", user_id, failed, len(subs))

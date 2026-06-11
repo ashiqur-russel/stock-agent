@@ -4,6 +4,10 @@ import yfinance as yf
 
 from services.market_data import _suppress_yfinance_stderr
 
+# Below this 20-day average volume a buy/sell signal is downgraded to hold:
+# thin order books make RSI/Bollinger readings unreliable and fills unrealistic.
+MIN_LIQUID_AVG_VOLUME = 100_000
+
 
 def compute_indicators(ticker: str) -> dict:
     """
@@ -115,9 +119,18 @@ def compute_indicators(ticker: str) -> dict:
 
     rsi = float(last["RSI_14"]) if not pd.isna(last.get("RSI_14", float("nan"))) else None
 
+    # 20-day average volume — the swing scorer uses it to suppress signals on
+    # illiquid names where indicator readings are mostly noise.
+    avg_volume = None
+    if "Volume" in df.columns:
+        vol_mean = df["Volume"].tail(20).mean()
+        if not pd.isna(vol_mean):
+            avg_volume = float(vol_mean)
+
     return {
         "ticker": tk,
         "current_price": round(close, 4),
+        "avg_volume_20d": round(avg_volume) if avg_volume is not None else None,
         "rsi_14": round(rsi, 2) if rsi else None,
         "macd": {
             "macd_line": round(macd_val, 4) if macd_val else None,
@@ -255,6 +268,15 @@ def run_swing_analysis(ticker: str) -> dict:
     else:
         quality = "hold"
 
+    # ── Liquidity gate ────────────────────────────────────────────────────────
+    avg_volume = indicators.get("avg_volume_20d")
+    if quality != "hold" and avg_volume is not None and avg_volume < MIN_LIQUID_AVG_VOLUME:
+        reasons.append(
+            f"Signal downgraded to HOLD: 20-day avg volume {avg_volume:,.0f} is below "
+            f"{MIN_LIQUID_AVG_VOLUME:,} — too illiquid for a reliable swing setup"
+        )
+        quality = "hold"
+
     key_support = bb_lower or ema20
     key_resistance = bb_upper or ema50
 
@@ -270,6 +292,7 @@ def run_swing_analysis(ticker: str) -> dict:
         "ema_50": ema50,
         "key_support": round(key_support, 4) if key_support else None,
         "key_resistance": round(key_resistance, 4) if key_resistance else None,
+        "avg_volume_20d": avg_volume,
         "swing_setup_quality": quality,
         "score": score,
         "signal_reasons": reasons,

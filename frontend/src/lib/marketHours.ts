@@ -48,7 +48,11 @@ export function isDEStockSessionOpen(d: Date = new Date()): boolean {
   const { weekday, hour, minute } = parseTimeZoneParts(d, 'Europe/Berlin')
   if (weekday === 'Sat' || weekday === 'Sun') return false
   const t = hour * 60 + minute
-  return t >= 7 * 60 + 30 && t < 22 * 60
+  if (t < 7 * 60 + 30) return false
+  // Until 17:30 the Xetra session keeps the lamp on; after that it tracks the
+  // actual US regular session instead of a hardcoded 22:00, so the lamp stays
+  // correct during the weeks when US and EU DST transitions don't line up.
+  return t < 17 * 60 + 30 || isUSStockSessionOpen(d)
 }
 
 export function isStockMarketOpen(region: MarketRegion, d: Date = new Date()): boolean {

@@ -60,6 +60,92 @@
   animation: shimmer 3s linear infinite;
 }
 
+/* ── Skeleton loading placeholder (see ui/Skeleton.tsx) ── */
+@keyframes sa-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.sa-skeleton {
+  background: var(--color-surface-input);
+  animation: sa-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* ── Authenticated app shell: fixed sidebar on desktop, drawer on mobile ── */
+.sa-sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+}
+.sa-main {
+  flex: 1;
+  margin-left: 220px;
+  padding: 32px;
+  min-height: 100vh;
+  color: var(--color-text);
+}
+.sa-mobile-topbar {
+  display: none;
+}
+.sa-sidebar-backdrop {
+  display: none;
+}
+@media (max-width: 767px) {
+  .sa-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-out;
+  }
+  .sa-sidebar.sa-sidebar-open {
+    transform: none;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+  .sa-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(2, 6, 23, 0.7);
+  }
+  .sa-main {
+    margin-left: 0;
+    padding: 16px;
+    /* keep content clear of the fixed mobile top bar */
+    padding-top: 64px;
+  }
+  .sa-mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    height: 52px;
+    padding: 0 12px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+
+/* Keyboard-visible focus for interactive elements that use inline styles */
+.sa-focusable:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
 /* Candlestick chart (modal) — must sit above TradingView canvas; spinner uses global @keyframes spin */
 .sa-chart-loader-panel {
   position: absolute;

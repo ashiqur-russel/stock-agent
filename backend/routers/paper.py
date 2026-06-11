@@ -1,10 +1,14 @@
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from database import get_connection, is_postgres
 from middleware.auth import get_current_user
-from services.market_data import fetch_quote, get_usd_to_eur_rate
+from services.market_data import FALLBACK_EUR_PER_USD, fetch_quote, get_usd_to_eur_rate
 from services.user_prefs import get_user_market_region
+from utils.validation import normalize_ticker
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper"])
 
@@ -20,7 +24,7 @@ STARTING_BALANCE_DISPLAY = 1_000_000.0
 def _starting_balance_eur(currency: str) -> float:
     """EUR amount to seed so the user's currency view shows exactly 1M."""
     if (currency or "EUR").upper() == "USD":
-        rate = get_usd_to_eur_rate() or 0.91  # USD → EUR
+        rate = get_usd_to_eur_rate() or FALLBACK_EUR_PER_USD  # USD → EUR
         return round(STARTING_BALANCE_DISPLAY * rate, 2)
     return STARTING_BALANCE_DISPLAY
 
@@ -56,10 +60,11 @@ def _calc_holdings(user_id: int, conn) -> dict:
             h["shares"] += tx["shares"]
             h["avg_cost"] = total / h["shares"]
         else:
-            h["realized_pnl"] += (tx["price_eur"] - h["avg_cost"]) * tx["shares"]
-            h["shares"] -= tx["shares"]
-            if h["shares"] < 0:
-                h["shares"] = 0.0
+            # /trade rejects oversells; min() keeps any legacy bad rows from
+            # fabricating P&L for shares that were never owned.
+            sold = min(tx["shares"], h["shares"])
+            h["realized_pnl"] += (tx["price_eur"] - h["avg_cost"]) * sold
+            h["shares"] -= sold
     return {k: v for k, v in holdings.items() if v["shares"] > 0.0001}
 
 
@@ -74,21 +79,34 @@ def get_account(
         balance_eur = _ensure_account(user_id, conn, currency=currency)
         holdings_raw = _calc_holdings(user_id, conn)
 
-    eur_rate = get_usd_to_eur_rate() or 0.91  # USD → EUR
+    eur_rate = get_usd_to_eur_rate() or FALLBACK_EUR_PER_USD  # USD → EUR
     usd_per_eur = (1 / eur_rate) if eur_rate else 1.0
+
+    # Parallel fetch — sequential per-ticker fetches were both slow and prone
+    # to rate-limit cascades (same pattern as portfolio_service).
+    tickers = list(holdings_raw.keys())
+    quotes: dict[str, dict] = {}
+    if tickers:
+        _qfn = partial(fetch_quote, display_region=display_region)
+        with ThreadPoolExecutor(max_workers=min(8, len(tickers))) as pool:
+            quotes = dict(zip(tickers, pool.map(_qfn, tickers)))
 
     holdings = []
     portfolio_value_eur = 0.0
     for ticker, h in holdings_raw.items():
-        quote = fetch_quote(ticker, display_region=display_region)
+        quote = quotes.get(ticker, {})
         price_eur = quote.get("current_price", 0.0) or 0.0
         price_usd = quote.get("current_price_usd", 0.0) or 0.0
+        # Use this quote's own FX rate so the USD P&L matches the USD price and
+        # value shown beside it (a global rate would make value − cost ≠ P&L).
+        quote_rate = float(quote.get("eur_rate") or eur_rate)
         shares = h["shares"]
         avg_cost_eur = h["avg_cost"]
+        avg_cost_usd = (avg_cost_eur / quote_rate) if quote_rate else 0.0
         value_eur = round(shares * price_eur, 2)
         value_usd = round(shares * price_usd, 2)
         pnl_eur = round((price_eur - avg_cost_eur) * shares, 2)
-        pnl_usd = round(pnl_eur * usd_per_eur, 2)
+        pnl_usd = round((price_usd - avg_cost_usd) * shares, 2)
         pnl_pct = round(
             (pnl_eur / (avg_cost_eur * shares) * 100) if avg_cost_eur and shares else 0,
             2,
@@ -136,7 +154,7 @@ class PaperTradeBody(BaseModel):
 @router.post("/trade")
 def paper_trade(body: PaperTradeBody, user=Depends(get_current_user)):
     user_id = user["user_id"]
-    ticker = body.ticker.upper()
+    ticker = normalize_ticker(body.ticker)
     if body.type not in ("BUY", "SELL"):
         raise HTTPException(400, "type must be BUY or SELL")
     if body.shares <= 0:
@@ -221,10 +239,6 @@ class WatchlistBody(BaseModel):
     ticker: str
 
 
-def _normalize_ticker(raw: str) -> str:
-    return raw.strip().upper()
-
-
 @router.get("/watchlist")
 def list_watchlist(user=Depends(get_current_user)):
     user_id = user["user_id"]
@@ -239,9 +253,7 @@ def list_watchlist(user=Depends(get_current_user)):
 @router.post("/watchlist")
 def add_to_watchlist(body: WatchlistBody, user=Depends(get_current_user)):
     user_id = user["user_id"]
-    ticker = _normalize_ticker(body.ticker)
-    if not ticker:
-        raise HTTPException(400, "ticker is required")
+    ticker = normalize_ticker(body.ticker)
     with get_connection() as conn:
         if is_postgres():
             conn.execute(
@@ -261,7 +273,7 @@ def add_to_watchlist(body: WatchlistBody, user=Depends(get_current_user)):
 @router.delete("/watchlist/{ticker}")
 def remove_from_watchlist(ticker: str, user=Depends(get_current_user)):
     user_id = user["user_id"]
-    ticker = _normalize_ticker(ticker)
+    ticker = normalize_ticker(ticker)
     with get_connection() as conn:
         conn.execute(
             "DELETE FROM paper_watchlist WHERE user_id=? AND ticker=?",

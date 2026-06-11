@@ -1,3 +1,4 @@
+import logging
 import os
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -20,14 +21,19 @@ from routers.push import router as push_router
 from routers.release import router as release_router
 from routers.ws import router as ws_router
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+
 app = FastAPI(title="Stock Agent API", version=get_app_version())
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth_router)
@@ -48,6 +54,7 @@ _scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 def startup():
+    config.validate_security_config()
     if os.getenv("RENDER") and "localhost" in config.FRONTEND_URL:
         print(
             "[config] WARNING: FRONTEND_URL is still localhost. "
@@ -64,6 +71,8 @@ def startup():
         minutes=config.ALERT_INTERVAL_MINUTES,
         id="portfolio_scan",
         replace_existing=True,
+        max_instances=1,  # a slow scan must never overlap the next one
+        coalesce=True,  # collapse missed runs into a single catch-up run
     )
     _scheduler.add_job(
         prune_alert_tables,
