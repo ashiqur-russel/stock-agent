@@ -36,7 +36,36 @@ def _groq_quota_bucket() -> str:
 # Shorter windows use a proportional slice of each user's daily share (e.g. TPD×1/24 per hour).
 GROQ_QUOTA_BUCKET: str = _groq_quota_bucket()
 
+# "production" when deployed (Render sets RENDER=true); override with APP_ENV.
+APP_ENV: str = os.getenv("APP_ENV", "production" if os.getenv("RENDER") else "development").lower()
+
 JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
+
+# Access-token lifetime. Without a refresh-token flow this is the session length;
+# keep it as short as the login UX tolerates.
+JWT_EXPIRE_DAYS: int = int(os.getenv("JWT_EXPIRE_DAYS", "7"))
+
+_INSECURE_JWT_SECRETS = ("", "change-me-in-production")
+
+
+def validate_security_config() -> None:
+    """Fail fast on insecure auth config instead of silently signing weak JWTs.
+
+    Called at app startup. In production a missing/default/short JWT_SECRET
+    aborts boot; in development it only warns so local setup stays frictionless.
+    """
+    weak = JWT_SECRET in _INSECURE_JWT_SECRETS or len(JWT_SECRET) < 32
+    if not weak:
+        return
+    hint = (
+        "Set a strong JWT_SECRET (>= 32 chars), e.g.: "
+        'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+    )
+    if APP_ENV == "production":
+        raise RuntimeError(f"[config] Refusing to start with insecure JWT_SECRET. {hint}")
+    print(f"[config] WARNING: insecure JWT_SECRET (dev only). {hint}")
+
+
 DATABASE_PATH: str = os.getenv("DATABASE_PATH", "./portfolio.db")
 
 # Future: German listing quotes beyond Yahoo (e.g. Deutsche Börse MDS, vendor API).

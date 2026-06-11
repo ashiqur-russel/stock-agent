@@ -26,8 +26,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth_router)
@@ -48,6 +48,7 @@ _scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 def startup():
+    config.validate_security_config()
     if os.getenv("RENDER") and "localhost" in config.FRONTEND_URL:
         print(
             "[config] WARNING: FRONTEND_URL is still localhost. "
