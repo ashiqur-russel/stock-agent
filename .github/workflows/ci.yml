@@ -118,7 +118,7 @@ jobs:
       # Next.js incremental build cache — keyed on lockfile + sources so a
       # source-only change still restores the previous compilation cache.
       - name: Restore Next.js cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: frontend/.next/cache
           key: nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**/*.ts', 'frontend/src/**/*.tsx') }}
